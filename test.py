@@ -82,6 +82,7 @@ def get_song_data(music_notes):
     '''
     Function to concatenate all the waves (notes)
     '''
+    frequency = 1
     note_freqs = get_piano_notes()  # Function that we made earlier
     sine_wave = get_sine_wave(frequency, duration=2, amplitude=2048)
     song = [get_wave(note_freqs[note]) for note in music_notes.split('-')]
