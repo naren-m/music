@@ -1,6 +1,7 @@
 import pyaudio
 import librosa
 import numpy as np
+from scipy.spatial.distance import euclidean
 
 # Define the audio parameters
 CHANNELS = 1
@@ -33,13 +34,60 @@ NOTE_FREQS = {
     'A3': 220.00,
     'A#3': 233.08,
     'B3': 246.94,
+    'C4': 261.63,
+    'C#4': 277.18,
+    'D4': 293.66,
+    'D#4': 311.13,
+    'E4': 329.63,
+    'F4': 349.23,
+    'F#4': 369.99,
+    'G4': 392.00,
+    'G#4': 415.30,
+    'A4': 440.00,
+    'A#4': 466.16,
+    'B4': 493.88,
+    'C5': 523.25,
+    'C#5': 554.37,
+    'D5': 587.33,
+    'D#5': 622.25,
+    'E5': 659.25,
+    'F5': 698.46,
+    'F#5': 739.99,
+    'G5': 783.99,
+    'G#5': 830.61,
+    'A5': 880.00,
+    'A#5': 932.33,
+    'B5': 987.77,
+    'C6': 1046.50,
+    'C#6': 1108.73,
+    'D6': 1174.66,
+    'D#6': 1244.51,
+    'E6': 1318.51,
+    'F6': 1396.91,
+    'F#6': 1479.98,
+    'G6': 1567.98,
+    'G#6': 1661.22,
+    'A6': 1760.00,
+    'A#6': 1864.66,
+    'B6': 1975.53,
+    'C7': 2093.00,
+    'C#7': 2217.46,
+    'D7': 2349.32,
+    'D#7': 2489.02,
+    'E7': 2637.02,
+    'F7': 2793.83,
+    'F#7': 2959.96,
+    'G7': 3135.96,
+    'G#7': 3322.44,
+    'A7': 3520
 }
-
-# Define the frequency range to check around each note frequency
-FREQ_TOLERANCE = 1.5
 
 # Initialize the PyAudio object
 pa = pyaudio.PyAudio()
+
+# Define the frequency range to check around each note frequency
+FREQ_TOLERANCE = 1.5
+DISTANCE_TOLERANCE = 5
 
 # Open the audio stream
 stream = pa.open(format=pyaudio.paFloat32,
@@ -48,7 +96,19 @@ stream = pa.open(format=pyaudio.paFloat32,
                  input=True,
                  frames_per_buffer=CHUNK_SIZE)
 
-def start(stream, pa):
+
+# Define a function to find the closest note to a given frequency
+def find_closest_note_freq(frequency, dist_tol=DISTANCE_TOLERANCE):
+    distances = {n: abs(frequency - f) for n, f in NOTE_FREQS.items()}
+    closest_note, distance = min(distances.items(), key=lambda x: x[1])
+    closest_freq = NOTE_FREQS[closest_note]
+    if distance > dist_tol:
+        return None, None, None
+    return closest_note, closest_freq, distance
+
+
+def start():
+    # Continuously record and process the audio
     while True:
         # Read a chunk of audio data from the stream
         data = stream.read(CHUNK_SIZE, exception_on_overflow=False)
@@ -57,10 +117,7 @@ def start(stream, pa):
         audio = np.frombuffer(data, dtype=np.float32)
 
         # Compute the short-time Fourier transform (STFT) of the audio
-        # audio_padded = np.concatenate((audio, np.zeros_like(audio)))
-        # stft = librosa.stft(audio, n_fft=2048, hop_length=512)
         stft = librosa.stft(audio, n_fft=1024, hop_length=512)
-
 
         # Compute the magnitude spectrogram of the STFT
         mag_spec = np.abs(stft)
@@ -69,21 +126,27 @@ def start(stream, pa):
         max_idx = np.argmax(mag_spec)
 
         # Compute the frequency of the note with the maximum magnitude
-        freq = librosa.fft_frequencies(sr=RATE, n_fft=2048)[max_idx]
+        freq = librosa.fft_frequencies(sr=RATE, n_fft=1024)[max_idx]
 
-        # Determine if the detected frequency falls within the range of any note frequency
+        # Determine which note corresponds to the frequency
+        closest_note, closest_freq, distance = find_closest_note_freq(freq)
+        if closest_note is not None:
+            print('Closest distance note', closest_note, freq, closest_freq,
+                  distance)
+
         note = None
         for n, f in NOTE_FREQS.items():
-            if abs(freq - f) <= FREQ_TOLERANCE:
+            if abs(freq - f) < FREQ_TOLERANCE:
                 note = n
                 break
-
-        # Print the detected note
         if note is not None:
-            print(note)
+            print("Regular", note)
+
 
 try:
-    start(stream, pa)
+    start()
+except Exception as e:
+    print("Exception", e)
 except KeyboardInterrupt:
     # Clean up the audio stream and PyAudio object
     stream.stop_stream()
