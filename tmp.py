@@ -1,73 +1,74 @@
-import librosa
+import plotly.graph_objs as go
+from plotly.subplots import make_subplots
 import numpy as np
+import sounddevice as sd
+import librosa
+import librosa.display
+
+# Constants for audio processing
+FRAME_SIZE = 2048
+HOP_SIZE = 512
+SAMPLE_RATE = 44100
+
+# Constants for note detection
+NOTE_RANGE = 48  # Number of notes to consider (starting from A0)
+CQT_BINS = 7 * NOTE_RANGE  # Number of frequency bins in CQT
+CQT_FMIN = librosa.note_to_hz('C6')  # Minimum frequency for CQT
+
+# Set up the figure with two subplots: audio waveform and note detection
+fig = make_subplots(rows=2, cols=1, shared_xaxes=True)
+audio_trace = go.Scatter(x=[], y=[], mode='lines', name='Audio waveform')
+fig.add_trace(audio_trace, row=1, col=1)
+note_trace = go.Scatter(x=[], y=[], mode='markers', name='Detected notes')
+fig.add_trace(note_trace, row=2, col=1)
+
+# Define the callback function that will be called with each new audio buffer
+def audio_callback(indata, frames, time, status):
+    # Compute the CQT of the audio signal
+    # cqt = np.abs(librosa.cqt(indata[:, 0], sr=SAMPLE_RATE, hop_length=HOP_SIZE,
+    #                          n_bins=CQT_BINS, fmin=CQT_FMIN))
+    cqt =  np.abs(librosa.cqt(indata[:, 0], sr=SAMPLE_RATE, hop_length=HOP_SIZE, fmin=CQT_FMIN,
+                              n_bins=CQT_BINS, bins_per_octave=24))
 
 
-def print_notes(note_matrix):
-    prev_notes = [''] * note_matrix.shape[1]  # Initialize with empty strings
-    for i in range(note_matrix.shape[0]):
-        notes = []
-        for j in range(note_matrix.shape[1]):
-            note = note_matrix[i, j]
-            if note != '':
-                notes.append(note)
-        if notes != prev_notes:
-            print(f"Frame {i}: {' '.join(notes)}")
-            prev_notes = notes
+    # Compute the mean magnitude of each note across all frequency bins
+    note_mags = np.zeros(NOTE_RANGE)
+    for i in range(NOTE_RANGE):
+        note_mags[i] = cqt[i*7:(i+1)*7, :].mean()
 
+    # Detect the note with the highest magnitude
+    max_note = note_mags.argmax()
+    max_mag = note_mags[max_note]
 
-def get_notes(audio_file):
+    # Convert the note index to a MIDI note number and frequency
+    midi_note = max_note + 21  # MIDI note numbers start at 21 for A0
+    freq = librosa.midi_to_hz(midi_note)
 
-    # Load the audio file
-    # audio_path = 'path/to/audio/file.wav'
-    y, sr = librosa.load(audio_path)
+    # Add the detected note to the plot
+    note_trace.x.append(time.time())
+    note_trace.y.append(freq)
 
-    # Extract chroma features from the audio signal
-    chroma = librosa.feature.chroma_stft(y=y, sr=sr)
+    # Truncate the plot data to only show the most recent 5 seconds
+    if len(note_trace.x) > 0 and time.time() - note_trace.x[0] > 5:
+        note_trace.x.pop(0)
+        note_trace.y.pop(0)
 
-    # Convert chroma features to log frequencies
-    log_freqs = librosa.core.cqt_frequencies(
-        chroma.shape[0],
-        fmin=librosa.note_to_hz('A0'))[:, np.newaxis] * np.arange(
-            chroma.shape[1])
+    # Update the audio waveform plot
+    audio_trace.x = np.arange(len(indata)) / SAMPLE_RATE
+    audio_trace.y = indata[:, 0]
 
-    # Replace any zero values in the log_freqs array with a small positive value
-    log_freqs = np.where(log_freqs == 0, 1e-9, log_freqs)
+    # Update the plot layout
+    fig.update_layout(title='Live Note Detection',
+                      xaxis=dict(title='Time (s)'),
+                      yaxis=dict(title='Frequency (Hz)', range=[0, 400]))
 
-    # Convert log frequencies to MIDI numbers
-    midi = librosa.core.hz_to_midi(2**(np.log2(log_freqs / 440.0)))
+    # Update the plot
+    fig.update()
 
-    # Clip the MIDI values to the valid range (0-127)
-    midi = np.clip(midi, 0, 127)
+# Start the audio stream
+stream = sd.InputStream(channels=1, samplerate=SAMPLE_RATE, blocksize=FRAME_SIZE,
+                         callback=audio_callback)
+stream.start()
 
-    # Convert MIDI numbers to notes
-    notes = librosa.core.midi_to_note(midi)
-    return notes
-
-
-def get_notes2(audio_path):
-    y, sr = librosa.load(audio_path, sr=None, mono=True)
-
-    # Extract chroma features
-    hop_length = 512
-    chromagram = librosa.feature.chroma_cqt(y=y, sr=sr, hop_length=hop_length)
-
-    # Convert chroma features to notes
-    notes = []
-    for i in range(chromagram.shape[1]):
-        chroma_vector = chromagram[:, i]
-        # Find the index of the maximum value in the chroma vector
-        note_index = np.argmax(chroma_vector)
-        # Convert the index to a MIDI note number
-        note_midi = note_index + 24
-        # Convert the MIDI note number to a note name
-        note_name = librosa.midi_to_note(note_midi)
-        notes.append(note_name)
-
-    return notes
-
-
-audio_path = './twinkle-twinkle.wav'
-notes = get_notes2(audio_path)
-# Print the notes
-print(notes)
-print(len(notes))
+# Show the plot
+fig.show()
