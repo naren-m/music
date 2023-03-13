@@ -156,7 +156,7 @@ def audio_callback(indata, frames, sTime, status):
     closest_note, closest_freq = find_closest_note_freq(frequency)
     if closest_note:
         # Print the detected note and frequency
-        print(f"Detected note: {closest_note}, frequency: {closest_freq:.2f} Hz, Magnitude:{magnitude}, Time:{sTime}", flush=True)
+        print(f"Detected note: {closest_note}, frequency: {closest_freq:.2f} Hz, Magnitude:{magnitude}", flush=True)
 
 # Set the audio sampling rate
 device = None

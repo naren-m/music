@@ -1,102 +1,126 @@
-import numpy as np
-from scipy.io.wavfile import write
-
-samplerate = 44100  #Frequecy in Hz
+from play import MusicGenerator
 
 
-def get_wave(freq, duration=0.5):
-    '''
-    Function takes the "frequecy" and "time_duration" for a wave
-    as the input and returns a "numpy array" of values at all points
-    in time
-    '''
+NOTE_FREQS = {
+    # "C0": 16.35,
+    # "C#0": 17.32,
+    # "D0": 18.35,
+    # "Eb0": 19.45,
+    # "E0": 20.60,
+    # "F0": 21.83,
+    # "F#0": 23.12,
+    # "G0": 24.50,
+    # "G#0": 25.96,
+    # "A0": 27.50,
+    # "Bb0": 29.14,
+    # "B0": 30.87,
+    "C1": 32.70,
+    "C#1": 34.65,
+    "D1": 36.71,
+    "Eb1": 38.89,
+    "E1": 41.20,
+    "F1": 43.65,
+    "F#1": 46.25,
+    "G1": 49.00,
+    "G#1": 51.91,
+    "A1": 55.00,
+    "Bb1": 58.27,
+    "B1": 61.74,
+    "C2": 65.41,
+    "C#2": 69.30,
+    "D2": 73.42,
+    "Eb2": 77.78,
+    "E2": 82.41,
+    "F2": 87.31,
+    "F#2": 92.50,
+    "G2": 98.00,
+    "G#2": 103.8,
+    "A2": 110.0,
+    "Bb2": 116.5,
+    "B2": 123.5,
+    "C3": 130.8,
+    "C#3": 138.6,
+    "D3": 146.8,
+    "Eb3": 155.6,
+    "E3": 164.8,
+    "F3": 174.6,
+    "F#3": 185.0,
+    "G3": 196.0,
+    "G#3": 207.7,
+    "A3": 220.0,
+    "Bb3": 233.1,
+    "B3": 246.9,
+    "C4": 261.6,
+    "C#4": 277.2,
+    "D4": 293.7,
+    "Eb4": 311.1,
+    "E4": 329.6,
+    "F4": 349.2,
+    "F#4": 370.0,
+    "G4": 392.0,
+    "G#4": 415.3,
+    "A4": 440.0,
+    "Bb4": 466.2,
+    "B4": 493.9,
+    "C5": 523.3,
+    "C#5": 554.4,
+    "D5": 587.3,
+    "Eb5": 622.3,
+    "E5": 659.3,
+    "F5": 698.5,
+    "F#5": 740.0,
+    "G5": 784.0,
+    "G#5": 830.6,
+    "A5": 880.0,
+    "Bb5": 932.3,
+    "B5": 987.8,
+    "C6": 1047,
+    "C#6": 1109,
+    "D6": 1175,
+    "Eb6": 1245,
+    "E6": 1319,
+    "F6": 1397,
+    "F#6": 1480,
+    "G6": 1568,
+    "G#6": 1661,
+    "A6": 1760,
+    "Bb6": 1865,
+    "B6": 1976,
+    "C7": 2093,
+    "C#7": 2217,
+    "D7": 2349,
+    "Eb7": 2489,
+    "E7": 2637,
+    "F7": 2794,
+    "F#7": 2960,
+    "G7": 3136,
+    "G#7": 3322,
+    "A7": 3520,
+    "Bb7": 3729,
+    "B7": 3951,
+    "C8": 4186,
+    "C#8": 4435,
+    "D8": 4699,
+    "Eb8": 4978,
+    "E8": 5274,
+    "F8": 5588,
+    "F#8": 5920,
+    "G8": 6272,
+    "G#8": 6645,
+    "A8": 7040,
+    "Bb8": 7459,
+    "B8": 7902,
+}
 
-    amplitude = 4096
-    t = np.linspace(0, duration, int(samplerate * duration))
-    wave = amplitude * np.sin(2 * np.pi * freq * t)
 
-    return wave
+mg = MusicGenerator()
 
+# Generate a melody in the key of A minor using the provided notes and durations
+notes = ['A4', 'B4', 'C5', 'D5', 'E5', 'F5', 'G5', 'A5']
+durations = [0.5, 0.5, 0.5, 0.5, 1, 1, 0.5, 0.5]
 
-# To get a 1 second long wave of frequency 440Hz
-a_wave = get_wave(440, 1)
+for n in notes:
+    mg.play_sound(NOTE_FREQS[n]) # plays an A4 note
 
-#wave features
-print(len(a_wave))  # 44100
-print(np.max(a_wave))  # 4096
-print(np.min(a_wave))  # -4096
+mg.close()
 
-# import matplotlib.pyplot as plt
-
-# plt.plot(a_wave[0:int(44100/440)])
-# plt.xlabel('time')
-# plt.ylabel('Amplitude')
-# plt.show()
-
-# note_freq = base_freq * 2^(n/12)
-
-
-def get_piano_notes():
-    '''
-    Returns a dict object for all the piano
-    note's frequencies
-    '''
-    # White keys are in Uppercase and black keys (sharps) are in lowercase
-    octave = ['C', 'c', 'D', 'd', 'E', 'F', 'f', 'G', 'g', 'A', 'a', 'B']
-    # octave = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
-    base_freq = 261.63  #Frequency of Note C4
-
-    note_freqs = {
-        octave[i]: base_freq * pow(2, (i / 12))
-        for i in range(len(octave))
-    }
-    note_freqs[''] = 0.0  # silent note
-
-    return note_freqs
-
-
-def get_piano_notes():
-    # White keys are in Uppercase and black keys (sharps) are in lowercase
-    octave = ['C', 'c', 'D', 'd', 'E', 'F', 'f', 'G', 'g', 'A', 'a', 'B']
-    base_freq = 440  #Frequency of Note A4
-    keys = np.array([x + str(y) for y in range(0, 9) for x in octave])
-    # Trim to standard 88 keys
-    start = np.where(keys == 'A0')[0][0]
-    end = np.where(keys == 'C8')[0][0]
-    keys = keys[start:end + 1]
-
-    note_freqs = dict(
-        zip(keys,
-            [2**((n + 1 - 49) / 12) * base_freq for n in range(len(keys))]))
-    note_freqs[''] = 0.0  # stop
-    return note_freqs
-
-
-def get_sine_wave(frequency, duration, sample_rate=44100, amplitude=4096):
-    t = np.linspace(0, duration, int(sample_rate * duration))  # Time axis
-    wave = amplitude * np.sin(2 * np.pi * frequency * t)
-    return wave
-
-
-def get_song_data(music_notes):
-    '''
-    Function to concatenate all the waves (notes)
-    '''
-    frequency = 1
-    note_freqs = get_piano_notes()  # Function that we made earlier
-    sine_wave = get_sine_wave(frequency, duration=2, amplitude=2048)
-    song = [get_wave(note_freqs[note]) for note in music_notes.split('-')]
-    song = np.concatenate(song)
-    return song
-
-
-music_notes = 'C-C-G-G-A-A-G--F-F-E-E-D-D-C--G-G-F-F-E-E-D--G-G-F-F-E-E-D--C-C-G-G-A-A-G--F-F-E-E-D-D-C'
-data = get_song_data(music_notes)
-
-# data = data * (16300/np.max(data)) # Adjusting the Amplitude (Optional)
-
-# write('twinkle-twinkle.wav', samplerate, data.astype(np.int16))
-
-# Pure sine wave
-# sine_wave = get_sine_wave(frequency, duration=2, amplitude=2048)
-# wavfile.write('pure_c.wav', rate=44100, data=sine_wave.astype(np.int16))
