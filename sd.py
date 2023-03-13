@@ -14,18 +14,18 @@ import sounddevice as sd
 # 8	4186	4435	4699	4978	5274	5588	5920	6272	6645	7040	7459	7902
 
 NOTE_FREQS = {
-    "C0": 16.35,
-    "C#0": 17.32,
-    "D0": 18.35,
-    "Eb0": 19.45,
-    "E0": 20.60,
-    "F0": 21.83,
-    "F#0": 23.12,
-    "G0": 24.50,
-    "G#0": 25.96,
-    "A0": 27.50,
-    "Bb0": 29.14,
-    "B0": 30.87,
+    # "C0": 16.35,
+    # "C#0": 17.32,
+    # "D0": 18.35,
+    # "Eb0": 19.45,
+    # "E0": 20.60,
+    # "F0": 21.83,
+    # "F#0": 23.12,
+    # "G0": 24.50,
+    # "G#0": 25.96,
+    # "A0": 27.50,
+    # "Bb0": 29.14,
+    # "B0": 30.87,
     "C1": 32.70,
     "C#1": 34.65,
     "D1": 36.71,
@@ -132,28 +132,38 @@ def find_closest_note_freq(frequency):
     closest_note, closest_freq = min(distances.items(), key=lambda x: x[1])
     return closest_note, closest_freq
 
-# Define the audio processing callback function
-def audio_callback_working(indata, frames, time, status):
-    if status:
-        print(status, flush=True)
-    # Convert audio data to frequency domain using FFT
+
+def get_magnitude_frequency(indata, frames):
+        # Convert audio data to frequency domain using FFT
     magnitude = np.abs(np.fft.rfft(indata[:, 0]))
     # Find the frequency with maximum magnitude
     max_magnitude_idx = np.argmax(magnitude)
-    if magnitude[max_magnitude_idx] < 9:
-        return
     frequency = max_magnitude_idx * sample_rate / frames
 
-    if frequency < FREQ_TRESHOLD:
+    return magnitude[max_magnitude_idx], frequency
+
+# Define the audio processing callback function
+def audio_callback(indata, frames, sTime, status):
+    if status:
+        print(status, flush=True)
+
+    magnitude, frequency = get_magnitude_frequency(indata, frames)
+
+    if magnitude < 9 or frequency < FREQ_TRESHOLD:
         return
+
     # Find the closest note to the detected frequency
     closest_note, closest_freq = find_closest_note_freq(frequency)
-    # Print the detected note and frequency
-    print(f"Detected note: {closest_note}, frequency: {closest_freq:.2f} Hz, Magnitude:{magnitude[max_magnitude_idx]}", flush=True)
+    if closest_note:
+        # Print the detected note and frequency
+        print(f"Detected note: {closest_note}, frequency: {closest_freq:.2f} Hz, Magnitude:{magnitude}, Time:{sTime}", flush=True)
 
 # Set the audio sampling rate
+device = None
 sample_rate = 44100
-
+device_info = sd.query_devices(device, 'input')
+sample_rate = device_info['default_samplerate']
+print(sample_rate)
 # Start the audio stream and run the audio processing callback function
 with sd.InputStream(callback=audio_callback, blocksize=2048, samplerate=sample_rate):
     while True:

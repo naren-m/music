@@ -1,14 +1,6 @@
-import pyaudio
-import librosa
 import numpy as np
-from scipy.spatial.distance import euclidean
-import noisereduce as nr
 import sounddevice as sd
-
-# Define the audio parameters
-CHANNELS = 1
-RATE = 44100
-CHUNK_SIZE = 2048
+import librosa
 
 # Source: https://www.seventhstring.com/resources/notefrequencies.html
 # 	C	    C#	    D	    Eb	    E	    F	    F#	    G	    G#	    A	    Bb	    B
@@ -133,129 +125,38 @@ NOTE_FREQS = {
     "B8": 7902,
 }
 
-# Initialize the PyAudio object
-pa = pyaudio.PyAudio()
-
-# Define the frequency range to check around each note frequency
-FREQ_TOLERANCE = 1.5
-DISTANCE_TOLERANCE = 5
-
-# Open the audio stream
-stream = pa.open(format=pyaudio.paFloat32,
-                 channels=CHANNELS,
-                 rate=RATE,
-                 input=True,
-                 frames_per_buffer=CHUNK_SIZE)
-
+FREQ_TRESHOLD = 1
 
 # Define a function to find the closest note to a given frequency
-def find_closest_note_freq(frequency, dist_tol=DISTANCE_TOLERANCE):
+def find_closest_note_freq(frequency):
     distances = {n: abs(frequency - f) for n, f in NOTE_FREQS.items()}
-    closest_note, distance = min(distances.items(), key=lambda x: x[1])
-    closest_freq = NOTE_FREQS[closest_note]
-    if distance > dist_tol:
-        return None, None, None
-    return closest_note, closest_freq, distance
+    closest_note, closest_freq = min(distances.items(), key=lambda x: x[1])
+    return closest_note, closest_freq
+
+# Define the audio processing callback function
+def audio_callback(indata, frames, time, status):
+    if status:
+        print(status, flush=True)
+    # Convert audio data to frequency domain using FFT
+    magnitude = np.abs(librosa.stft(indata[:, 0]))
+    # Find the frequency with maximum magnitude
+    max_magnitude_idx = np.argmax(magnitude)
+    # if magnitude[max_magnitude_idx] < 9:
+    #     return
+    frequency = librosa.fft_frequencies(sr=sample_rate, n_fft=frames)[max_magnitude_idx]
+
+    if frequency < FREQ_TRESHOLD:
+        return
+    # Find the closest note to the detected frequency
+    closest_note, closest_freq = find_closest_note_freq(frequency)
+    # Print the detected note and frequency
+    print(f"Detected note: {closest_note}, frequency: {closest_freq:.2f} Hz, Magnitude:{magnitude[max_magnitude_idx]}", flush=True)
 
 
-def detect(audio):
-    # Compute the short-time Fourier transform (STFT) of the audio
-    stft = librosa.stft(audio, n_fft=1024, hop_length=512)
+# Set the audio sampling rate
+sample_rate = 44100
 
-    # Compute the magnitude spectrogram of the STFT
-    mag_spec = np.abs(stft)
-
-    # Find the index of the frequency bin with the maximum magnitude
-    max_idx = np.argmax(mag_spec)
-
-    # Compute the frequency of the note with the maximum magnitude
-    freq = librosa.fft_frequencies(sr=RATE, n_fft=1024)[max_idx]
-
-    # Determine which note corresponds to the frequency
-    closest_note, closest_freq, distance = find_closest_note_freq(freq)
-    if closest_note is not None:
-        print(
-            'Frequence heard: {freq}, closest: {closest_freq}, freq diff: {distance}. \nNote: {closest_note}'
-            .format(freq=freq,
-                    closest_freq=closest_freq,
-                    distance=distance,
-                    closest_note=closest_note))
-
-    note = None
-    for n, f in NOTE_FREQS.items():
-        if abs(freq - f) < FREQ_TOLERANCE:
-            note = n
-            break
-    if note is not None:
-        print("Regular", note)
-
-
-def detect_better(audio):
-    signal = librosa.to_mono(audio)
-
-    # Detect the piano notes in the audio signal
-    notes = librosa.onset.onset_detect(y=signal, sr=sr)
-
-    # Print the detected piano notes
-    print("Detected piano notes:")
-    for note in notes:
-        print(
-            librosa.hz_to_note(
-                librosa.fft_frequencies(n_fft=2048, sr=sr)[note]))
-
-    return notes
-
-
-def just_freq(audio):
-    # Compute the short-time Fourier transform (STFT) of the audio
-    stft = librosa.stft(audio, n_fft=1024, hop_length=512)
-    # Compute the magnitude spectrogram of the STFT
-    mag_spec = np.abs(stft)
-    max_magnitude_idx = np.argmax(mag_spec)
-
-    # Find the index of the frequency bin with the maximum magnitude
-    max_idx = np.argmax(mag_spec)
-    # Compute the frequency of the note with the maximum magnitude
-    freq = librosa.fft_frequencies(sr=RATE, n_fft=1024)[max_idx]
-    mag = max(mag_spec[max_magnitude_idx])
-
-    return freq, mag
-
-
-import numpy as np
-from scipy.signal import stft, istft
-
-
-def start():
-    # Continuously record and process the audio
+# Start the audio stream and run the audio processing callback function
+with sd.InputStream(callback=audio_callback, blocksize=2048, samplerate=sample_rate):
     while True:
-        # Read a chunk of audio data from the stream
-        data = stream.read(CHUNK_SIZE, exception_on_overflow=False)
-        # Convert the raw audio data to a numpy array
-        audio = np.frombuffer(data, dtype=np.float32)
-
-        f, m = just_freq(audio)
-        if m >1:
-            print(f, m)
-
-
-try:
-    start()
-except Exception as e:
-    print("Exception", e)
-except KeyboardInterrupt:
-    # Clean up the audio stream and PyAudio object
-    stream.stop_stream()
-    stream.close()
-    pa.terminate()
-
-
-def start1():
-    # Continuously record and process the audio
-    while True:
-        # Read a chunk of audio data from the stream
-        data = stream.read(CHUNK_SIZE, exception_on_overflow=False)
-
-        # Convert the raw audio data to a numpy array
-        audio = np.frombuffer(data, dtype=np.float32)
-        detect(audio)
+        pass
