@@ -137,7 +137,11 @@ class MusicGenerator:
         stream.close()
 
     def play_sequence(self, notes, durations):
-        for n in notes:
+        samples = []
+
+        for n, d in zip(notes, durations):
+            frequency = 440 * 2 ** ((NOTE_FREQS[n] - 69) / 12)
+
             self.play_sound(NOTE_FREQS[n]) # plays an A4 note
 
     def play_song(self, song_path):
@@ -154,7 +158,7 @@ class MusicGenerator:
         self.p.terminate()
 
 
-mg = MusicGenerator(sr=44100, duration=0.5)
+mg = MusicGenerator(sr=44100, duration=1)
 
 # Generate a melody in the key of A minor using the provided notes and durations
 notes = ['A4', 'B4', 'C5', 'D5', 'E5', 'F5', 'G5', 'A5']
