@@ -1,5 +1,7 @@
 import numpy as np
 import sounddevice as sd
+import os
+import sys
 
 # Source: https://www.seventhstring.com/resources/notefrequencies.html
 # 	C	    C#	    D	    Eb	    E	    F	    F#	    G	    G#	    A	    Bb	    B
@@ -126,6 +128,58 @@ NOTE_FREQS = {
 
 FREQ_TRESHOLD = 1
 
+def clear_screen():
+    """Clear the terminal screen"""
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+def create_waveform_visualization(magnitude_array, width=80):
+    """Create enhanced ASCII waveform with visual appeal"""
+    if len(magnitude_array) == 0:
+        return "─" * width
+    
+    # Normalize the magnitude array
+    max_mag = max(magnitude_array) if magnitude_array else 1
+    normalized = [int((mag / max_mag) * 10) for mag in magnitude_array[-width:]]
+    
+    # Enhanced ASCII bars with color-like representation
+    chars = [' ', '░', '▒', '▓', '▁', '▂', '▃', '▄', '▅', '▆', '█']
+    waveform = ''.join(chars[min(level, 10)] for level in normalized)
+    
+    # Pad if necessary
+    return waveform.ljust(width, '─')
+
+def calculate_confidence(frequency, closest_freq, magnitude):
+    """Calculate confidence based on frequency match and magnitude"""
+    freq_diff = abs(frequency - closest_freq)
+    freq_confidence = max(0, 100 - (freq_diff * 2))
+    mag_confidence = min(100, magnitude * 2)
+    return min(freq_confidence, mag_confidence)
+
+def format_data_row(note, frequency, confidence, volume):
+    """Format the main data row with consistent spacing"""
+    return f"♪ {note:>4} │ {frequency:>7.1f}Hz │ {confidence:>5.1f}% │ {volume:>5.1f}% ♪"
+
+def format_waveform_row(waveform):
+    """Format the waveform row with visual enhancements"""
+    return f"♫ {waveform} ♫"
+
+def get_confidence_indicator(confidence):
+    """Get visual confidence indicator"""
+    if confidence >= 90:
+        return "🟢"
+    elif confidence >= 70:
+        return "🟡" 
+    elif confidence >= 50:
+        return "🟠"
+    else:
+        return "🔴"
+
+def get_volume_bar(volume, width=20):
+    """Create a visual volume level bar"""
+    filled = int((volume / 100) * width)
+    bar = "█" * filled + "░" * (width - filled)
+    return f"[{bar}]"
+
 # Define a function to find the closest note to a given frequency
 def find_closest_note_freq(frequency):
     distances = {n: abs(frequency - f) for n, f in NOTE_FREQS.items()}
@@ -134,20 +188,32 @@ def find_closest_note_freq(frequency):
 
 
 def get_magnitude_frequency(indata, frames):
-        # Convert audio data to frequency domain using FFT
+    # Convert audio data to frequency domain using FFT
     magnitude = np.abs(np.fft.rfft(indata[:, 0]))
     # Find the frequency with maximum magnitude
     max_magnitude_idx = np.argmax(magnitude)
     frequency = max_magnitude_idx * sample_rate / frames
 
-    return magnitude[max_magnitude_idx], frequency
+    return magnitude[max_magnitude_idx], frequency, magnitude
+
+# Global variables for visualization
+magnitude_history = []
+last_display_time = 0
+display_interval = 0.1  # Update display every 100ms
 
 # Define the audio processing callback function
 def audio_callback(indata, frames, sTime, status):
+    global magnitude_history, last_display_time
+    
     if status:
         print(status, flush=True)
 
-    magnitude, frequency = get_magnitude_frequency(indata, frames)
+    magnitude, frequency, full_magnitude = get_magnitude_frequency(indata, frames)
+    
+    # Add magnitude to history for waveform
+    magnitude_history.append(magnitude)
+    if len(magnitude_history) > 100:  # Keep last 100 samples
+        magnitude_history.pop(0)
 
     if magnitude < 9 or frequency < FREQ_TRESHOLD:
         return
@@ -155,16 +221,87 @@ def audio_callback(indata, frames, sTime, status):
     # Find the closest note to the detected frequency
     closest_note, closest_freq = find_closest_note_freq(frequency)
     if closest_note:
-        # Print the detected note and frequency
-        print(f"Detected note: {closest_note}, frequency: {closest_freq:.2f} Hz, Magnitude:{magnitude}", flush=True)
+        # Calculate confidence and normalize volume
+        confidence = calculate_confidence(frequency, NOTE_FREQS[closest_note], magnitude)
+        volume = min(100, magnitude / 2)  # Normalize volume to 0-100
+        
+        # Only update display every display_interval seconds
+        current_time = sTime
+        if current_time - last_display_time >= display_interval:
+            # Clear screen and display enhanced UI
+            clear_screen()
+            
+            # Modern header with better typography
+            print("┌─────────────────────────────────────────────────────────────────────────────────┐")
+            print("│                          🎵 REAL-TIME NOTE DETECTION 🎵                          │")
+            print("└─────────────────────────────────────────────────────────────────────────────────┘")
+            print()
+            
+            # Main data row - clean and focused
+            confidence_indicator = get_confidence_indicator(confidence)
+            data_row = format_data_row(closest_note, frequency, confidence, volume)
+            print(f"  {confidence_indicator} {data_row}")
+            print()
+            
+            # Waveform visualization row
+            waveform = create_waveform_visualization(magnitude_history, 75)
+            waveform_row = format_waveform_row(waveform)
+            print(f"  {waveform_row}")
+            print()
+            
+            # Volume level bar
+            volume_bar = get_volume_bar(volume, 30)
+            print(f"  🔊 Volume: {volume_bar} {volume:>5.1f}%")
+            print()
+            
+            # Technical details (compact)
+            freq_diff = frequency - NOTE_FREQS[closest_note]
+            print("┌─────────────────────────────────────────────────────────────────────────────────┐")
+            print(f"│ Target: {NOTE_FREQS[closest_note]:>7.1f}Hz │ Detected: {frequency:>7.1f}Hz │ Difference: {freq_diff:>+6.1f}Hz │")
+            print("└─────────────────────────────────────────────────────────────────────────────────┘")
+            print()
+            print("  💡 Tip: Use a microphone close to your instrument for best results")
+            print("  ⌨️  Press Ctrl+C to stop")
+            
+            last_display_time = current_time
 
 # Set the audio sampling rate
 device = None
 sample_rate = 44100
 device_info = sd.query_devices(device, 'input')
 sample_rate = device_info['default_samplerate']
-print(sample_rate)
+
+print("┌─────────────────────────────────────────────────────────────────────────────────┐")
+print("│                      🎤 AUDIO SYSTEM INITIALIZATION 🎤                        │")
+print("└─────────────────────────────────────────────────────────────────────────────────┘")
+print()
+print(f"  ⚙️  Sample Rate: {sample_rate}Hz")
+print(f"  🎵 Note Range: C0 ({NOTE_FREQS['C0']}Hz) to B8 ({NOTE_FREQS['B8']}Hz)")
+print(f"  🔍 Detection Threshold: {FREQ_TRESHOLD}Hz")
+print()
+print("  🟢 System ready! Start playing music...")
+print()
+
 # Start the audio stream and run the audio processing callback function
-with sd.InputStream(callback=audio_callback, blocksize=2048, samplerate=sample_rate):
-    while True:
-        pass
+try:
+    with sd.InputStream(callback=audio_callback, blocksize=2048, samplerate=sample_rate):
+        while True:
+            pass
+except KeyboardInterrupt:
+    clear_screen()
+    print("┌─────────────────────────────────────────────────────────────────────────────────┐")
+    print("│                          🎵 SESSION COMPLETE 🎵                               │")
+    print("└─────────────────────────────────────────────────────────────────────────────────┘")
+    print()
+    print("  ✅ Note detection stopped successfully")
+    print("  🙏 Thank you for using the note detector!")
+    print()
+except Exception as e:
+    clear_screen()
+    print("┌─────────────────────────────────────────────────────────────────────────────────┐")
+    print("│                            ❌ ERROR OCCURRED ❌                               │")
+    print("└─────────────────────────────────────────────────────────────────────────────────┘")
+    print()
+    print(f"  🔧 Error details: {e}")
+    print("  💡 Try checking your microphone connection")
+    print()

@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎵 Carnatic Music Shruti Detection</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            background: linear-gradient(135deg, #2d3436 0%, #636e72 50%, #74b9ff 100%);
+            color: #ddd;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+            font-style: italic;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: rgba(45, 52, 54, 0.8);
+            border: 2px solid rgba(116, 185, 255, 0.4);
+            color: #e1e5e9;
+            padding: 15px 30px;
+            margin: 5px;
+            border-radius: 15px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+
+        button:hover {
+            background: rgba(116, 185, 255, 0.2);
+            border-color: rgba(116, 185, 255, 0.6);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+        }
+
+        button.active {
+            background: rgba(99, 110, 114, 0.6);
+            border-color: rgba(116, 185, 255, 0.8);
+            color: #ffffff;
+        }
+
+        .frequency-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px;
+        }
+
+        .frequency-control label {
+            font-size: 0.9rem;
+            min-width: 60px;
+        }
+
+        .frequency-control input {
+            background: rgba(45, 52, 54, 0.7);
+            border: 1px solid rgba(116, 185, 255, 0.3);
+            color: #e1e5e9;
+            padding: 8px 12px;
+            border-radius: 10px;
+            width: 80px;
+            text-align: center;
+        }
+
+        .frequency-control input::placeholder {
+            color: rgba(225, 229, 233, 0.6);
+        }
+
+        .status {
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+
+        .status.connected { background: rgba(99, 110, 114, 0.4); color: #81ecec; }
+        .status.detecting { background: rgba(116, 185, 255, 0.3); color: #74b9ff; }
+        .status.stopped { background: rgba(99, 110, 114, 0.3); color: #fab1a0; }
+
+        .detection-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .shruti-display {
+            background: rgba(45, 52, 54, 0.6);
+            backdrop-filter: blur(5px);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            border: 1px solid rgba(116, 185, 255, 0.2);
+        }
+
+        .current-shruti {
+            font-size: 3.5rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.4);
+            color: #81ecec;
+        }
+
+        .shruti-western {
+            font-size: 1.5rem;
+            opacity: 0.8;
+            margin-bottom: 10px;
+        }
+
+        .shruti-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .info-item {
+            background: rgba(45, 52, 54, 0.4);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(116, 185, 255, 0.2);
+        }
+
+        .info-label {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .raga-context {
+            background: rgba(45, 52, 54, 0.6);
+            backdrop-filter: blur(5px);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(116, 185, 255, 0.2);
+        }
+
+        .raga-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #fab1a0;
+            margin-bottom: 10px;
+        }
+
+        .raga-notation {
+            font-size: 1.1rem;
+            font-family: 'Courier New', monospace;
+            background: rgba(45, 52, 54, 0.7);
+            padding: 10px;
+            border-radius: 8px;
+            margin: 5px 0;
+            border: 1px solid rgba(116, 185, 255, 0.1);
+        }
+
+        .shruti-scale {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .shruti-note {
+            width: 60px;
+            height: 80px;
+            border: 2px solid rgba(116, 185, 255, 0.3);
+            border-radius: 6px;
+            margin: 2px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 5px;
+            font-size: 0.7rem;
+            transition: all 0.3s ease;
+            background: rgba(45, 52, 54, 0.5);
+        }
+
+        .shruti-note.active {
+            background: #81ecec !important;
+            color: #2d3436 !important;
+            border-color: #81ecec !important;
+            transform: scale(1.05);
+            box-shadow: 0 3px 12px rgba(129, 236, 236, 0.4);
+        }
+
+        .shruti-name {
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+
+        .shruti-western-mini {
+            font-size: 0.6rem;
+            opacity: 0.8;
+        }
+
+        .history {
+            background: rgba(45, 52, 54, 0.6);
+            backdrop-filter: blur(5px);
+            border-radius: 12px;
+            padding: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid rgba(116, 185, 255, 0.2);
+        }
+
+        .history h3 {
+            margin-bottom: 15px;
+            color: #81ecec;
+        }
+
+        .history-item {
+            background: rgba(45, 52, 54, 0.4);
+            padding: 8px 12px;
+            margin: 3px 0;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid rgba(116, 185, 255, 0.1);
+            font-size: 0.9rem;
+        }
+
+        .analytics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .analytics-item {
+            background: rgba(45, 52, 54, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid rgba(116, 185, 255, 0.2);
+        }
+
+        .analytics-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #74b9ff;
+        }
+
+        .analytics-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.02); opacity: 0.9; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .detecting .current-shruti {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        /* Dark mode optimizations */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: linear-gradient(135deg, #1a1a1a 0%, #2d3436 50%, #636e72 100%);
+            }
+        }
+
+        /* Reduced motion for accessibility */
+        @media (prefers-reduced-motion: reduce) {
+            .detecting .current-shruti {
+                animation: none;
+            }
+            button:hover {
+                transform: none;
+            }
+            .shruti-note.active {
+                transform: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 2.2rem; }
+            .current-shruti { font-size: 2.8rem; }
+            .detection-display { grid-template-columns: 1fr; }
+            .controls { flex-direction: column; }
+            .shruti-note { width: 45px; height: 60px; font-size: 0.6rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 कर्णाटक संगीत श्रुति</h1>
+        <div class="subtitle">Carnatic Music - 22 Shruti Detection System</div>
+        
+        <div class="status" id="status">Connecting...</div>
+        
+        <div class="controls">
+            <div class="frequency-control">
+                <label>Sa (Hz):</label>
+                <input type="number" id="baseFreq" value="261.63" min="100" max="500" step="0.01">
+                <button onclick="updateBaseFrequency()">Tune Sa</button>
+            </div>
+            <button id="startBtn" onclick="startDetection()">Start Detection</button>
+            <button id="stopBtn" onclick="stopDetection()">Stop Detection</button>
+        </div>
+
+        <div class="detection-display">
+            <div class="shruti-display" id="shrutiDisplay">
+                <div class="current-shruti" id="currentShruti">♪ सा ♪</div>
+                <div class="shruti-western" id="shrutiWestern">Sa (C)</div>
+                
+                <div class="shruti-info">
+                    <div class="info-item">
+                        <div class="info-label">Frequency</div>
+                        <div class="info-value" id="frequency">261.63 Hz</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Detected</div>
+                        <div class="info-value" id="detectedFreq">-- Hz</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Confidence</div>
+                        <div class="info-value" id="confidence">--</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Cents</div>
+                        <div class="info-value" id="centValue">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="raga-context" id="ragaContext">
+                <div class="raga-name" id="ragaName">राग संदर्भ</div>
+                <div class="raga-notation" id="ragaAroha">Aroha: S R G M P D N Ṡ</div>
+                <div class="raga-notation" id="ragaAvaroha">Avaroha: Ṡ N D P M G R S</div>
+            </div>
+        </div>
+
+        <div class="shruti-scale" id="shrutiScale">
+            <!-- Shruti scale will be generated by JavaScript -->
+        </div>
+
+        <div class="analytics">
+            <div class="analytics-item">
+                <div class="analytics-value" id="totalDetections">0</div>
+                <div class="analytics-label">Total Detections</div>
+            </div>
+            <div class="analytics-item">
+                <div class="analytics-value" id="avgConfidence">0%</div>
+                <div class="analytics-label">Avg Confidence</div>
+            </div>
+            <div class="analytics-item">
+                <div class="analytics-value" id="uniqueShrutis">0</div>
+                <div class="analytics-label">Unique Shrutis</div>
+            </div>
+            <div class="analytics-item">
+                <div class="analytics-value" id="sessionTime">0:00</div>
+                <div class="analytics-label">Session Time</div>
+            </div>
+        </div>
+
+        <div class="history">
+            <h3>Recent Shruti Detections</h3>
+            <div id="historyList"></div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let isDetecting = false;
+        let detectionHistory = [];
+        let currentActiveShruti = null;
+        let sessionStartTime = null;
+        let uniqueShrutis = new Set();
+
+        // Shruti definitions with Devanagari names
+        const shrutis = [
+            {name: 'Shadja', devanagari: 'षड्ज', western: 'Sa (C)', short: 'S'},
+            {name: 'Suddha Ri', devanagari: 'शुद्ध रि', western: 'R₁', short: 'R₁'},
+            {name: 'Chatussruti Ri', devanagari: 'चतुःश्रुति रि', western: 'R₂', short: 'R₂'},
+            {name: 'Shatsruti Ri', devanagari: 'षट्श्रुति रि', western: 'R₃', short: 'R₃'},
+            {name: 'Suddha Ga', devanagari: 'शुद्ध ग', western: 'G₁', short: 'G₁'},
+            {name: 'Sadharana Ga', devanagari: 'साधारण ग', western: 'G₂', short: 'G₂'},
+            {name: 'Antara Ga', devanagari: 'अन्तर ग', western: 'G₃', short: 'G₃'},
+            {name: 'Suddha Ma', devanagari: 'शुद्ध म', western: 'M₁', short: 'M₁'},
+            {name: 'Prati Ma', devanagari: 'प्रति म', western: 'M₂', short: 'M₂'},
+            {name: 'Panchama', devanagari: 'पञ्चम', western: 'Pa (G)', short: 'P'},
+            {name: 'Suddha Dha', devanagari: 'शुद्ध ध', western: 'D₁', short: 'D₁'},
+            {name: 'Chatussruti Dha', devanagari: 'चतुःश्रुति ध', western: 'D₂', short: 'D₂'},
+            {name: 'Shatsruti Dha', devanagari: 'षट्श्रुति ध', western: 'D₃', short: 'D₃'},
+            {name: 'Suddha Ni', devanagari: 'शुद्ध नि', western: 'N₁', short: 'N₁'},
+            {name: 'Kaisika Ni', devanagari: 'कैशिकी नि', western: 'N₂', short: 'N₂'},
+            {name: 'Kakali Ni', devanagari: 'काकली नि', western: 'N₃', short: 'N₃'}
+        ];
+
+        // Raga information
+        const ragaInfo = {
+            'Sankarabharanam': {
+                aroha: 'S R₂ G₃ M₁ P D₂ N₃ Ṡ',
+                avaroha: 'Ṡ N₃ D₂ P M₁ G₃ R₂ S',
+                devanagari: 'शंकराभरणम्'
+            },
+            'Kharaharapriya': {
+                aroha: 'S R₂ G₂ M₁ P D₂ N₂ Ṡ',
+                avaroha: 'Ṡ N₂ D₂ P M₁ G₂ R₂ S',
+                devanagari: 'खरहरप्रिया'
+            },
+            'Mayamalavagowla': {
+                aroha: 'S R₁ G₃ M₁ P D₁ N₃ Ṡ',
+                avaroha: 'Ṡ N₃ D₁ P M₁ G₃ R₁ S',
+                devanagari: 'मायामालवगौळा'
+            },
+            'Mohanam': {
+                aroha: 'S R₂ G₃ P D₂ Ṡ',
+                avaroha: 'Ṡ D₂ P G₃ R₂ S',
+                devanagari: 'मोहनम्'
+            },
+            'Kalyani': {
+                aroha: 'S R₂ G₃ M₂ P D₂ N₃ Ṡ',
+                avaroha: 'Ṡ N₃ D₂ P M₂ G₃ R₂ S',
+                devanagari: 'कल्याणी'
+            }
+        };
+
+        function createShrutiScale() {
+            const scaleContainer = document.getElementById('shrutiScale');
+            scaleContainer.innerHTML = '';
+            
+            shrutis.forEach(shruti => {
+                const shrutiElement = document.createElement('div');
+                shrutiElement.className = 'shruti-note';
+                shrutiElement.id = 'shruti-' + shruti.name.replace(/\s+/g, '-');
+                shrutiElement.innerHTML = `
+                    <div class="shruti-name">${shruti.short}</div>
+                    <div class="shruti-western-mini">${shruti.western}</div>
+                `;
+                scaleContainer.appendChild(shrutiElement);
+            });
+        }
+
+        function highlightShruti(shrutiName) {
+            // Remove previous highlight
+            if (currentActiveShruti) {
+                currentActiveShruti.classList.remove('active');
+            }
+            
+            // Highlight current shruti
+            const shrutiId = 'shruti-' + shrutiName.replace(/\s+/g, '-');
+            const shruti = document.getElementById(shrutiId);
+            if (shruti) {
+                shruti.classList.add('active');
+                currentActiveShruti = shruti;
+                
+                // Remove highlight after 2 seconds
+                setTimeout(() => {
+                    if (currentActiveShruti === shruti) {
+                        shruti.classList.remove('active');
+                        currentActiveShruti = null;
+                    }
+                }, 2000);
+            }
+        }
+
+        function updateBaseFrequency() {
+            const frequency = parseFloat(document.getElementById('baseFreq').value);
+            if (frequency >= 100 && frequency <= 500) {
+                socket.emit('set_base_frequency', {frequency: frequency});
+            } else {
+                alert('Please enter a frequency between 100-500 Hz');
+            }
+        }
+
+        function startDetection() {
+            const baseFreq = parseFloat(document.getElementById('baseFreq').value);
+            socket.emit('start_detection', {base_frequency: baseFreq});
+            sessionStartTime = Date.now();
+        }
+
+        function stopDetection() {
+            socket.emit('stop_detection');
+        }
+
+        function updateStatus(className, text) {
+            const statusEl = document.getElementById('status');
+            statusEl.className = 'status ' + className;
+            statusEl.textContent = text;
+        }
+
+        function updateShrutiDisplay(data) {
+            // Find shruti info
+            const shrutiInfo = shrutis.find(s => s.name === data.note) || 
+                              {devanagari: data.note, western: data.western_equiv || data.note, short: data.note};
+
+            document.getElementById('currentShruti').textContent = shrutiInfo.devanagari;
+            document.getElementById('shrutiWestern').textContent = `${shrutiInfo.western} (${data.note})`;
+            document.getElementById('frequency').textContent = data.frequency + ' Hz';
+            document.getElementById('detectedFreq').textContent = data.detected_frequency + ' Hz';
+            document.getElementById('confidence').textContent = Math.round(data.confidence * 100) + '%';
+            document.getElementById('centValue').textContent = data.cent_value || '--';
+
+            // Update raga context
+            if (data.raga_context) {
+                const raga = ragaInfo[data.raga_context];
+                if (raga) {
+                    document.getElementById('ragaName').textContent = `${raga.devanagari} (${data.raga_context})`;
+                    document.getElementById('ragaAroha').textContent = `Aroha: ${raga.aroha}`;
+                    document.getElementById('ragaAvaroha').textContent = `Avaroha: ${raga.avaroha}`;
+                } else {
+                    document.getElementById('ragaName').textContent = data.raga_context;
+                }
+            }
+        }
+
+        function updateAnalytics() {
+            document.getElementById('totalDetections').textContent = detectionHistory.length;
+            
+            if (detectionHistory.length > 0) {
+                const avgConf = detectionHistory.reduce((sum, d) => sum + d.confidence, 0) / detectionHistory.length;
+                document.getElementById('avgConfidence').textContent = Math.round(avgConf * 100) + '%';
+            }
+            
+            document.getElementById('uniqueShrutis').textContent = uniqueShrutis.size;
+            
+            if (sessionStartTime) {
+                const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                document.getElementById('sessionTime').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }
+
+        function showDockerLimitationHelp(message) {
+            // Remove any existing help message
+            const existingHelp = document.querySelector('.docker-help');
+            if (existingHelp) {
+                existingHelp.remove();
+            }
+            
+            // Show helpful message for Docker limitation
+            if (message.includes('Docker') || message.includes('microphone') || message.includes('standalone')) {
+                const helpDiv = document.createElement('div');
+                helpDiv.className = 'docker-help';
+                helpDiv.innerHTML = `
+                    <div style="background: rgba(45, 52, 54, 0.9); padding: 25px; border-radius: 12px; margin: 20px; border: 2px solid #fab1a0; box-shadow: 0 5px 20px rgba(0,0,0,0.3);">
+                        <h3 style="color: #fab1a0; margin-bottom: 15px; text-align: center;">🎤 Microphone Access Limitation</h3>
+                        <p style="margin-bottom: 10px; line-height: 1.5;">Docker containers cannot access the microphone on macOS due to security restrictions.</p>
+                        <div style="background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 3px solid #81ecec;">
+                            <p style="margin-bottom: 8px;"><strong>✅ Solution - Run the standalone script:</strong></p>
+                            <code style="background: rgba(0,0,0,0.6); padding: 8px 12px; border-radius: 5px; display: block; margin: 8px 0; font-family: 'Courier New', monospace; color: #81ecec;">
+                                cd /Users/narenmudivarthy/Projects/music<br>
+                                python3 standalone_carnatic.py
+                            </code>
+                        </div>
+                        <div style="font-size: 0.9em; opacity: 0.9; background: rgba(116, 185, 255, 0.1); padding: 12px; border-radius: 8px;">
+                            <p><strong>🎵 Features of the standalone script:</strong></p>
+                            <ul style="margin: 8px 0 0 20px; line-height: 1.4;">
+                                <li>Direct microphone access (no Docker limitations)</li>
+                                <li>Enhanced terminal interface with Devanagari display</li>
+                                <li>Session recording and export to JSON</li>
+                                <li>Real-time raga context analysis</li>
+                                <li>Professional-grade detection accuracy</li>
+                            </ul>
+                        </div>
+                        <div style="text-align: center; margin-top: 15px;">
+                            <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                                style="background: rgba(116, 185, 255, 0.3); border: 1px solid #74b9ff; color: #e1e5e9; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 0.9em;">
+                                ✕ Close
+                            </button>
+                        </div>
+                    </div>
+                `;
+                document.querySelector('.container').appendChild(helpDiv);
+            }
+        }
+
+        function addToHistory(data) {
+            detectionHistory.unshift(data);
+            uniqueShrutis.add(data.note);
+            
+            if (detectionHistory.length > 20) {
+                detectionHistory.pop();
+            }
+            
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = '';
+            
+            detectionHistory.slice(0, 10).forEach(detection => {
+                const item = document.createElement('div');
+                item.className = 'history-item';
+                const shrutiInfo = shrutis.find(s => s.name === detection.note) || {short: detection.note};
+                item.innerHTML = `
+                    <span>${shrutiInfo.short || detection.note}</span>
+                    <span>${detection.frequency} Hz</span>
+                    <span>${Math.round(detection.confidence * 100)}%</span>
+                `;
+                historyList.appendChild(item);
+            });
+            
+            updateAnalytics();
+        }
+
+        // Socket event listeners
+        socket.on('connect', function() {
+            updateStatus('connected', 'Connected to Carnatic System');
+        });
+
+        socket.on('disconnect', function() {
+            updateStatus('stopped', 'Disconnected');
+        });
+
+        socket.on('detection_status', function(data) {
+            if (data.status === 'started') {
+                isDetecting = true;
+                updateStatus('detecting', 'Detecting Shrutis...');
+                document.getElementById('shrutiDisplay').classList.add('detecting');
+                document.getElementById('startBtn').classList.add('active');
+                document.getElementById('stopBtn').classList.remove('active');
+            } else if (data.status === 'stopped') {
+                isDetecting = false;
+                updateStatus('stopped', 'Detection Stopped');
+                document.getElementById('shrutiDisplay').classList.remove('detecting');
+                document.getElementById('startBtn').classList.remove('active');
+                document.getElementById('stopBtn').classList.add('active');
+            } else if (data.status === 'connected') {
+                updateStatus('connected', 'Carnatic System Ready');
+            } else if (data.status === 'error') {
+                isDetecting = false;
+                updateStatus('stopped', 'Error: ' + data.message);
+                document.getElementById('shrutiDisplay').classList.remove('detecting');
+                document.getElementById('startBtn').classList.remove('active');
+                document.getElementById('stopBtn').classList.remove('active');
+                
+                // Show Docker limitation help
+                showDockerLimitationHelp(data.message);
+            }
+        });
+
+        socket.on('note_detected', function(data) {
+            updateShrutiDisplay(data);
+            addToHistory(data);
+            highlightShruti(data.note);
+        });
+
+        socket.on('base_frequency_updated', function(data) {
+            document.getElementById('baseFreq').value = data.base_frequency;
+            updateStatus('connected', data.message);
+        });
+
+        socket.on('error', function(data) {
+            updateStatus('stopped', 'Error: ' + data.message);
+            
+            // Show helpful message for Docker limitation
+            if (data.message.includes('Docker') || data.message.includes('microphone')) {
+                const helpDiv = document.createElement('div');
+                helpDiv.innerHTML = `
+                    <div style="background: rgba(45, 52, 54, 0.8); padding: 20px; border-radius: 10px; margin: 20px; border: 2px solid #fab1a0;">
+                        <h3 style="color: #fab1a0; margin-bottom: 10px;">🎤 Microphone Access Issue</h3>
+                        <p>Docker containers cannot access the microphone on macOS.</p>
+                        <p><strong>Solution:</strong> Run the standalone Python script for full functionality:</p>
+                        <code style="background: rgba(0,0,0,0.3); padding: 5px 10px; border-radius: 5px; display: block; margin: 10px 0;">
+                            python3 standalone_carnatic.py
+                        </code>
+                        <p style="font-size: 0.9em; opacity: 0.8;">This script provides direct microphone access and enhanced terminal interface.</p>
+                    </div>
+                `;
+                document.querySelector('.container').appendChild(helpDiv);
+            }
+        });
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            createShrutiScale();
+            
+            // Update session time every second
+            setInterval(updateAnalytics, 1000);
+        });
+
+        // Handle microphone permissions
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(function(stream) {
+                    console.log('Microphone access granted for Carnatic detection');
+                    stream.getTracks().forEach(track => track.stop());
+                })
+                .catch(function(err) {
+                    console.log('Microphone access denied:', err);
+                    alert('माइक्रोफोन पहुंच आवश्यक है। कृपया अनुमति दें।\nMicrophone access required for shruti detection.');
+                });
+        }
+    </script>
+</body>
+</html>

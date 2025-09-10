@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carnatic Swara Detection</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .controls {
+            margin-bottom: 40px;
+        }
+
+        button {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 15px 30px;
+            margin: 0 10px;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        button:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.active {
+            background: rgba(76, 175, 80, 0.4);
+            border-color: rgba(76, 175, 80, 0.6);
+        }
+
+        .note-display {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.2);
+            min-height: 500px;
+            width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .note-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1;
+            justify-content: flex-start;
+        }
+
+        .current-note {
+            font-size: 4rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            color: #FFD700;
+            min-height: 4.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .swara-display {
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+            color: #E8F5E8;
+            min-height: 3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-style: italic;
+        }
+
+        .note-info {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+            min-height: 80px;
+        }
+
+        .info-item {
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+            min-height: 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .info-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+        }
+
+        .status {
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+
+        .status.connected {
+            background: rgba(76, 175, 80, 0.3);
+            color: #4CAF50;
+        }
+
+        .status.detecting {
+            background: rgba(255, 193, 7, 0.3);
+            color: #FFC107;
+        }
+
+        .status.stopped {
+            background: rgba(244, 67, 54, 0.3);
+            color: #F44336;
+        }
+
+        .status.error {
+            background: rgba(244, 67, 54, 0.5);
+            color: #FFCDD2;
+        }
+
+        .history {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+            min-height: 120px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .history h3 {
+            margin-bottom: 15px;
+            color: #FFD700;
+            font-size: 1.2rem;
+        }
+
+        .history-notes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            justify-content: flex-start;
+            align-items: center;
+            min-height: 60px;
+            padding: 5px 0;
+        }
+
+        .note-chip {
+            background: rgba(255,255,255,0.08);
+            color: rgba(255,255,255,0.9);
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 1rem;
+            border: 1px solid rgba(255,255,255,0.15);
+            backdrop-filter: blur(5px);
+            min-width: 60px;
+            max-width: 80px;
+            text-align: center;
+            display: inline-block;
+            box-sizing: border-box;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .note-chip:hover {
+            background: rgba(255,255,255,0.12);
+            border-color: rgba(255,255,255,0.25);
+        }
+
+        .note-chip.sharp {
+            background: rgba(180,180,180,0.1);
+            border-color: rgba(180,180,180,0.2);
+        }
+        
+        .swara-text {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.7);
+            font-style: normal;
+            font-weight: 400;
+        }
+
+        .empty-history {
+            color: rgba(255,255,255,0.6);
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
+        }
+
+
+
+
+        .piano-keys {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            min-height: 140px;
+            width: 100%;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        .key {
+            width: 40px;
+            height: 120px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 5px;
+            margin: 2px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding: 5px;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+
+        .key.white {
+            background: rgba(255,255,255,0.9);
+            color: #333;
+        }
+
+        .key.black {
+            background: rgba(0,0,0,0.8);
+            color: white;
+            width: 30px;
+            height: 80px;
+            margin: 2px -15px;
+            z-index: 2;
+        }
+
+        .key.active {
+            background: #FFD700 !important;
+            color: #333 !important;
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(255,215,0,0.5);
+        }
+
+        .debug-info {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            text-align: left;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .current-note {
+                font-size: 3rem;
+                min-height: 3.6rem;
+            }
+            
+            .swara-display {
+                font-size: 2rem;
+                min-height: 2.4rem;
+            }
+            
+            .note-info {
+                grid-template-columns: 1fr;
+            }
+            
+            .key {
+                width: 30px;
+                height: 100px;
+            }
+            
+            .key.black {
+                width: 22px;
+                height: 70px;
+                margin: 2px -11px;
+            }
+            
+            .note-chip {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+            
+            .history-notes {
+                gap: 4px;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Carnatic Swara Detection</h1>
+        
+        <div class="status" id="status">Click Start to begin</div>
+        
+        <div class="controls">
+            <button id="startBtn" onclick="startDetection()">Start Detection</button>
+            <button id="stopBtn" onclick="stopDetection()">Stop Detection</button>
+            
+            <div style="margin-top: 15px;">
+                <label for="tonicSelect" style="margin-right: 10px; color: #FFD700;">Sa (Tonic):</label>
+                <select id="tonicSelect" onchange="changeTonic()" style="padding: 8px; border-radius: 5px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.3);">
+                    <option value="C4">C</option>
+                    <option value="C#4">C#</option>
+                    <option value="D4">D</option>
+                    <option value="D#4">D#</option>
+                    <option value="E4">E</option>
+                    <option value="F4">F</option>
+                    <option value="F#4">F#</option>
+                    <option value="G4">G</option>
+                    <option value="G#4">G#</option>
+                    <option value="A4">A</option>
+                    <option value="A#4">A#</option>
+                    <option value="B4">B</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="note-display" id="noteDisplay">
+            <div class="note-content">
+                <div class="current-note" id="currentNote">♪ Ready ♪</div>
+                <div class="swara-display" id="swaraDisplay">🎵 Swara 🎵</div>
+                
+                <div class="piano-keys" id="pianoKeys">
+                    <!-- Piano keys will be generated by JavaScript -->
+                </div>
+            </div>
+            
+            <div class="note-info">
+                <div class="info-item">
+                    <div class="info-label">Note</div>
+                    <div class="info-value" id="detectedNote">--</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Frequency</div>
+                    <div class="info-value" id="frequency">-- Hz</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Confidence</div>
+                    <div class="info-value" id="confidence">--%</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Volume</div>
+                    <div class="info-value" id="volume">--</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Swara</div>
+                    <div class="info-value" id="swaraName">--</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="history">
+            <h3>🎼 Musical Phrase</h3>
+            <div class="history-notes" id="historyList">
+                <div class="empty-history">Play some notes to see them here...</div>
+            </div>
+        </div>
+
+        <div class="debug-info" id="debugInfo">
+            Audio Status: Not started<br>
+            Sample Rate: --<br>
+            Buffer Size: --
+        </div>
+    </div>
+
+    <script>
+        // Note frequencies (A4 = 440Hz)
+        const NOTE_FREQS = {
+            "C0": 16.35, "C#0": 17.32, "D0": 18.35, "Eb0": 19.45, "E0": 20.60, "F0": 21.83,
+            "F#0": 23.12, "G0": 24.50, "G#0": 25.96, "A0": 27.50, "Bb0": 29.14, "B0": 30.87,
+            "C1": 32.70, "C#1": 34.65, "D1": 36.71, "Eb1": 38.89, "E1": 41.20, "F1": 43.65,
+            "F#1": 46.25, "G1": 49.00, "G#1": 51.91, "A1": 55.00, "Bb1": 58.27, "B1": 61.74,
+            "C2": 65.41, "C#2": 69.30, "D2": 73.42, "Eb2": 77.78, "E2": 82.41, "F2": 87.31,
+            "F#2": 92.50, "G2": 98.00, "G#2": 103.8, "A2": 110.0, "Bb2": 116.5, "B2": 123.5,
+            "C3": 130.8, "C#3": 138.6, "D3": 146.8, "Eb3": 155.6, "E3": 164.8, "F3": 174.6,
+            "F#3": 185.0, "G3": 196.0, "G#3": 207.7, "A3": 220.0, "Bb3": 233.1, "B3": 246.9,
+            "C4": 261.6, "C#4": 277.2, "D4": 293.7, "Eb4": 311.1, "E4": 329.6, "F4": 349.2,
+            "F#4": 370.0, "G4": 392.0, "G#4": 415.3, "A4": 440.0, "Bb4": 466.2, "B4": 493.9,
+            "C5": 523.3, "C#5": 554.4, "D5": 587.3, "Eb5": 622.3, "E5": 659.3, "F5": 698.5,
+            "F#5": 740.0, "G5": 784.0, "G#5": 830.6, "A5": 880.0, "Bb5": 932.3, "B5": 987.8,
+            "C6": 1047, "C#6": 1109, "D6": 1175, "Eb6": 1245, "E6": 1319, "F6": 1397,
+            "F#6": 1480, "G6": 1568, "G#6": 1661, "A6": 1760, "Bb6": 1865, "B6": 1976,
+        };
+
+        // Carnatic Swara Mapping (relative to tonic Sa)
+        // Default: C as Sa (can be changed by user)
+        let tonicNote = 'C4'; // Default tonic
+        
+        const CARNATIC_SWARAS = {
+            // Swara patterns based on semitone intervals from Sa
+            0: { swara: 'Sa', full: 'Shadja', variants: ['Sa'] },
+            1: { swara: 'Ri₁', full: 'Shuddha Rishabha', variants: ['Ri₁', 'R₁'] },
+            2: { swara: 'Ri₂/Ga₁', full: 'Chatushruti Rishabha / Shuddha Gandhara', variants: ['Ri₂', 'R₂', 'Ga₁', 'G₁'] },
+            3: { swara: 'Ri₃/Ga₂', full: 'Shatshruti Rishabha / Sadharana Gandhara', variants: ['Ri₃', 'R₃', 'Ga₂', 'G₂'] },
+            4: { swara: 'Ga₃', full: 'Antara Gandhara', variants: ['Ga₃', 'G₃'] },
+            5: { swara: 'Ma₁', full: 'Shuddha Madhyama', variants: ['Ma₁', 'M₁'] },
+            6: { swara: 'Ma₂', full: 'Prati Madhyama', variants: ['Ma₂', 'M₂'] },
+            7: { swara: 'Pa', full: 'Panchama', variants: ['Pa'] },
+            8: { swara: 'Dha₁', full: 'Shuddha Dhaivata', variants: ['Dha₁', 'D₁'] },
+            9: { swara: 'Dha₂/Ni₁', full: 'Chatushruti Dhaivata / Shuddha Nishada', variants: ['Dha₂', 'D₂', 'Ni₁', 'N₁'] },
+            10: { swara: 'Dha₃/Ni₂', full: 'Shatshruti Dhaivata / Kaisiki Nishada', variants: ['Dha₃', 'D₃', 'Ni₂', 'N₂'] },
+            11: { swara: 'Ni₃', full: 'Kakali Nishada', variants: ['Ni₃', 'N₃'] }
+        };
+
+        function getTonicFrequency() {
+            return NOTE_FREQS[tonicNote] || NOTE_FREQS['C4'];
+        }
+
+        function getCarnaticSwara(westernNote) {
+            // Calculate semitone distance from tonic
+            const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+            const tonicBase = tonicNote.slice(0, -1);
+            const noteBase = westernNote.slice(0, -1);
+            
+            let tonicIndex = noteNames.indexOf(tonicBase);
+            let noteIndex = noteNames.indexOf(noteBase);
+            
+            if (tonicIndex === -1 || noteIndex === -1) return null;
+            
+            // Calculate interval in semitones
+            let interval = (noteIndex - tonicIndex + 12) % 12;
+            
+            return CARNATIC_SWARAS[interval];
+        }
+
+        // Global variables
+        let audioContext = null;
+        let analyser = null;
+        let microphone = null;
+        let isDetecting = false;
+        let noteHistory = [];
+        let currentActiveKey = null;
+        let animationId = null;
+        
+        // Note detection state
+        let currentNote = null;
+        let lastNoteTime = 0;
+        let silenceCounter = 0;
+        let noteConfidenceBuffer = [];
+        const SILENCE_THRESHOLD = 8; // frames of silence before allowing new note
+        const MIN_NOTE_DURATION = 300; // ms minimum time between notes
+        const CONFIDENCE_HISTORY = 5; // frames to average confidence
+
+        // Piano keys setup
+        const whiteKeys = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+        const blackKeys = ['C#', 'D#', '', 'F#', 'G#', 'A#', ''];
+        
+        function createPianoKeys() {
+            const pianoContainer = document.getElementById('pianoKeys');
+            pianoContainer.innerHTML = '';
+            
+            for (let octave = 3; octave <= 5; octave++) {
+                for (let i = 0; i < whiteKeys.length; i++) {
+                    // White key
+                    const whiteKey = document.createElement('div');
+                    whiteKey.className = 'key white';
+                    whiteKey.textContent = whiteKeys[i] + octave;
+                    whiteKey.id = 'key-' + whiteKeys[i] + octave;
+                    pianoContainer.appendChild(whiteKey);
+                    
+                    // Black key (if exists)
+                    if (blackKeys[i]) {
+                        const blackKey = document.createElement('div');
+                        blackKey.className = 'key black';
+                        blackKey.textContent = blackKeys[i] + octave;
+                        blackKey.id = 'key-' + blackKeys[i] + octave;
+                        pianoContainer.appendChild(blackKey);
+                    }
+                }
+            }
+        }
+
+        function findClosestNote(frequency) {
+            let minDiff = Infinity;
+            let closestNote = '';
+            let confidence = 0;
+            
+            for (const [note, freq] of Object.entries(NOTE_FREQS)) {
+                const diff = Math.abs(frequency - freq);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestNote = note;
+                    // Calculate confidence based on how close the frequency is
+                    confidence = Math.max(0, 100 - (diff / freq * 100));
+                }
+            }
+            
+            return { note: closestNote, confidence: Math.round(confidence) };
+        }
+
+        function highlightKey(noteName) {
+            // Remove previous highlight
+            if (currentActiveKey) {
+                currentActiveKey.classList.remove('active');
+            }
+            
+            // Highlight current key
+            const key = document.getElementById('key-' + noteName);
+            if (key) {
+                key.classList.add('active');
+                currentActiveKey = key;
+                
+                // Remove highlight after 1 second
+                setTimeout(() => {
+                    if (currentActiveKey === key) {
+                        key.classList.remove('active');
+                        currentActiveKey = null;
+                    }
+                }, 1000);
+            }
+        }
+
+        function updateDisplay(note, frequency, confidence, volume) {
+            const carnaticSwara = getCarnaticSwara(note);
+            
+            // Update note display (Western note only)
+            document.getElementById('currentNote').textContent = note;
+            
+            // Update separate swara display
+            if (carnaticSwara) {
+                document.getElementById('swaraDisplay').textContent = carnaticSwara.swara;
+                document.getElementById('swaraName').textContent = carnaticSwara.full;
+            } else {
+                document.getElementById('swaraDisplay').textContent = '🎵 Swara 🎵';
+                document.getElementById('swaraName').textContent = '--';
+            }
+            
+            // Update info panel (show combined text here for reference)
+            const displayText = carnaticSwara ? 
+                `${note} | ${carnaticSwara.swara}` : note;
+            document.getElementById('detectedNote').textContent = displayText;
+            document.getElementById('frequency').textContent = frequency.toFixed(1) + ' Hz';
+            document.getElementById('confidence').textContent = confidence + '%';
+            document.getElementById('volume').textContent = Math.round(volume);
+            
+            highlightKey(note);
+            addToHistory({note, swara: carnaticSwara, frequency, confidence, timestamp: Date.now()});
+        }
+
+        function addToHistory(data) {
+            noteHistory.unshift(data);
+            if (noteHistory.length > 12) {
+                noteHistory.pop();
+            }
+            
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = '';
+            
+            if (noteHistory.length === 0) {
+                historyList.innerHTML = '<div class="empty-history">Play some swaras to see them here...</div>';
+                return;
+            }
+            
+            noteHistory.forEach((item, index) => {
+                const chip = document.createElement('div');
+                chip.className = 'note-chip';
+                
+                // Add special styling for sharp/flat notes or certain swaras
+                if (item.note.includes('#') || item.note.includes('b')) {
+                    chip.classList.add('sharp');
+                }
+                
+                // Display both Western note and Carnatic swara
+                const displayText = item.swara ? 
+                    `${item.note}\n${item.swara.swara}` : item.note;
+                chip.innerHTML = displayText.replace('\n', '<br><span class="swara-text">') + 
+                                (item.swara ? '</span>' : '');
+                
+                chip.title = item.swara ? item.swara.full : '';
+                
+                historyList.appendChild(chip);
+            });
+        }
+
+        function updateStatus(className, text) {
+            const statusEl = document.getElementById('status');
+            statusEl.className = 'status ' + className;
+            statusEl.textContent = text;
+        }
+
+        function updateDebugInfo(message) {
+            document.getElementById('debugInfo').innerHTML = message;
+        }
+
+        function changeTonic() {
+            const newTonic = document.getElementById('tonicSelect').value;
+            tonicNote = newTonic;
+            
+            // Clear current note to refresh the display
+            currentNote = null;
+            
+            // Update debug info to show new tonic
+            const currentDebug = document.getElementById('debugInfo').innerHTML;
+            document.getElementById('debugInfo').innerHTML = currentDebug + '<br>Tonic changed to: ' + newTonic;
+            
+            // Refresh history display with new swara mappings
+            if (noteHistory.length > 0) {
+                // Recalculate swaras for existing notes
+                noteHistory.forEach(item => {
+                    item.swara = getCarnaticSwara(item.note);
+                });
+                
+                // Refresh the display
+                addToHistory({note: '', swara: null}); // Dummy call to trigger refresh
+                noteHistory.shift(); // Remove the dummy entry
+            }
+        }
+
+        function analyzeAudio() {
+            if (!isDetecting) return;
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            const freqArray = new Float32Array(bufferLength);
+            
+            analyser.getByteFrequencyData(dataArray);
+            analyser.getFloatFrequencyData(freqArray);
+
+            // Calculate volume (RMS)
+            let sum = 0;
+            for (let i = 0; i < bufferLength; i++) {
+                sum += dataArray[i] * dataArray[i];
+            }
+            const volume = Math.sqrt(sum / bufferLength);
+
+            // Find dominant frequency
+            let maxIndex = 0;
+            let maxValue = -Infinity;
+            
+            // Focus on frequencies between 80Hz and 2000Hz (musical range)
+            const minBin = Math.floor(80 * bufferLength / (audioContext.sampleRate / 2));
+            const maxBin = Math.floor(2000 * bufferLength / (audioContext.sampleRate / 2));
+            
+            for (let i = minBin; i < maxBin; i++) {
+                if (freqArray[i] > maxValue) {
+                    maxValue = freqArray[i];
+                    maxIndex = i;
+                }
+            }
+
+            const frequency = maxIndex * audioContext.sampleRate / (2 * bufferLength);
+            const now = Date.now();
+            
+            updateDebugInfo(`
+                Audio Status: Active<br>
+                Sample Rate: ${audioContext.sampleRate}Hz<br>
+                Buffer Size: ${bufferLength}<br>
+                Volume: ${volume.toFixed(1)}<br>
+                Dominant Frequency: ${frequency.toFixed(1)}Hz<br>
+                Max dB: ${maxValue.toFixed(1)}dB<br>
+                Current Note: ${currentNote || 'None'}<br>
+                Silence Counter: ${silenceCounter}
+            `);
+
+            // Check if we have a strong enough signal
+            if (volume > 15 && frequency > 80 && frequency < 2000 && maxValue > -50) {
+                const result = findClosestNote(frequency);
+                
+                // Add to confidence buffer for smoothing
+                noteConfidenceBuffer.push({note: result.note, confidence: result.confidence});
+                if (noteConfidenceBuffer.length > CONFIDENCE_HISTORY) {
+                    noteConfidenceBuffer.shift();
+                }
+                
+                // Calculate average confidence for the most common note in buffer
+                const noteCount = {};
+                noteConfidenceBuffer.forEach(item => {
+                    if (!noteCount[item.note]) noteCount[item.note] = [];
+                    noteCount[item.note].push(item.confidence);
+                });
+                
+                let bestNote = null;
+                let bestAvgConfidence = 0;
+                
+                for (const [note, confidences] of Object.entries(noteCount)) {
+                    const avgConfidence = confidences.reduce((a, b) => a + b, 0) / confidences.length;
+                    if (avgConfidence > bestAvgConfidence && avgConfidence > 40) {
+                        bestNote = note;
+                        bestAvgConfidence = avgConfidence;
+                    }
+                }
+                
+                // Reset silence counter since we detected something
+                silenceCounter = 0;
+                
+                // Check if this is a new note or enough time has passed
+                if (bestNote && (bestNote !== currentNote) && (now - lastNoteTime > MIN_NOTE_DURATION)) {
+                    currentNote = bestNote;
+                    lastNoteTime = now;
+                    updateDisplay(bestNote, frequency, bestAvgConfidence, volume);
+                }
+                
+            } else {
+                // Increment silence counter
+                silenceCounter++;
+                
+                // Clear confidence buffer during silence
+                if (silenceCounter > SILENCE_THRESHOLD / 2) {
+                    noteConfidenceBuffer = [];
+                }
+                
+                // Allow new notes after enough silence
+                if (silenceCounter > SILENCE_THRESHOLD) {
+                    currentNote = null;
+                }
+            }
+
+            animationId = requestAnimationFrame(analyzeAudio);
+        }
+
+        async function startDetection() {
+            try {
+                updateStatus('connecting', 'Requesting microphone access...');
+                
+                // Get microphone access
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                // Create audio context
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                microphone = audioContext.createMediaStreamSource(stream);
+                
+                // Configure analyser
+                analyser.fftSize = 4096;  // Higher resolution for better frequency detection
+                analyser.smoothingTimeConstant = 0.8;
+                
+                // Connect audio nodes
+                microphone.connect(analyser);
+                
+                isDetecting = true;
+                updateStatus('detecting', 'Listening for notes...');
+                document.getElementById('noteDisplay').classList.add('detecting');
+                document.getElementById('startBtn').classList.add('active');
+                document.getElementById('stopBtn').classList.remove('active');
+                
+                // Start analysis loop
+                analyzeAudio();
+                
+            } catch (error) {
+                console.error('Error accessing microphone:', error);
+                updateStatus('error', 'Microphone access denied');
+                updateDebugInfo(`Error: ${error.message}`);
+            }
+        }
+
+        function stopDetection() {
+            isDetecting = false;
+            
+            // Reset note detection state
+            currentNote = null;
+            lastNoteTime = 0;
+            silenceCounter = 0;
+            noteConfidenceBuffer = [];
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            
+            if (microphone) {
+                microphone.disconnect();
+                microphone = null;
+            }
+            
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+            
+            updateStatus('stopped', 'Detection stopped');
+            document.getElementById('noteDisplay').classList.remove('detecting');
+            document.getElementById('startBtn').classList.remove('active');
+            document.getElementById('stopBtn').classList.add('active');
+            document.getElementById('currentNote').textContent = '♪ Stopped ♪';
+            document.getElementById('swaraDisplay').textContent = '🎵 Swara 🎵';
+            
+            updateDebugInfo('Audio Status: Stopped<br>Sample Rate: --<br>Buffer Size: --');
+        }
+
+        // Initialize piano keys on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            createPianoKeys();
+            updateStatus('connected', 'Ready to detect notes');
+        });
+
+        // Handle page unload
+        window.addEventListener('beforeunload', function() {
+            if (isDetecting) {
+                stopDetection();
+            }
+        });
+    </script>
+</body>
+</html>
