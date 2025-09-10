@@ -1,0 +1,30 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: music-app-ingress
+  namespace: music-app
+  labels:
+    app: music-app
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    # Optional: Enable WebSocket support for real-time audio
+    nginx.ingress.kubernetes.io/websocket-services: "music-app-service"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: music-app.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: music-app-service
+            port:
+              number: 8000
+  # Optional: TLS configuration
+  # tls:
+  # - hosts:
+  #   - music-app.local
+  #   secretName: music-app-tls

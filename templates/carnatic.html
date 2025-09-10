@@ -82,25 +82,44 @@
             align-items: center;
             gap: 10px;
             margin: 10px;
+            background: rgba(45, 52, 54, 0.6);
+            padding: 15px 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(116, 185, 255, 0.2);
         }
 
         .frequency-control label {
             font-size: 0.9rem;
-            min-width: 60px;
+            min-width: 80px;
+            font-weight: bold;
         }
 
         .frequency-control input {
-            background: rgba(45, 52, 54, 0.7);
-            border: 1px solid rgba(116, 185, 255, 0.3);
+            background: rgba(45, 52, 54, 0.8);
+            border: 1px solid rgba(116, 185, 255, 0.4);
             color: #e1e5e9;
-            padding: 8px 12px;
-            border-radius: 10px;
-            width: 80px;
+            padding: 10px 15px;
+            border-radius: 12px;
+            width: 100px;
             text-align: center;
+            font-weight: bold;
         }
 
         .frequency-control input::placeholder {
             color: rgba(225, 229, 233, 0.6);
+        }
+
+        .auto-detect-btn {
+            background: rgba(116, 185, 255, 0.3) !important;
+            border: 2px solid rgba(116, 185, 255, 0.5) !important;
+            color: #81ecec !important;
+            font-size: 0.85rem;
+            padding: 8px 16px !important;
+        }
+
+        .auto-detect-btn:hover {
+            background: rgba(116, 185, 255, 0.4) !important;
+            border-color: rgba(116, 185, 255, 0.7) !important;
         }
 
         .status {
@@ -239,29 +258,66 @@
 
         .history {
             background: rgba(45, 52, 54, 0.6);
-            backdrop-filter: blur(5px);
-            border-radius: 12px;
-            padding: 20px;
-            max-height: 200px;
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            max-height: 300px;
             overflow-y: auto;
-            border: 1px solid rgba(116, 185, 255, 0.2);
+            border: 1px solid rgba(116, 185, 255, 0.3);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
         }
 
         .history h3 {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             color: #81ecec;
+            font-size: 1.3rem;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
         }
 
         .history-item {
-            background: rgba(45, 52, 54, 0.4);
-            padding: 8px 12px;
-            margin: 3px 0;
-            border-radius: 6px;
-            display: flex;
-            justify-content: space-between;
+            background: rgba(45, 52, 54, 0.7);
+            backdrop-filter: blur(5px);
+            padding: 12px 18px;
+            margin: 8px 0;
+            border-radius: 12px;
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 15px;
             align-items: center;
-            border: 1px solid rgba(116, 185, 255, 0.1);
-            font-size: 0.9rem;
+            border: 1px solid rgba(116, 185, 255, 0.2);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .history-item:hover {
+            background: rgba(116, 185, 255, 0.1);
+            border-color: rgba(116, 185, 255, 0.4);
+            transform: translateX(3px);
+        }
+
+        .history-shruti {
+            font-weight: bold;
+            color: #81ecec;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .history-frequency {
+            color: #fab1a0;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+
+        .history-confidence {
+            background: rgba(116, 185, 255, 0.2);
+            color: #74b9ff;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            min-width: 50px;
+            text-align: center;
         }
 
         .analytics {
@@ -332,7 +388,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🎵 कर्णाटक संगीत श्रुति</h1>
+        <h1>🎵 Carnatic Music Shruti Detection</h1>
         <div class="subtitle">Carnatic Music - 22 Shruti Detection System</div>
         
         <div class="status" id="status">Connecting...</div>
@@ -342,6 +398,7 @@
                 <label>Sa (Hz):</label>
                 <input type="number" id="baseFreq" value="261.63" min="100" max="500" step="0.01">
                 <button onclick="updateBaseFrequency()">Tune Sa</button>
+                <button class="auto-detect-btn" onclick="autoDetectSa()">Auto-Detect Sa</button>
             </div>
             <button id="startBtn" onclick="startDetection()">Start Detection</button>
             <button id="stopBtn" onclick="stopDetection()">Stop Detection</button>
@@ -349,7 +406,7 @@
 
         <div class="detection-display">
             <div class="shruti-display" id="shrutiDisplay">
-                <div class="current-shruti" id="currentShruti">♪ सा ♪</div>
+                <div class="current-shruti" id="currentShruti">♪ Sa ♪</div>
                 <div class="shruti-western" id="shrutiWestern">Sa (C)</div>
                 
                 <div class="shruti-info">
@@ -373,7 +430,7 @@
             </div>
 
             <div class="raga-context" id="ragaContext">
-                <div class="raga-name" id="ragaName">राग संदर्भ</div>
+                <div class="raga-name" id="ragaName">Raga Context</div>
                 <div class="raga-notation" id="ragaAroha">Aroha: S R G M P D N Ṡ</div>
                 <div class="raga-notation" id="ragaAvaroha">Avaroha: Ṡ N D P M G R S</div>
             </div>
@@ -416,24 +473,24 @@
         let sessionStartTime = null;
         let uniqueShrutis = new Set();
 
-        // Shruti definitions with Devanagari names
+        // Shruti definitions with English names
         const shrutis = [
-            {name: 'Shadja', devanagari: 'षड्ज', western: 'Sa (C)', short: 'S'},
-            {name: 'Suddha Ri', devanagari: 'शुद्ध रि', western: 'R₁', short: 'R₁'},
-            {name: 'Chatussruti Ri', devanagari: 'चतुःश्रुति रि', western: 'R₂', short: 'R₂'},
-            {name: 'Shatsruti Ri', devanagari: 'षट्श्रुति रि', western: 'R₃', short: 'R₃'},
-            {name: 'Suddha Ga', devanagari: 'शुद्ध ग', western: 'G₁', short: 'G₁'},
-            {name: 'Sadharana Ga', devanagari: 'साधारण ग', western: 'G₂', short: 'G₂'},
-            {name: 'Antara Ga', devanagari: 'अन्तर ग', western: 'G₃', short: 'G₃'},
-            {name: 'Suddha Ma', devanagari: 'शुद्ध म', western: 'M₁', short: 'M₁'},
-            {name: 'Prati Ma', devanagari: 'प्रति म', western: 'M₂', short: 'M₂'},
-            {name: 'Panchama', devanagari: 'पञ्चम', western: 'Pa (G)', short: 'P'},
-            {name: 'Suddha Dha', devanagari: 'शुद्ध ध', western: 'D₁', short: 'D₁'},
-            {name: 'Chatussruti Dha', devanagari: 'चतुःश्रुति ध', western: 'D₂', short: 'D₂'},
-            {name: 'Shatsruti Dha', devanagari: 'षट्श्रुति ध', western: 'D₃', short: 'D₃'},
-            {name: 'Suddha Ni', devanagari: 'शुद्ध नि', western: 'N₁', short: 'N₁'},
-            {name: 'Kaisika Ni', devanagari: 'कैशिकी नि', western: 'N₂', short: 'N₂'},
-            {name: 'Kakali Ni', devanagari: 'काकली नि', western: 'N₃', short: 'N₃'}
+            {name: 'Shadja', english: 'Shadja', western: 'Sa (C)', short: 'S'},
+            {name: 'Suddha Ri', english: 'Suddha Ri', western: 'R₁', short: 'R₁'},
+            {name: 'Chatussruti Ri', english: 'Chatussruti Ri', western: 'R₂', short: 'R₂'},
+            {name: 'Shatsruti Ri', english: 'Shatsruti Ri', western: 'R₃', short: 'R₃'},
+            {name: 'Suddha Ga', english: 'Suddha Ga', western: 'G₁', short: 'G₁'},
+            {name: 'Sadharana Ga', english: 'Sadharana Ga', western: 'G₂', short: 'G₂'},
+            {name: 'Antara Ga', english: 'Antara Ga', western: 'G₃', short: 'G₃'},
+            {name: 'Suddha Ma', english: 'Suddha Ma', western: 'M₁', short: 'M₁'},
+            {name: 'Prati Ma', english: 'Prati Ma', western: 'M₂', short: 'M₂'},
+            {name: 'Panchama', english: 'Panchama', western: 'Pa (G)', short: 'P'},
+            {name: 'Suddha Dha', english: 'Suddha Dha', western: 'D₁', short: 'D₁'},
+            {name: 'Chatussruti Dha', english: 'Chatussruti Dha', western: 'D₂', short: 'D₂'},
+            {name: 'Shatsruti Dha', english: 'Shatsruti Dha', western: 'D₃', short: 'D₃'},
+            {name: 'Suddha Ni', english: 'Suddha Ni', western: 'N₁', short: 'N₁'},
+            {name: 'Kaisika Ni', english: 'Kaisika Ni', western: 'N₂', short: 'N₂'},
+            {name: 'Kakali Ni', english: 'Kakali Ni', western: 'N₃', short: 'N₃'}
         ];
 
         // Raga information
@@ -441,27 +498,27 @@
             'Sankarabharanam': {
                 aroha: 'S R₂ G₃ M₁ P D₂ N₃ Ṡ',
                 avaroha: 'Ṡ N₃ D₂ P M₁ G₃ R₂ S',
-                devanagari: 'शंकराभरणम्'
+                english: 'Sankarabharanam'
             },
             'Kharaharapriya': {
                 aroha: 'S R₂ G₂ M₁ P D₂ N₂ Ṡ',
                 avaroha: 'Ṡ N₂ D₂ P M₁ G₂ R₂ S',
-                devanagari: 'खरहरप्रिया'
+                english: 'Kharaharapriya'
             },
             'Mayamalavagowla': {
                 aroha: 'S R₁ G₃ M₁ P D₁ N₃ Ṡ',
                 avaroha: 'Ṡ N₃ D₁ P M₁ G₃ R₁ S',
-                devanagari: 'मायामालवगौळा'
+                english: 'Mayamalavagowla'
             },
             'Mohanam': {
                 aroha: 'S R₂ G₃ P D₂ Ṡ',
                 avaroha: 'Ṡ D₂ P G₃ R₂ S',
-                devanagari: 'मोहनम्'
+                english: 'Mohanam'
             },
             'Kalyani': {
                 aroha: 'S R₂ G₃ M₂ P D₂ N₃ Ṡ',
                 avaroha: 'Ṡ N₃ D₂ P M₂ G₃ R₂ S',
-                devanagari: 'कल्याणी'
+                english: 'Kalyani'
             }
         };
 
@@ -508,19 +565,219 @@
             const frequency = parseFloat(document.getElementById('baseFreq').value);
             if (frequency >= 100 && frequency <= 500) {
                 socket.emit('set_base_frequency', {frequency: frequency});
+                updateStatus('connected', `Sa frequency set to ${frequency.toFixed(2)} Hz`);
             } else {
                 alert('Please enter a frequency between 100-500 Hz');
             }
         }
 
-        function startDetection() {
-            const baseFreq = parseFloat(document.getElementById('baseFreq').value);
-            socket.emit('start_detection', {base_frequency: baseFreq});
-            sessionStartTime = Date.now();
+        // Auto-detect Sa frequency from current input
+        let autoDetecting = false;
+        let autoDetectSamples = [];
+        
+        async function autoDetectSa() {
+            if (autoDetecting) return;
+            
+            const autoBtn = event.target;
+            const originalText = autoBtn.textContent;
+            
+            try {
+                autoDetecting = true;
+                autoBtn.textContent = 'Detecting...';
+                autoBtn.style.opacity = '0.6';
+                updateStatus('connecting', 'Play Sa note for auto-detection...');
+                
+                // Create temporary audio context for Sa detection
+                let tempAudioContext = null;
+                let tempAnalyser = null;
+                let tempMicrophone = null;
+                
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    
+                    tempAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    tempAnalyser = tempAudioContext.createAnalyser();
+                    tempMicrophone = tempAudioContext.createMediaStreamSource(stream);
+                    
+                    tempAnalyser.fftSize = 8192;
+                    tempAnalyser.smoothingTimeConstant = 0.3;
+                    tempMicrophone.connect(tempAnalyser);
+                    
+                    autoDetectSamples = [];
+                    
+                    // Collect samples for 3 seconds
+                    const collectSamples = () => {
+                        if (!autoDetecting) return;
+                        
+                        const bufferLength = tempAnalyser.frequencyBinCount;
+                        const dataArray = new Uint8Array(bufferLength);
+                        const freqArray = new Float32Array(bufferLength);
+                        
+                        tempAnalyser.getByteFrequencyData(dataArray);
+                        tempAnalyser.getFloatFrequencyData(freqArray);
+                        
+                        // Calculate volume
+                        let sum = 0;
+                        for (let i = 0; i < bufferLength; i++) {
+                            sum += dataArray[i] * dataArray[i];
+                        }
+                        const volume = Math.sqrt(sum / bufferLength);
+                        
+                        // Find dominant frequency
+                        let maxIndex = 0;
+                        let maxValue = -Infinity;
+                        
+                        const minBin = Math.floor(100 * bufferLength / (tempAudioContext.sampleRate / 2));
+                        const maxBin = Math.floor(500 * bufferLength / (tempAudioContext.sampleRate / 2));
+                        
+                        for (let i = minBin; i < maxBin; i++) {
+                            if (freqArray[i] > maxValue) {
+                                maxValue = freqArray[i];
+                                maxIndex = i;
+                            }
+                        }
+                        
+                        const frequency = maxIndex * tempAudioContext.sampleRate / (2 * bufferLength);
+                        
+                        // Only collect strong, stable signals
+                        if (volume > 20 && frequency > 100 && frequency < 500 && maxValue > -40) {
+                            autoDetectSamples.push(frequency);
+                            autoBtn.textContent = `Detecting... (${autoDetectSamples.length}/30)`;
+                        }
+                        
+                        if (autoDetectSamples.length < 30 && autoDetecting) {
+                            requestAnimationFrame(collectSamples);
+                        } else if (autoDetecting) {
+                            finalizeSaDetection();
+                        }
+                    };
+                    
+                    const finalizeSaDetection = () => {
+                        // Clean up audio resources
+                        if (tempMicrophone) tempMicrophone.disconnect();
+                        if (tempAudioContext) tempAudioContext.close();
+                        
+                        if (autoDetectSamples.length > 0) {
+                            // Calculate median frequency for stability
+                            autoDetectSamples.sort((a, b) => a - b);
+                            const medianIndex = Math.floor(autoDetectSamples.length / 2);
+                            const detectedSa = autoDetectSamples[medianIndex];
+                            
+                            // Set the detected Sa
+                            document.getElementById('baseFreq').value = detectedSa.toFixed(2);
+                            socket.emit('set_base_frequency', {frequency: detectedSa});
+                            
+                            updateStatus('connected', `Sa auto-detected: ${detectedSa.toFixed(2)} Hz`);
+                            autoBtn.textContent = '✓ Sa Detected';
+                            setTimeout(() => {
+                                autoBtn.textContent = originalText;
+                                autoBtn.style.opacity = '1';
+                            }, 2000);
+                        } else {
+                            updateStatus('connected', 'No stable Sa detected. Please play a clear Sa note.');
+                            autoBtn.textContent = 'Try Again';
+                            setTimeout(() => {
+                                autoBtn.textContent = originalText;
+                                autoBtn.style.opacity = '1';
+                            }, 2000);
+                        }
+                        
+                        autoDetecting = false;
+                    };
+                    
+                    // Start timeout for detection
+                    setTimeout(() => {
+                        if (autoDetecting) {
+                            finalizeSaDetection();
+                        }
+                    }, 5000); // 5 second timeout
+                    
+                    collectSamples();
+                    
+                } catch (audioError) {
+                    console.error('Audio access error:', audioError);
+                    updateStatus('stopped', 'Microphone access denied for Sa detection');
+                    autoBtn.textContent = originalText;
+                    autoBtn.style.opacity = '1';
+                    autoDetecting = false;
+                }
+                
+            } catch (error) {
+                console.error('Sa detection error:', error);
+                updateStatus('connected', 'Sa detection failed');
+                autoBtn.textContent = originalText;
+                autoBtn.style.opacity = '1';
+                autoDetecting = false;
+            }
+        }
+
+        // Client-side audio processing variables
+        let audioContext = null;
+        let analyser = null;
+        let microphone = null;
+        let detectionActive = false;
+        let animationId = null;
+
+        async function startDetection() {
+            try {
+                updateStatus('connecting', 'Requesting microphone access...');
+                
+                // Get base frequency for calculations
+                const baseFreq = parseFloat(document.getElementById('baseFreq').value);
+                
+                // Get microphone access (CLIENT-SIDE)
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                // Create audio context (CLIENT-SIDE PROCESSING)
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                microphone = audioContext.createMediaStreamSource(stream);
+                
+                // Configure analyser for precise detection
+                analyser.fftSize = 8192;  // Higher resolution for Carnatic precision
+                analyser.smoothingTimeConstant = 0.8;
+                
+                // Connect audio nodes
+                microphone.connect(analyser);
+                
+                detectionActive = true;
+                sessionStartTime = Date.now();
+                updateStatus('detecting', 'Listening for Shrutis...');
+                document.getElementById('shrutiDisplay').classList.add('detecting');
+                document.getElementById('startBtn').classList.add('active');
+                document.getElementById('stopBtn').classList.remove('active');
+                
+                // Start client-side analysis loop
+                analyzeCarnaticAudio();
+                
+            } catch (error) {
+                console.error('Error accessing microphone:', error);
+                updateStatus('stopped', 'Microphone access denied');
+                showMicrophoneError(error.message);
+            }
         }
 
         function stopDetection() {
-            socket.emit('stop_detection');
+            detectionActive = false;
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            
+            if (microphone) {
+                microphone.disconnect();
+                microphone = null;
+            }
+            
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+            
+            updateStatus('stopped', 'Detection stopped');
+            document.getElementById('shrutiDisplay').classList.remove('detecting');
+            document.getElementById('startBtn').classList.remove('active');
+            document.getElementById('stopBtn').classList.add('active');
         }
 
         function updateStatus(className, text) {
@@ -532,12 +789,12 @@
         function updateShrutiDisplay(data) {
             // Find shruti info
             const shrutiInfo = shrutis.find(s => s.name === data.note) || 
-                              {devanagari: data.note, western: data.western_equiv || data.note, short: data.note};
+                              {english: data.note, western: data.western_equiv || data.note, short: data.note};
 
-            document.getElementById('currentShruti').textContent = shrutiInfo.devanagari;
+            document.getElementById('currentShruti').textContent = shrutiInfo.english;
             document.getElementById('shrutiWestern').textContent = `${shrutiInfo.western} (${data.note})`;
-            document.getElementById('frequency').textContent = data.frequency + ' Hz';
-            document.getElementById('detectedFreq').textContent = data.detected_frequency + ' Hz';
+            document.getElementById('frequency').textContent = parseFloat(data.frequency).toFixed(2) + ' Hz';
+            document.getElementById('detectedFreq').textContent = parseFloat(data.detected_frequency).toFixed(2) + ' Hz';
             document.getElementById('confidence').textContent = Math.round(data.confidence * 100) + '%';
             document.getElementById('centValue').textContent = data.cent_value || '--';
 
@@ -545,7 +802,7 @@
             if (data.raga_context) {
                 const raga = ragaInfo[data.raga_context];
                 if (raga) {
-                    document.getElementById('ragaName').textContent = `${raga.devanagari} (${data.raga_context})`;
+                    document.getElementById('ragaName').textContent = `${raga.english} (${data.raga_context})`;
                     document.getElementById('ragaAroha').textContent = `Aroha: ${raga.aroha}`;
                     document.getElementById('ragaAvaroha').textContent = `Avaroha: ${raga.avaroha}`;
                 } else {
@@ -616,6 +873,165 @@
             }
         }
 
+        function analyzeCarnaticAudio() {
+            if (!detectionActive) return;
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            const freqArray = new Float32Array(bufferLength);
+            
+            analyser.getByteFrequencyData(dataArray);
+            analyser.getFloatFrequencyData(freqArray);
+
+            // Calculate volume (RMS)
+            let sum = 0;
+            for (let i = 0; i < bufferLength; i++) {
+                sum += dataArray[i] * dataArray[i];
+            }
+            const volume = Math.sqrt(sum / bufferLength);
+
+            // Find dominant frequency in Carnatic range (80Hz - 1200Hz)
+            let maxIndex = 0;
+            let maxValue = -Infinity;
+            
+            const minBin = Math.floor(80 * bufferLength / (audioContext.sampleRate / 2));
+            const maxBin = Math.floor(1200 * bufferLength / (audioContext.sampleRate / 2));
+            
+            for (let i = minBin; i < maxBin; i++) {
+                if (freqArray[i] > maxValue) {
+                    maxValue = freqArray[i];
+                    maxIndex = i;
+                }
+            }
+
+            const frequency = maxIndex * audioContext.sampleRate / (2 * bufferLength);
+            
+            // Improved detection threshold - more sensitive
+            if (volume > 15 && frequency > 80 && frequency < 1200 && maxValue > -50) {
+                const result = detectCarnaticShruti(frequency);
+                
+                if (result && result.confidence > 0.3) {
+                    updateShrutiDisplay(result);
+                    addToHistory(result);
+                    highlightShruti(result.note);
+                }
+            }
+
+            animationId = requestAnimationFrame(analyzeCarnaticAudio);
+        }
+
+        function detectCarnaticShruti(frequency) {
+            const baseFreq = parseFloat(document.getElementById('baseFreq').value);
+            
+            // Calculate cents from Sa
+            const cents = 1200 * Math.log2(frequency / baseFreq);
+            
+            // Improved Carnatic shruti mapping with more accurate cents
+            const shrutiCents = [
+                {name: 'Shadja', cents: 0, western: 'Sa'},
+                {name: 'Suddha Ri', cents: 90, western: 'R₁'},
+                {name: 'Chatussruti Ri', cents: 204, western: 'R₂'},
+                {name: 'Shatsruti Ri', cents: 294, western: 'R₃'},
+                {name: 'Suddha Ga', cents: 316, western: 'G₁'},
+                {name: 'Sadharana Ga', cents: 386, western: 'G₂'},
+                {name: 'Antara Ga', cents: 408, western: 'G₃'},
+                {name: 'Suddha Ma', cents: 498, western: 'M₁'},
+                {name: 'Prati Ma', cents: 612, western: 'M₂'},
+                {name: 'Panchama', cents: 702, western: 'Pa'},
+                {name: 'Suddha Dha', cents: 792, western: 'D₁'},
+                {name: 'Chatussruti Dha', cents: 906, western: 'D₂'},
+                {name: 'Shatsruti Dha', cents: 996, western: 'D₃'},
+                {name: 'Suddha Ni', cents: 1018, western: 'N₁'},
+                {name: 'Kaisika Ni', cents: 1088, western: 'N₂'},
+                {name: 'Kakali Ni', cents: 1110, western: 'N₃'}
+            ];
+            
+            // Normalize cents to 0-1200 range
+            const normalizedCents = ((cents % 1200) + 1200) % 1200;
+            
+            // Find closest shruti with improved algorithm
+            let closestShruti = null;
+            let minDiff = Infinity;
+            
+            shrutiCents.forEach(shruti => {
+                const diff = Math.min(
+                    Math.abs(normalizedCents - shruti.cents),
+                    Math.abs(normalizedCents - shruti.cents + 1200),
+                    Math.abs(normalizedCents - shruti.cents - 1200)
+                );
+                
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestShruti = shruti;
+                }
+            });
+            
+            // More forgiving tolerance for microtonal detection
+            if (closestShruti && minDiff < 60) {
+                const confidence = Math.max(0.3, 1 - (minDiff / 60));
+                
+                return {
+                    note: closestShruti.name,
+                    western_equiv: closestShruti.western,
+                    frequency: parseFloat((baseFreq * Math.pow(2, closestShruti.cents / 1200)).toFixed(2)),
+                    detected_frequency: parseFloat(frequency.toFixed(2)),
+                    confidence: confidence,
+                    cent_value: Math.round(normalizedCents - closestShruti.cents),
+                    timestamp: Date.now(),
+                    raga_context: determineRagaContext(closestShruti.name)
+                };
+            }
+            
+            return null;
+        }
+        
+        function determineRagaContext(shrutiName) {
+            // Simple raga context determination based on recent notes
+            const recentNotes = detectionHistory.slice(0, 5).map(d => d.note);
+            
+            // Basic pattern matching for common ragas
+            if (recentNotes.includes('Chatussruti Ri') && recentNotes.includes('Antara Ga')) {
+                return 'Sankarabharanam';
+            } else if (recentNotes.includes('Chatussruti Ri') && recentNotes.includes('Sadharana Ga')) {
+                return 'Kharaharapriya';
+            } else if (recentNotes.includes('Suddha Ri') && recentNotes.includes('Antara Ga')) {
+                return 'Mayamalavagowla';
+            } else if (recentNotes.includes('Prati Ma')) {
+                return 'Kalyani';
+            } else if (!recentNotes.includes('Suddha Ma') && !recentNotes.includes('Prati Ma')) {
+                return 'Mohanam';
+            }
+            
+            return 'Sankarabharanam'; // Default
+        }
+
+        function showMicrophoneError(message) {
+            const helpDiv = document.createElement('div');
+            helpDiv.className = 'microphone-help';
+            helpDiv.innerHTML = `
+                <div style="background: rgba(45, 52, 54, 0.9); padding: 25px; border-radius: 12px; margin: 20px; border: 2px solid #fab1a0;">
+                    <h3 style="color: #fab1a0; text-align: center; margin-bottom: 15px;">🎤 Microphone Access Required</h3>
+                    <p style="margin-bottom: 10px;">Carnatic shruti detection requires microphone access.</p>
+                    <div style="background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px; margin: 15px 0;">
+                        <p><strong>Please:</strong></p>
+                        <ul style="margin: 8px 0 0 20px;">
+                            <li>Allow microphone access when prompted</li>
+                            <li>Ensure you're using HTTPS (required for microphone)</li>
+                            <li>Check browser permissions in settings</li>
+                        </ul>
+                    </div>
+                    <p style="font-size: 0.9em; opacity: 0.8;">Error: ${message}</p>
+                    <div style="text-align: center; margin-top: 15px;">
+                        <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                            style="background: rgba(116, 185, 255, 0.3); border: 1px solid #74b9ff; color: #e1e5e9; padding: 8px 16px; border-radius: 20px; cursor: pointer;">
+                            ✕ Close
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.querySelector('.container').appendChild(helpDiv);
+        }
+
         function addToHistory(data) {
             detectionHistory.unshift(data);
             uniqueShrutis.add(data.note);
@@ -630,11 +1046,15 @@
             detectionHistory.slice(0, 10).forEach(detection => {
                 const item = document.createElement('div');
                 item.className = 'history-item';
-                const shrutiInfo = shrutis.find(s => s.name === detection.note) || {short: detection.note};
+                const shrutiInfo = shrutis.find(s => s.name === detection.note) || {short: detection.note, western: detection.western_equiv};
+                
                 item.innerHTML = `
-                    <span>${shrutiInfo.short || detection.note}</span>
-                    <span>${detection.frequency} Hz</span>
-                    <span>${Math.round(detection.confidence * 100)}%</span>
+                    <div class="history-shruti">
+                        <span>${shrutiInfo.short || detection.note}</span>
+                        <span style="opacity: 0.7; font-size: 0.8em;">${shrutiInfo.western || detection.western_equiv}</span>
+                    </div>
+                    <div class="history-frequency">${parseFloat(detection.frequency).toFixed(2)} Hz</div>
+                    <div class="history-confidence">${Math.round(detection.confidence * 100)}%</div>
                 `;
                 historyList.appendChild(item);
             });
@@ -727,7 +1147,7 @@
                 })
                 .catch(function(err) {
                     console.log('Microphone access denied:', err);
-                    alert('माइक्रोफोन पहुंच आवश्यक है। कृपया अनुमति दें।\nMicrophone access required for shruti detection.');
+                    alert('Microphone access required for shruti detection. Please allow when prompted.');
                 });
         }
     </script>

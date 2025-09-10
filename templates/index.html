@@ -592,7 +592,7 @@
             const displayText = carnaticSwara ? 
                 `${note} | ${carnaticSwara.swara}` : note;
             document.getElementById('detectedNote').textContent = displayText;
-            document.getElementById('frequency').textContent = frequency.toFixed(1) + ' Hz';
+            document.getElementById('frequency').textContent = frequency.toFixed(2) + ' Hz';
             document.getElementById('confidence').textContent = confidence + '%';
             document.getElementById('volume').textContent = Math.round(volume);
             
@@ -709,7 +709,7 @@
                 Sample Rate: ${audioContext.sampleRate}Hz<br>
                 Buffer Size: ${bufferLength}<br>
                 Volume: ${volume.toFixed(1)}<br>
-                Dominant Frequency: ${frequency.toFixed(1)}Hz<br>
+                Dominant Frequency: ${frequency.toFixed(2)}Hz<br>
                 Max dB: ${maxValue.toFixed(1)}dB<br>
                 Current Note: ${currentNote || 'None'}<br>
                 Silence Counter: ${silenceCounter}

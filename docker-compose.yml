@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  note-detector:
+    build: .
+    container_name: music-note-detector
+    ports:
+      - "3005:5000"  # HTTP for demo/testing (changed from 3001 due to VS Code conflict)
+      - "3006:5001"  # HTTPS for production microphone access
+    environment:
+      - FLASK_ENV=production
+      - PYTHONUNBUFFERED=1
+      - MICROPHONE_MODE=client_side  # Use client-side audio processing
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "microphone.access=client-side-only"
+      - "audio.processing=web-audio-api"
+      - "ssl.required=true"

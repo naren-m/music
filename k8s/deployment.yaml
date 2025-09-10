@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: music-app
+  namespace: music-app
+  labels:
+    app: music-app
+    version: v1.0.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: music-app
+  template:
+    metadata:
+      labels:
+        app: music-app
+        version: v1.0.0
+    spec:
+      containers:
+      - name: music-app
+        image: music-app:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: SAMPLE_RATE
+          valueFrom:
+            configMapKeyRef:
+              name: music-app-config
+              key: sample_rate
+        - name: BUFFER_SIZE
+          valueFrom:
+            configMapKeyRef:
+              name: music-app-config
+              key: buffer_size
+        - name: DEFAULT_TEMPO
+          valueFrom:
+            configMapKeyRef:
+              name: music-app-config
+              key: default_tempo
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        # Health checks
+        livenessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - "import sys; sys.exit(0)"
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - "import sys; sys.exit(0)"
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        # Volume mounts for audio output
+        volumeMounts:
+        - name: audio-output
+          mountPath: /app/output
+      volumes:
+      - name: audio-output
+        emptyDir: {}
+      # Security context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000

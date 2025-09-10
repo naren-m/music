@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: music-app-config
+  namespace: music-app
+  labels:
+    app: music-app
+data:
+  # Audio configuration
+  sample_rate: "44100"
+  buffer_size: "1024"
+  audio_format: "float32"
+  
+  # Application settings
+  default_tempo: "120"
+  default_volume: "0.8"
+  note_duration: "0.5"
+  
+  # Performance settings
+  max_concurrent_notes: "8"
+  processing_threads: "2"
