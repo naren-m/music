@@ -83,6 +83,81 @@
             justify-content: space-between;
         }
 
+        .unified-note-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .notation-tile {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(15px);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            border: 2px solid rgba(255,255,255,0.3);
+            transition: all 0.3s ease;
+        }
+
+        .notation-tile:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            background: rgba(255,255,255,0.2);
+        }
+
+        .notation-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .notation-main {
+            font-size: 3.5rem;
+            font-weight: bold;
+            margin: 10px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            min-height: 4rem;
+        }
+
+        .notation-sub {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            font-style: italic;
+        }
+
+        .western-tile {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
+        }
+
+        .carnatic-tile {
+            background: linear-gradient(135deg, rgba(255, 193, 7, 0.3), rgba(255, 111, 0, 0.3));
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .notation-tile:hover {
+            animation: pulse 0.5s ease-in-out;
+        }
+
+        /* Mobile responsive adjustments */
+        @media (max-width: 768px) {
+            .unified-note-display {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .notation-main {
+                font-size: 2.5rem;
+            }
+        }
+
         .note-content {
             display: flex;
             flex-direction: column;
@@ -197,36 +272,47 @@
 
         .history-notes {
             display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            gap: 8px;
             justify-content: flex-start;
             align-items: center;
-            min-height: 60px;
-            padding: 5px 0;
+            min-height: 80px;
+            padding: 10px 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-behavior: smooth;
         }
 
         .note-chip {
             background: rgba(255,255,255,0.08);
             color: rgba(255,255,255,0.9);
-            padding: 10px 14px;
-            border-radius: 8px;
+            padding: 12px 16px;
+            border-radius: 12px;
             font-weight: 500;
             font-size: 1rem;
             border: 1px solid rgba(255,255,255,0.15);
             backdrop-filter: blur(5px);
-            min-width: 60px;
-            max-width: 80px;
+            min-width: 70px;
+            max-width: 90px;
             text-align: center;
-            display: inline-block;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             box-sizing: border-box;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
         }
 
         .note-chip:hover {
             background: rgba(255,255,255,0.12);
             border-color: rgba(255,255,255,0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
 
         .note-chip.sharp {
@@ -239,6 +325,25 @@
             color: rgba(255,255,255,0.7);
             font-style: normal;
             font-weight: 400;
+        }
+
+        /* Horizontal scrollbar styling */
+        .history-notes::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .history-notes::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+        }
+
+        .history-notes::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 3px;
+        }
+
+        .history-notes::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.5);
         }
 
         .empty-history {
@@ -338,13 +443,21 @@
             }
             
             .note-chip {
-                padding: 8px 10px;
+                padding: 8px 12px;
                 font-size: 0.9rem;
+                min-width: 60px;
+                max-width: 75px;
             }
             
             .history-notes {
-                gap: 4px;
-                justify-content: center;
+                gap: 6px;
+                justify-content: flex-start;
+                padding: 8px 0;
+                min-height: 70px;
+            }
+            
+            .history {
+                min-height: 100px;
             }
         }
     </style>
@@ -360,20 +473,20 @@
             <button id="stopBtn" onclick="stopDetection()">Stop Detection</button>
             
             <div style="margin-top: 15px;">
-                <label for="tonicSelect" style="margin-right: 10px; color: #FFD700;">Sa (Tonic):</label>
+                <label for="tonicSelect" style="margin-right: 10px; color: #FFD700;">Tonic (Sa):</label>
                 <select id="tonicSelect" onchange="changeTonic()" style="padding: 8px; border-radius: 5px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.3);">
-                    <option value="C4">C</option>
-                    <option value="C#4">C#</option>
-                    <option value="D4">D</option>
-                    <option value="D#4">D#</option>
-                    <option value="E4">E</option>
-                    <option value="F4">F</option>
-                    <option value="F#4">F#</option>
-                    <option value="G4">G</option>
-                    <option value="G#4">G#</option>
-                    <option value="A4">A</option>
-                    <option value="A#4">A#</option>
-                    <option value="B4">B</option>
+                    <option value="C4">C = Sa (Tonic)</option>
+                    <option value="C#4">C# = Ri₁</option>
+                    <option value="D4">D = Ri₂</option>
+                    <option value="D#4">D# = Ga₁</option>
+                    <option value="E4">E = Ga₂</option>
+                    <option value="F4">F = Ma₁ (Fourth)</option>
+                    <option value="F#4">F# = Ma₂</option>
+                    <option value="G4">G = Pa (Fifth)</option>
+                    <option value="G#4">G# = Dha₁</option>
+                    <option value="A4">A = Dha₂</option>
+                    <option value="A#4">A# = Ni₁</option>
+                    <option value="B4">B = Ni₂</option>
                 </select>
             </div>
         </div>
@@ -406,8 +519,8 @@
                     <div class="info-value" id="volume">--</div>
                 </div>
                 <div class="info-item">
-                    <div class="info-label">Swara</div>
-                    <div class="info-value" id="swaraName">--</div>
+                    <div class="info-label">Mapping</div>
+                    <div class="info-value" id="noteMapping">Western = Carnatic</div>
                 </div>
             </div>
         </div>
@@ -422,7 +535,8 @@
         <div class="debug-info" id="debugInfo">
             Audio Status: Not started<br>
             Sample Rate: --<br>
-            Buffer Size: --
+            Buffer Size: --<br>
+            <strong>Detection Settings:</strong> Volume > 5, Confidence > 25%, Max dB > -80
         </div>
     </div>
 
@@ -449,20 +563,37 @@
         // Default: C as Sa (can be changed by user)
         let tonicNote = 'C4'; // Default tonic
         
+        // Fixed C=Sa mapping for Carnatic system
         const CARNATIC_SWARAS = {
-            // Swara patterns based on semitone intervals from Sa
-            0: { swara: 'Sa', full: 'Shadja', variants: ['Sa'] },
-            1: { swara: 'Ri₁', full: 'Shuddha Rishabha', variants: ['Ri₁', 'R₁'] },
-            2: { swara: 'Ri₂/Ga₁', full: 'Chatushruti Rishabha / Shuddha Gandhara', variants: ['Ri₂', 'R₂', 'Ga₁', 'G₁'] },
-            3: { swara: 'Ri₃/Ga₂', full: 'Shatshruti Rishabha / Sadharana Gandhara', variants: ['Ri₃', 'R₃', 'Ga₂', 'G₂'] },
-            4: { swara: 'Ga₃', full: 'Antara Gandhara', variants: ['Ga₃', 'G₃'] },
-            5: { swara: 'Ma₁', full: 'Shuddha Madhyama', variants: ['Ma₁', 'M₁'] },
-            6: { swara: 'Ma₂', full: 'Prati Madhyama', variants: ['Ma₂', 'M₂'] },
-            7: { swara: 'Pa', full: 'Panchama', variants: ['Pa'] },
-            8: { swara: 'Dha₁', full: 'Shuddha Dhaivata', variants: ['Dha₁', 'D₁'] },
-            9: { swara: 'Dha₂/Ni₁', full: 'Chatushruti Dhaivata / Shuddha Nishada', variants: ['Dha₂', 'D₂', 'Ni₁', 'N₁'] },
-            10: { swara: 'Dha₃/Ni₂', full: 'Shatshruti Dhaivata / Kaisiki Nishada', variants: ['Dha₃', 'D₃', 'Ni₂', 'N₂'] },
-            11: { swara: 'Ni₃', full: 'Kakali Nishada', variants: ['Ni₃', 'N₃'] }
+            // C=Sa mapping (Western C is Carnatic Sa)
+            0: { swara: 'Sa', full: 'Shadja', western: 'C', description: 'Tonic' },
+            1: { swara: 'Ri₁', full: 'Shuddha Rishabha', western: 'C#/Db', description: 'Minor Second' },
+            2: { swara: 'Ri₂', full: 'Chatushruti Rishabha', western: 'D', description: 'Major Second' },
+            3: { swara: 'Ga₁', full: 'Shuddha Gandhara', western: 'D#/Eb', description: 'Minor Third' },
+            4: { swara: 'Ga₂', full: 'Antara Gandhara', western: 'E', description: 'Major Third' },
+            5: { swara: 'Ma₁', full: 'Shuddha Madhyama', western: 'F', description: 'Perfect Fourth' },
+            6: { swara: 'Ma₂', full: 'Prati Madhyama', western: 'F#', description: 'Augmented Fourth' },
+            7: { swara: 'Pa', full: 'Panchama', western: 'G', description: 'Perfect Fifth' },
+            8: { swara: 'Dha₁', full: 'Shuddha Dhaivata', western: 'G#/Ab', description: 'Minor Sixth' },
+            9: { swara: 'Dha₂', full: 'Chatushruti Dhaivata', western: 'A', description: 'Major Sixth' },
+            10: { swara: 'Ni₁', full: 'Shuddha Nishada', western: 'A#/Bb', description: 'Minor Seventh' },
+            11: { swara: 'Ni₂', full: 'Kaisiki Nishada', western: 'B', description: 'Major Seventh' }
+        };
+
+        // Alternative notation for 22-shruti system (optional)
+        const CARNATIC_22_SHRUTIS = {
+            'C': 'Sa',
+            'C#': 'Ri₁', 'Db': 'Ri₁',
+            'D': 'Ri₂/Ga₁',
+            'D#': 'Ga₂', 'Eb': 'Ga₁',
+            'E': 'Ga₃',
+            'F': 'Ma₁',
+            'F#': 'Ma₂', 'Gb': 'Ma₂',
+            'G': 'Pa',
+            'G#': 'Dha₁', 'Ab': 'Dha₁',
+            'A': 'Dha₂/Ni₁',
+            'A#': 'Ni₂', 'Bb': 'Ni₁',
+            'B': 'Ni₃'
         };
 
         function getTonicFrequency() {
@@ -470,20 +601,34 @@
         }
 
         function getCarnaticSwara(westernNote) {
-            // Calculate semitone distance from tonic
+            // With C=Sa fixed mapping
             const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-            const tonicBase = tonicNote.slice(0, -1);
-            const noteBase = westernNote.slice(0, -1);
+            const noteBase = westernNote.slice(0, -1); // Remove octave number
             
+            // When tonic is C, use direct mapping
+            if (tonicNote.startsWith('C')) {
+                const noteIndex = noteNames.indexOf(noteBase);
+                if (noteIndex === -1) return null;
+                return CARNATIC_SWARAS[noteIndex];
+            }
+            
+            // For other tonics, calculate relative interval
+            const tonicBase = tonicNote.slice(0, -1);
             let tonicIndex = noteNames.indexOf(tonicBase);
             let noteIndex = noteNames.indexOf(noteBase);
             
             if (tonicIndex === -1 || noteIndex === -1) return null;
             
-            // Calculate interval in semitones
+            // Calculate interval in semitones from the chosen tonic
             let interval = (noteIndex - tonicIndex + 12) % 12;
             
             return CARNATIC_SWARAS[interval];
+        }
+
+        // Get direct Carnatic notation for Western note (C=Sa mapping)
+        function getDirectCarnaticNotation(westernNote) {
+            const noteBase = westernNote.slice(0, -1);
+            return CARNATIC_22_SHRUTIS[noteBase] || null;
         }
 
         // Global variables
@@ -501,7 +646,7 @@
         let silenceCounter = 0;
         let noteConfidenceBuffer = [];
         const SILENCE_THRESHOLD = 8; // frames of silence before allowing new note
-        const MIN_NOTE_DURATION = 300; // ms minimum time between notes
+        const MIN_NOTE_DURATION = 150; // ms minimum time between notes (faster response)
         const CONFIDENCE_HISTORY = 5; // frames to average confidence
 
         // Piano keys setup
@@ -576,25 +721,48 @@
         function updateDisplay(note, frequency, confidence, volume) {
             const carnaticSwara = getCarnaticSwara(note);
             
-            // Update note display (Western note only)
-            document.getElementById('currentNote').textContent = note;
-            
-            // Update separate swara display
-            if (carnaticSwara) {
-                document.getElementById('swaraDisplay').textContent = carnaticSwara.swara;
-                document.getElementById('swaraName').textContent = carnaticSwara.full;
-            } else {
-                document.getElementById('swaraDisplay').textContent = '🎵 Swara 🎵';
-                document.getElementById('swaraName').textContent = '--';
+            // Update Western tile
+            document.getElementById('currentNote').textContent = note || '♪';
+            const westernInfo = document.getElementById('westernInfo');
+            if (westernInfo) {
+                westernInfo.textContent = frequency ? `${frequency.toFixed(2)} Hz` : 'Ready to detect';
             }
             
-            // Update info panel (show combined text here for reference)
+            // Update Carnatic tile
+            if (carnaticSwara) {
+                document.getElementById('swaraDisplay').textContent = carnaticSwara.swara;
+                const swaraNameElem = document.getElementById('swaraName');
+                if (swaraNameElem) {
+                    swaraNameElem.textContent = `${carnaticSwara.full} (${carnaticSwara.description})`;
+                }
+                
+                // Add pulse animation to tiles
+                const tiles = document.querySelectorAll('.notation-tile');
+                tiles.forEach(tile => {
+                    tile.style.animation = 'pulse 0.3s ease-in-out';
+                    setTimeout(() => tile.style.animation = '', 300);
+                });
+            } else {
+                document.getElementById('swaraDisplay').textContent = '🎵';
+                const swaraNameElem = document.getElementById('swaraName');
+                if (swaraNameElem) {
+                    swaraNameElem.textContent = 'C = Sa (Tonic)';
+                }
+            }
+            
+            // Update info panel with both notations
             const displayText = carnaticSwara ? 
-                `${note} | ${carnaticSwara.swara}` : note;
+                `${note} = ${carnaticSwara.swara} (${carnaticSwara.western})` : note;
             document.getElementById('detectedNote').textContent = displayText;
             document.getElementById('frequency').textContent = frequency.toFixed(2) + ' Hz';
             document.getElementById('confidence').textContent = confidence + '%';
             document.getElementById('volume').textContent = Math.round(volume);
+            
+            // Update mapping display
+            const mappingElem = document.getElementById('noteMapping');
+            if (mappingElem && carnaticSwara) {
+                mappingElem.textContent = `${note} = ${carnaticSwara.swara}`;
+            }
             
             highlightKey(note);
             addToHistory({note, swara: carnaticSwara, frequency, confidence, timestamp: Date.now()});
@@ -715,8 +883,8 @@
                 Silence Counter: ${silenceCounter}
             `);
 
-            // Check if we have a strong enough signal
-            if (volume > 15 && frequency > 80 && frequency < 2000 && maxValue > -50) {
+            // Check if we have a strong enough signal (lowered thresholds for better sensitivity)
+            if (volume > 5 && frequency > 80 && frequency < 2000 && maxValue > -80) {
                 const result = findClosestNote(frequency);
                 
                 // Add to confidence buffer for smoothing
@@ -737,7 +905,7 @@
                 
                 for (const [note, confidences] of Object.entries(noteCount)) {
                     const avgConfidence = confidences.reduce((a, b) => a + b, 0) / confidences.length;
-                    if (avgConfidence > bestAvgConfidence && avgConfidence > 40) {
+                    if (avgConfidence > bestAvgConfidence && avgConfidence > 25) {
                         bestNote = note;
                         bestAvgConfidence = avgConfidence;
                     }
@@ -784,8 +952,8 @@
                 microphone = audioContext.createMediaStreamSource(stream);
                 
                 // Configure analyser
-                analyser.fftSize = 4096;  // Higher resolution for better frequency detection
-                analyser.smoothingTimeConstant = 0.8;
+                analyser.fftSize = 8192;  // Even higher resolution for better frequency detection
+                analyser.smoothingTimeConstant = 0.3;  // Less smoothing for more responsive detection
                 
                 // Connect audio nodes
                 microphone.connect(analyser);

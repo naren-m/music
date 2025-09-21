@@ -168,7 +168,7 @@ def handle_disconnect():
 if __name__ == '__main__':
     print("Starting web server for client-side audio processing...")
     print("🎤 Client-side microphone access requires HTTPS in production")
-    print("🔒 For local development, use: https://localhost:5000")
+    print("🔒 For local development, use: http://localhost:5000")
     print("📱 For mobile testing, generate SSL certificates")
     
     # Start the web server

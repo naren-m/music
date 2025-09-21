@@ -248,7 +248,7 @@ class CarnaticNoteDetector:
         
         # Update current raga context
         if raga_scores:
-            best_raga = max(raga_scores.keys(), key=lambda x: raga_scores[x])
+            best_raga = max(raga_scores, key=raga_scores.get)
             if raga_scores[best_raga] >= 3:
                 self.current_raga_context = best_raga
     
