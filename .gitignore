@@ -127,3 +127,81 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Audio files and recordings
+*.wav
+*.mp3
+*.m4a
+*.flac
+*.aac
+*.ogg
+recordings/
+audio_samples/
+
+# Development artifacts
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+screenshots/
+dev_artifacts/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.iws
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Archive and backup directories
+archive/
+backup/
+legacy/
+
+# Test results and coverage
+coverage_html/
+.coverage.*
+test_results/
+test-results/
+htmlcov/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Log files
+*.log
+logs/
+
+# Configuration secrets
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+secrets.json
+config/secrets/
