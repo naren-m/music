@@ -5,12 +5,19 @@ Handles audio processing, synthesis, and real-time detection
 
 from flask import Blueprint, request, jsonify
 import numpy as np
-import base64
-import json
-from io import BytesIO
+import logging
+from typing import Optional
 
 from core.services.audio_engine import CarnaticAudioEngine, AudioConfig
 from core.models.shruti import ShrutiSystem
+from api.validation import (
+    validate_audio_data, validate_json_request, validate_frequency_parameter,
+    ValidationError
+)
+from api.error_handlers import AudioProcessingError, create_error_response
+from api.rate_limiting import audio_rate_limit, standard_rate_limit
+
+logger = logging.getLogger(__name__)
 
 audio_bp = Blueprint('audio', __name__)
 
@@ -20,6 +27,7 @@ carnatic_engine = CarnaticAudioEngine(audio_config)
 
 
 @audio_bp.route('/config', methods=['GET'])
+@standard_rate_limit
 def get_audio_config():
     """Get audio configuration"""
     return {
@@ -33,82 +41,100 @@ def get_audio_config():
 
 
 @audio_bp.route('/detect', methods=['POST'])
+@audio_rate_limit
+@validate_json_request
 def detect_pitch():
-    """Detect pitch from audio data"""
+    """Detect Carnatic shruti from audio data - Security hardened"""
     try:
         data = request.get_json()
-        
-        # Get audio data (base64 encoded)
-        audio_b64 = data.get('audio_data')
-        if not audio_b64:
-            return jsonify({'error': 'No audio data provided'}), 400
-        
-        # Decode audio data
-        audio_bytes = base64.b64decode(audio_b64)
-        audio_array = np.frombuffer(audio_bytes, dtype=np.float32)
-        
-        # Detect pitch using Carnatic engine
+
+        # Validate and decode audio data with security checks
+        audio_array = validate_audio_data(data.get('audio_data'))
+
+        # Process with validated data
         result = carnatic_engine.detect_shruti(audio_array)
-        
+
         if result and result.confidence > audio_config.confidence_threshold:
             return jsonify({
                 'detected': True,
                 'shruti': {
-                    'name': result.detected_shruti.name,
-                    'western_equiv': result.detected_shruti.western_equiv,
-                    'frequency': result.fundamental_frequency,
-                    'confidence': result.confidence,
-                    'cents_deviation': result.cents_deviation
+                    'name': result.shruti.name,
+                    'western_equiv': result.shruti.western_equiv,
+                    'frequency': round(float(result.detected_frequency), 2),
+                    'confidence': round(float(result.confidence), 3),
+                    'cent_deviation': round(float(result.cent_deviation), 1)
                 },
                 'timestamp': result.timestamp
             })
         else:
             return jsonify({
                 'detected': False,
-                'message': 'No pitch detected or confidence too low'
+                'message': 'No pitch detected or confidence too low',
+                'confidence': round(float(result.confidence), 3) if result else 0.0
             })
-            
+
+    except ValidationError as e:
+        logger.warning(f"Audio validation failed: {e.message}")
+        error_response = {'error': e.message}
+        if e.field:
+            error_response['field'] = e.field
+        return jsonify(error_response), e.status_code
+
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Audio processing error: {str(e)}")
+        raise AudioProcessingError(
+            'Audio processing failed',
+            status_code=500,
+            error_code='SHRUTI_DETECTION_FAILED'
+        )
 
 
 @audio_bp.route('/detect-western', methods=['POST'])
+@audio_rate_limit
+@validate_json_request
 def detect_western_note():
-    """Detect Western note from audio data"""
+    """Detect Western note from audio data - Security hardened"""
     try:
         data = request.get_json()
-        
-        # Get audio data (base64 encoded)
-        audio_b64 = data.get('audio_data')
-        if not audio_b64:
-            return jsonify({'error': 'No audio data provided'}), 400
-        
-        # Decode audio data
-        audio_bytes = base64.b64decode(audio_b64)
-        audio_array = np.frombuffer(audio_bytes, dtype=np.float32)
-        
+
+        # Validate and decode audio data with security checks
+        audio_array = validate_audio_data(data.get('audio_data'))
+
         # Detect pitch using basic detection
-        result = carnatic_engine.detect_pitch(audio_array)
-        
+        result = carnatic_engine.pitch_detector.detect_pitch(audio_array)
+
         if result and result.confidence > audio_config.confidence_threshold:
             # Convert frequency to Western note
             western_note = frequency_to_note(result.fundamental_frequency)
-            
+
             return jsonify({
                 'detected': True,
                 'note': western_note,
-                'frequency': result.fundamental_frequency,
-                'confidence': result.confidence,
+                'frequency': round(float(result.fundamental_frequency), 2),
+                'confidence': round(float(result.confidence), 3),
                 'timestamp': result.timestamp
             })
         else:
             return jsonify({
                 'detected': False,
-                'message': 'No pitch detected or confidence too low'
+                'message': 'No pitch detected or confidence too low',
+                'confidence': round(float(result.confidence), 3) if result else 0.0
             })
-            
+
+    except ValidationError as e:
+        logger.warning(f"Audio validation failed: {e.message}")
+        error_response = {'error': e.message}
+        if e.field:
+            error_response['field'] = e.field
+        return jsonify(error_response), e.status_code
+
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Western note detection error: {str(e)}")
+        raise AudioProcessingError(
+            'Note detection failed',
+            status_code=500,
+            error_code='WESTERN_NOTE_DETECTION_FAILED'
+        )
 
 
 def frequency_to_note(frequency):
