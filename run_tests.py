@@ -74,19 +74,27 @@ class TestRunner:
         
         return self._execute_command(cmd, "End-to-End Tests")
     
-    def run_performance_tests(self, verbose=False):
-        """Run performance benchmarking tests."""
+    def run_performance_tests(self, verbose=False, benchmark=False):
+        """Run performance benchmarking tests with enhanced reporting."""
         cmd = [
             sys.executable, "-m", "pytest",
-            "tests/",
+            "tests/performance/",
+            "tests/test_audio_engine.py",
             "-m", "performance",
             "--tb=short",
-            "--durations=0"
+            "--durations=10"
         ]
-        
+
         if verbose:
             cmd.append("-v")
-        
+
+        if benchmark:
+            cmd.extend([
+                "--benchmark-only",
+                "--benchmark-sort=mean",
+                "--benchmark-json=benchmark_results.json"
+            ])
+
         return self._execute_command(cmd, "Performance Tests")
     
     def run_accessibility_tests(self, verbose=False):
@@ -157,19 +165,29 @@ class TestRunner:
         
         return results
     
-    def generate_test_report(self):
-        """Generate comprehensive test report."""
+    def generate_test_report(self, include_benchmarks=False):
+        """Generate comprehensive test report with performance metrics."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         report_file = self.project_root / f"test_report_{timestamp}.json"
-        
+
+        print("🔄 Generating comprehensive test report...")
+
         # Run all test categories
         results = {
             'timestamp': timestamp,
-            'unit_tests': self.run_unit_tests(),
-            'integration_tests': self.run_integration_tests(),
-            'performance_tests': self.run_performance_tests(),
+            'project': 'Carnatic Learning Application v2.0',
+            'unit_tests': self.run_unit_tests(verbose=True),
+            'integration_tests': self.run_integration_tests(verbose=True),
+            'performance_tests': self.run_performance_tests(verbose=True, benchmark=include_benchmarks),
             'lint_results': self.lint_and_format()
         }
+
+        # Add performance benchmarks if available
+        if include_benchmarks:
+            benchmark_file = self.project_root / "benchmark_results.json"
+            if benchmark_file.exists():
+                with open(benchmark_file, 'r') as f:
+                    results['benchmarks'] = json.load(f)
         
         # Calculate overall status
         all_passed = all(
@@ -239,6 +257,7 @@ def main():
     parser.add_argument("--integration", action="store_true", help="Run integration tests only")
     parser.add_argument("--e2e", action="store_true", help="Run end-to-end tests")
     parser.add_argument("--performance", action="store_true", help="Run performance tests")
+    parser.add_argument("--benchmark", action="store_true", help="Run performance benchmarks with detailed metrics")
     parser.add_argument("--accessibility", action="store_true", help="Run accessibility tests")
     parser.add_argument("--quick", action="store_true", help="Run quick smoke tests")
     parser.add_argument("--all", action="store_true", help="Run all tests")
@@ -271,8 +290,8 @@ def main():
     if args.e2e:
         results.append(runner.run_e2e_tests(headless=not args.headed, verbose=args.verbose))
     
-    if args.performance:
-        results.append(runner.run_performance_tests(verbose=args.verbose))
+    if args.performance or args.benchmark:
+        results.append(runner.run_performance_tests(verbose=args.verbose, benchmark=args.benchmark))
     
     if args.accessibility:
         results.append(runner.run_accessibility_tests(verbose=args.verbose))
@@ -288,7 +307,7 @@ def main():
         results.extend(lint_results.values())
     
     if args.report:
-        runner.generate_test_report()
+        runner.generate_test_report(include_benchmarks=args.benchmark)
         return
     
     # Summary

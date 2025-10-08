@@ -1,0 +1,122 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  body {
+    @apply bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900;
+    @apply text-white min-h-screen;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Cultural font classes */
+  .font-devanagari {
+    font-family: 'Noto Sans Devanagari', serif;
+  }
+
+  .font-tamil {
+    font-family: 'Noto Sans Tamil', serif;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-slate-800;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-saffron-600 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-saffron-500;
+  }
+}
+
+@layer components {
+  /* Cultural design components */
+  .carnatic-card {
+    @apply bg-gradient-to-br from-slate-800/80 to-slate-900/80;
+    @apply backdrop-blur-sm border border-saffron-500/20;
+    @apply rounded-lg shadow-lg;
+  }
+
+  .cultural-button {
+    @apply bg-gradient-to-r from-saffron-600 to-deepOrange-600;
+    @apply text-white font-medium px-6 py-2 rounded-lg;
+    @apply hover:from-saffron-500 hover:to-deepOrange-500;
+    @apply transition-all duration-200 shadow-md;
+    @apply hover:shadow-lg hover:scale-105;
+  }
+
+  .swara-display {
+    @apply font-devanagari text-2xl font-bold;
+    @apply text-saffron-400;
+    @apply drop-shadow-md;
+  }
+
+  /* Audio visualization components */
+  .audio-visualizer {
+    @apply bg-slate-800/50 backdrop-blur-sm;
+    @apply border border-blue-500/30 rounded-lg;
+  }
+
+  .pitch-indicator {
+    @apply bg-gradient-to-r from-green-500 to-blue-500;
+    @apply rounded-full shadow-lg;
+    @apply transition-all duration-100;
+  }
+
+  .pitch-indicator.accurate {
+    @apply from-green-400 to-green-600 animate-pulse;
+  }
+
+  .pitch-indicator.sharp {
+    @apply from-red-400 to-red-600;
+  }
+
+  .pitch-indicator.flat {
+    @apply from-yellow-400 to-yellow-600;
+  }
+}
+
+@layer utilities {
+  /* Cultural gradient backgrounds */
+  .bg-carnatic-primary {
+    background: linear-gradient(135deg, #ff6b35 0%, #ffc107 50%, #ff8f00 100%);
+  }
+
+  .bg-carnatic-secondary {
+    background: linear-gradient(135deg, #9c27b0 0%, #673ab7 50%, #3f51b5 100%);
+  }
+
+  /* Animation utilities */
+  .animate-swara-glow {
+    animation: swaraGlow 2s ease-in-out infinite alternate;
+  }
+
+  .animate-raga-flow {
+    animation: ragaFlow 3s ease-in-out infinite;
+  }
+
+  /* Text utilities for cultural content */
+  .text-cultural-primary {
+    @apply text-saffron-400;
+  }
+
+  .text-cultural-secondary {
+    @apply text-deepOrange-400;
+  }
+}

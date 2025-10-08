@@ -1,21 +1,55 @@
+version: '3.8'
+
 services:
-  note-detector:
-    build: .
-    container_name: music-note-detector
+  carnatic-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: carnatic-music-app
     ports:
-      - "3005:5000"  # HTTP for demo/testing (changed from 3001 due to VS Code conflict)
-      - "3006:5001"  # HTTPS for production microphone access
+      - "5002:5001"  # Main application port (external:internal)
     environment:
-      - FLASK_ENV=production
-      - PYTHONUNBUFFERED=1
-      - MICROPHONE_MODE=client_side  # Use client-side audio processing
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - PYTHONPATH=/app
+      - MICROPHONE_MODE=client_side
+    volumes:
+      # Mount source code for development hot reload
+      - .:/app
+      - /app/__pycache__
+      - /app/.pytest_cache
+    networks:
+      - carnatic-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      test: ["CMD", "curl", "-f", "http://localhost:5001/api/v1/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
     labels:
-      - "microphone.access=client-side-only"
-      - "audio.processing=web-audio-api"
-      - "ssl.required=true"
+      - "carnatic.version=v2.0"
+      - "carnatic.audio=client-side"
+      - "carnatic.realtime=websocket"
+
+  # Optional: Redis for session management and caching
+  redis:
+    image: redis:7-alpine
+    container_name: carnatic-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - carnatic-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    profiles:
+      - full-stack
+
+networks:
+  carnatic-network:
+    driver: bridge
+
+volumes:
+  redis_data:

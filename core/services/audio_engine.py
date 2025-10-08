@@ -10,21 +10,29 @@ import threading
 import time
 from collections import deque
 import json
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+import functools
 
 from ..models.shruti import ShrutiSystem, Shruti
 
 
 @dataclass
 class AudioConfig:
-    """Audio processing configuration"""
+    """Audio processing configuration with performance optimizations"""
     sample_rate: int = 44100
-    buffer_size: int = 2048
-    fft_size: int = 8192
+    buffer_size: int = 1024  # Reduced for lower latency
+    fft_size: int = 4096     # Optimized balance between accuracy and speed
     overlap_ratio: float = 0.5
     smoothing_factor: float = 0.3
     confidence_threshold: float = 0.6
     frequency_range: Tuple[float, float] = (80.0, 2000.0)
     noise_gate_threshold: float = -60.0  # dB
+    # Performance optimizations
+    enable_parallel_processing: bool = True
+    max_worker_threads: int = 4
+    cache_size: int = 128
+    use_optimized_fft: bool = True
 
 
 @dataclass
@@ -53,25 +61,56 @@ class ShrutiDetectionResult:
 
 
 class AdvancedPitchDetector:
-    """Advanced pitch detection using multiple algorithms"""
-    
+    """Advanced pitch detection using multiple algorithms with performance optimizations"""
+
     def __init__(self, config: AudioConfig):
         self.config = config
         self._autocorr_threshold = 0.3
         self._harmonic_threshold = 0.1
+
+        # Performance optimizations
+        self._executor = ThreadPoolExecutor(max_workers=config.max_worker_threads)
+        self._fft_cache = {}
+        self._window_cache = {}
+        self._precompute_windows()
+
+        # Pre-allocate arrays for better performance
+        self._autocorr_buffer = np.zeros(config.fft_size)
+        self._fft_buffer = np.zeros(config.fft_size, dtype=complex)
+
+    def _precompute_windows(self):
+        """Precompute window functions for better performance"""
+        common_sizes = [512, 1024, 2048, 4096, 8192]
+        for size in common_sizes:
+            if size <= self.config.fft_size:
+                self._window_cache[size] = np.hanning(size)
         
     def detect_pitch(self, audio_data: np.ndarray) -> Optional[PitchDetectionResult]:
-        """Detect pitch using hybrid approach"""
+        """Detect pitch using optimized hybrid approach"""
         if len(audio_data) < self.config.buffer_size:
             return None
-            
-        # Apply window function
-        windowed = audio_data * np.hanning(len(audio_data))
-        
-        # Multiple pitch detection methods
-        freq_autocorr = self._autocorrelation_pitch(windowed)
-        freq_harmonic = self._harmonic_product_spectrum(windowed)
-        freq_cepstrum = self._cepstrum_pitch(windowed)
+
+        # Use cached window function if available
+        window_size = len(audio_data)
+        if window_size in self._window_cache:
+            windowed = audio_data * self._window_cache[window_size]
+        else:
+            windowed = audio_data * np.hanning(window_size)
+
+        # Parallel pitch detection methods for better performance
+        if self.config.enable_parallel_processing:
+            futures = []
+            futures.append(self._executor.submit(self._autocorrelation_pitch, windowed))
+            futures.append(self._executor.submit(self._harmonic_product_spectrum, windowed))
+            futures.append(self._executor.submit(self._cepstrum_pitch, windowed))
+
+            # Collect results with reasonable timeout for real-time processing
+            freq_autocorr, freq_harmonic, freq_cepstrum = [f.result(timeout=0.05) for f in futures]
+        else:
+            # Sequential processing for fallback
+            freq_autocorr = self._autocorrelation_pitch(windowed)
+            freq_harmonic = self._harmonic_product_spectrum(windowed)
+            freq_cepstrum = self._cepstrum_pitch(windowed)
         
         # Combine results with confidence weighting
         fundamental = self._combine_pitch_estimates([
@@ -122,8 +161,22 @@ class AdvancedPitchDetector:
         return self.config.sample_rate / period
     
     def _harmonic_product_spectrum(self, signal: np.ndarray) -> Optional[float]:
-        """Pitch detection using harmonic product spectrum"""
-        fft_data = np.fft.rfft(signal, n=self.config.fft_size)
+        """Optimized pitch detection using harmonic product spectrum"""
+        # Use cached FFT if available
+        cache_key = (len(signal), self.config.fft_size)
+        if cache_key in self._fft_cache and len(self._fft_cache) < self.config.cache_size:
+            fft_data = self._fft_cache[cache_key]
+        else:
+            if self.config.use_optimized_fft:
+                # Use scipy's optimized FFT for better performance
+                from scipy.fft import rfft
+                fft_data = rfft(signal, n=self.config.fft_size)
+            else:
+                fft_data = np.fft.rfft(signal, n=self.config.fft_size)
+
+            if len(self._fft_cache) < self.config.cache_size:
+                self._fft_cache[cache_key] = fft_data
+
         magnitude_spectrum = np.abs(fft_data)
         
         # Downsample for harmonic products

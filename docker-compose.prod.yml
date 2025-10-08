@@ -1,0 +1,363 @@
+version: '3.8'
+
+# Production Docker Compose Configuration
+# Carnatic Music Learning Platform
+
+services:
+  # Main Application
+  carnatic-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: carnatic-music-app-prod
+    restart: unless-stopped
+
+    ports:
+      - "80:5001"
+      - "443:5001"  # HTTPS (requires SSL setup)
+
+    environment:
+      - FLASK_ENV=production
+      - FLASK_DEBUG=0
+      - PYTHONPATH=/app
+      - MICROPHONE_MODE=client_side
+
+      # Database Configuration
+      - POSTGRES_HOST=carnatic-postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=carnatic_production
+      - POSTGRES_USER=carnatic_user
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+
+      # Redis Configuration
+      - REDIS_HOST=carnatic-redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD_FILE=/run/secrets/redis_password
+
+      # Performance Settings
+      - DB_POOL_SIZE=20
+      - DB_MAX_OVERFLOW=40
+      - DB_POOL_TIMEOUT=30
+      - DB_POOL_RECYCLE=3600
+
+      # Security Settings
+      - SECRET_KEY_FILE=/run/secrets/app_secret_key
+      - JWT_SECRET_KEY_FILE=/run/secrets/jwt_secret_key
+
+      # External Services
+      - REDIS_CACHE_TTL=3600
+      - AUDIO_PROCESSING_WORKERS=8
+
+    volumes:
+      # Audio uploads and user data
+      - carnatic_uploads:/app/uploads
+      - carnatic_recordings:/app/recordings
+
+      # SSL certificates (if using HTTPS)
+      - ./certs:/app/certs:ro
+
+      # Configuration files
+      - ./config/production.conf:/app/config/production.conf:ro
+
+    networks:
+      - carnatic-network
+
+    depends_on:
+      carnatic-postgres:
+        condition: service_healthy
+      carnatic-redis:
+        condition: service_healthy
+
+    secrets:
+      - postgres_password
+      - redis_password
+      - app_secret_key
+      - jwt_secret_key
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    labels:
+      - "carnatic.service=main-app"
+      - "carnatic.version=v2.0"
+      - "traefik.enable=true"
+      - "traefik.http.routers.carnatic.rule=Host(`carnatic.yourdomain.com`)"
+      - "traefik.http.routers.carnatic.tls.certresolver=letsencrypt"
+
+  # PostgreSQL Database
+  carnatic-postgres:
+    image: postgres:15-alpine
+    container_name: carnatic-postgres-prod
+    restart: unless-stopped
+
+    environment:
+      - POSTGRES_DB=carnatic_production
+      - POSTGRES_USER=carnatic_user
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+      - POSTGRES_INITDB_ARGS="--encoding=UTF8 --lc-collate=C --lc-ctype=C"
+
+    volumes:
+      - carnatic_postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+      - ./migrations/init_production.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+    networks:
+      - carnatic-network
+
+    secrets:
+      - postgres_password
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U carnatic_user -d carnatic_production"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    labels:
+      - "carnatic.service=database"
+      - "carnatic.backup=daily"
+
+  # Redis Cache and Session Storage
+  carnatic-redis:
+    image: redis:7-alpine
+    container_name: carnatic-redis-prod
+    restart: unless-stopped
+
+    command: >
+      redis-server
+      --requirepass $$(cat /run/secrets/redis_password)
+      --appendonly yes
+      --appendfsync everysec
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+
+    volumes:
+      - carnatic_redis_data:/data
+      - ./config/redis.conf:/etc/redis/redis.conf:ro
+
+    networks:
+      - carnatic-network
+
+    secrets:
+      - redis_password
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "$$(cat /run/secrets/redis_password)", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    labels:
+      - "carnatic.service=cache"
+
+  # Nginx Reverse Proxy (Optional)
+  carnatic-nginx:
+    image: nginx:alpine
+    container_name: carnatic-nginx-prod
+    restart: unless-stopped
+
+    ports:
+      - "8080:80"
+      - "8443:443"
+
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/carnatic.conf:/etc/nginx/conf.d/carnatic.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+      - carnatic_static_files:/var/www/carnatic/static:ro
+
+    networks:
+      - carnatic-network
+
+    depends_on:
+      - carnatic-app
+
+    labels:
+      - "carnatic.service=reverse-proxy"
+
+  # PostgreSQL Backup Service
+  carnatic-backup:
+    image: postgres:15-alpine
+    container_name: carnatic-backup-prod
+    restart: "no"
+
+    environment:
+      - POSTGRES_HOST=carnatic-postgres
+      - POSTGRES_DB=carnatic_production
+      - POSTGRES_USER=carnatic_user
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup.sh:/backup.sh:ro
+
+    networks:
+      - carnatic-network
+
+    secrets:
+      - postgres_password
+
+    command: ["/bin/sh", "/backup.sh"]
+
+    depends_on:
+      carnatic-postgres:
+        condition: service_healthy
+
+    labels:
+      - "carnatic.service=backup"
+
+  # Log Management (Optional)
+  carnatic-logrotate:
+    image: alpine:latest
+    container_name: carnatic-logrotate-prod
+    restart: unless-stopped
+
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./logs:/app/logs
+      - ./scripts/logrotate.sh:/logrotate.sh:ro
+
+    command: ["/bin/sh", "-c", "while true; do /logrotate.sh; sleep 86400; done"]
+
+    labels:
+      - "carnatic.service=log-management"
+
+  # Prometheus Monitoring
+  carnatic-monitoring:
+    image: prom/prometheus:latest
+    container_name: carnatic-prometheus-prod
+    restart: unless-stopped
+
+    ports:
+      - "9090:9090"
+
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - carnatic_prometheus_data:/prometheus
+
+    networks:
+      - carnatic-network
+
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+
+    labels:
+      - "carnatic.service=monitoring"
+
+  # Grafana Dashboard
+  carnatic-grafana:
+    image: grafana/grafana:latest
+    container_name: carnatic-grafana-prod
+    restart: unless-stopped
+
+    ports:
+      - "3000:3000"
+
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD_FILE=/run/secrets/grafana_password
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_USERS_ALLOW_ORG_CREATE=false
+
+    volumes:
+      - carnatic_grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+
+    networks:
+      - carnatic-network
+
+    depends_on:
+      - carnatic-monitoring
+
+    secrets:
+      - grafana_password
+
+    labels:
+      - "carnatic.service=visualization"
+
+  # Performance Monitor Service
+  carnatic-performance:
+    build:
+      context: .
+      dockerfile: Dockerfile.performance
+    container_name: carnatic-performance-prod
+    restart: unless-stopped
+
+    environment:
+      - MONITORING_ENABLED=true
+      - METRICS_EXPORT_URL=http://carnatic-monitoring:9090/api/v1/write
+
+    volumes:
+      - ./monitoring:/app/monitoring
+      - ./logs:/app/logs
+
+    networks:
+      - carnatic-network
+
+    depends_on:
+      - carnatic-app
+      - carnatic-monitoring
+
+    labels:
+      - "carnatic.service=performance-monitoring"
+
+# Networks
+networks:
+  carnatic-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# Persistent Volumes
+volumes:
+  carnatic_postgres_data:
+    driver: local
+
+  carnatic_redis_data:
+    driver: local
+
+  carnatic_uploads:
+    driver: local
+
+  carnatic_recordings:
+    driver: local
+
+  carnatic_static_files:
+    driver: local
+
+  carnatic_prometheus_data:
+    driver: local
+
+  carnatic_grafana_data:
+    driver: local
+
+# Secrets Management
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+
+  redis_password:
+    file: ./secrets/redis_password.txt
+
+  app_secret_key:
+    file: ./secrets/app_secret_key.txt
+
+  jwt_secret_key:
+    file: ./secrets/jwt_secret_key.txt
+
+  grafana_password:
+    file: ./secrets/grafana_password.txt
