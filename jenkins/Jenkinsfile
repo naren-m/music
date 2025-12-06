@@ -1,0 +1,564 @@
+#!/usr/bin/env groovy
+
+/**
+ * Jenkins Pipeline for Music (Carnatic Learning Platform) Multi-Architecture Build and Deployment
+ *
+ * This pipeline automates the complete CI/CD workflow for the music project:
+ * - Multi-architecture Docker builds (linux/amd64, linux/arm64)
+ * - Push to local registry running on homelab K8s cluster
+ * - Update K8s manifests with new image tags
+ * - Deploy to heterogeneous K8s cluster (amd64 + arm64 nodes)
+ * - Verify deployment across all architectures
+ * - Rollback capability on failure
+ *
+ * Architecture Support:
+ * - Dell Laptop (hanuma): amd64 control plane
+ * - Dell Mini: amd64 worker
+ * - GTX1080 Beast (srirama): amd64 worker with GPU
+ * - Mac Mini: arm64 worker (Apple Silicon)
+ *
+ * Registry: 192.168.68.124:30502 (local K8s registry)
+ */
+
+// Pipeline configuration
+def config = [
+    // Registry settings
+    registryHost: '192.168.68.124',
+    registryPort: '30502',
+    imageName: 'music',
+
+    // Kubernetes settings
+    namespace: 'music',
+    kubeconfig: '/home/jenkins/.kube/config',
+
+    // Build settings
+    platforms: 'linux/amd64,linux/arm64',
+    builderName: 'music-jenkins-builder',
+    dockerfilePath: 'Dockerfile',
+    buildContext: '.',
+
+    // Deployment settings
+    manifestPath: '/Users/narenmudivarthy/Projects/deployment/homelab/base/applications/music',
+    deploymentTimeout: 300, // seconds
+
+    // Verification settings
+    healthCheckEndpoint: '/api/v1/health',
+    healthCheckPort: '5001',
+    healthCheckRetries: 10,
+    healthCheckDelay: 10, // seconds
+]
+
+// Global variables
+def imageTag = ''
+def previousTag = ''
+def buildSuccess = false
+def deploySuccess = false
+
+pipeline {
+    agent {
+        label 'docker-buildx'
+    }
+
+    options {
+        // Build options
+        buildDiscarder(logRotator(numToKeepStr: '10', artifactNumToKeepStr: '5'))
+        disableConcurrentBuilds()
+        timeout(time: 1, unit: 'HOURS')
+        timestamps()
+    }
+
+    triggers {
+        // Trigger on push to main/master branch
+        githubPush()
+    }
+
+    environment {
+        // Registry environment
+        REGISTRY = "${config.registryHost}:${config.registryPort}"
+        IMAGE_NAME = "${config.imageName}"
+        FULL_IMAGE_NAME = "${REGISTRY}/${IMAGE_NAME}"
+
+        // Build environment
+        DOCKER_BUILDKIT = '1'
+        BUILDX_BUILDER = "${config.builderName}"
+
+        // Kubernetes environment
+        KUBECONFIG = credentials('homelab-kubeconfig')
+        NAMESPACE = "${config.namespace}"
+    }
+
+    stages {
+        stage('Preparation') {
+            steps {
+                script {
+                    echo "═══════════════════════════════════════════════════════════"
+                    echo "Pipeline: Music (Carnatic Learning Platform) Multi-Arch Build & Deploy"
+                    echo "═══════════════════════════════════════════════════════════"
+
+                    // Generate timestamp-based tag
+                    imageTag = generateTag()
+                    echo "Generated image tag: ${imageTag}"
+
+                    // Validate tag format
+                    if (!validateTagFormat(imageTag)) {
+                        error("Invalid tag format: ${imageTag}")
+                    }
+
+                    // Get previous deployment tag for rollback
+                    previousTag = getPreviousTag()
+                    echo "Previous deployment tag: ${previousTag}"
+
+                    // Display build info
+                    echo """
+                    Build Configuration:
+                    - Registry: ${REGISTRY}
+                    - Image: ${IMAGE_NAME}
+                    - Tag: ${imageTag}
+                    - Platforms: ${config.platforms}
+                    - Namespace: ${NAMESPACE}
+                    - Dockerfile: ${config.dockerfilePath}
+                    """
+                }
+            }
+        }
+
+        stage('Checkout') {
+            steps {
+                echo "Checking out source code..."
+                checkout scm
+
+                script {
+                    // Display git information
+                    sh """
+                        echo "Git Information:"
+                        echo "Branch: \$(git branch --show-current)"
+                        echo "Commit: \$(git rev-parse --short HEAD)"
+                        echo "Author: \$(git log -1 --format='%an')"
+                        echo "Message: \$(git log -1 --format='%s')"
+                    """
+
+                    // Verify Dockerfile exists
+                    sh """
+                        if [ ! -f "${config.dockerfilePath}" ]; then
+                            echo "ERROR: Dockerfile not found at ${config.dockerfilePath}"
+                            exit 1
+                        fi
+                        echo "✅ Dockerfile found: ${config.dockerfilePath}"
+                    """
+                }
+            }
+        }
+
+        stage('Build Multi-Arch Image') {
+            steps {
+                script {
+                    echo "═══════════════════════════════════════════════════════════"
+                    echo "Stage: Build Multi-Architecture Docker Image"
+                    echo "═══════════════════════════════════════════════════════════"
+
+                    // Setup buildx builder
+                    setupBuildx()
+
+                    // Build and push multi-arch image
+                    buildMultiArchImage(imageTag)
+
+                    buildSuccess = true
+                }
+            }
+        }
+
+        stage('Verify Image') {
+            steps {
+                script {
+                    echo "═══════════════════════════════════════════════════════════"
+                    echo "Stage: Verify Multi-Architecture Image"
+                    echo "═══════════════════════════════════════════════════════════"
+
+                    verifyImage(imageTag)
+                }
+            }
+        }
+
+        stage('Test Image') {
+            steps {
+                script {
+                    echo "═══════════════════════════════════════════════════════════"
+                    echo "Stage: Test Docker Image"
+                    echo "═══════════════════════════════════════════════════════════"
+
+                    // Run quick smoke tests on the image
+                    testImage(imageTag)
+                }
+            }
+        }
+
+        stage('Update Manifests') {
+            steps {
+                script {
+                    echo "═══════════════════════════════════════════════════════════"
+                    echo "Stage: Update Kubernetes Manifests"
+                    echo "═══════════════════════════════════════════════════════════"
+
+                    updateKubernetesManifests(imageTag)
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    echo "═══════════════════════════════════════════════════════════"
+                    echo "Stage: Deploy to Kubernetes Cluster"
+                    echo "═══════════════════════════════════════════════════════════"
+
+                    deployToKubernetes()
+
+                    deploySuccess = true
+                }
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                script {
+                    echo "═══════════════════════════════════════════════════════════"
+                    echo "Stage: Verify Deployment Across Architectures"
+                    echo "═══════════════════════════════════════════════════════════"
+
+                    verifyDeployment()
+                }
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                script {
+                    echo "═══════════════════════════════════════════════════════════"
+                    echo "Stage: Application Health Check"
+                    echo "═══════════════════════════════════════════════════════════"
+
+                    performHealthCheck()
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            script {
+                echo """
+                ═══════════════════════════════════════════════════════════
+                ✅ Pipeline Completed Successfully!
+                ═══════════════════════════════════════════════════════════
+                Image: ${FULL_IMAGE_NAME}:${imageTag}
+                Deployed to: ${NAMESPACE} namespace
+                Architecture: Multi-arch (amd64 + arm64)
+                Access URL: http://music.hanuma.com
+                ═══════════════════════════════════════════════════════════
+                """
+            }
+        }
+
+        failure {
+            script {
+                echo """
+                ═══════════════════════════════════════════════════════════
+                ❌ Pipeline Failed!
+                ═══════════════════════════════════════════════════════════
+                """
+
+                // Perform rollback if deployment failed
+                if (buildSuccess && deploySuccess == false && previousTag) {
+                    echo "Attempting rollback to previous version: ${previousTag}"
+                    rollbackDeployment(previousTag)
+                }
+            }
+        }
+
+        always {
+            script {
+                echo "Cleaning up build resources..."
+
+                // Archive build artifacts
+                archiveArtifacts artifacts: '**/deployment.yaml', allowEmptyArchive: true
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Helper Functions
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Generate timestamp-based image tag
+ * Format: hhmmss-ddMmmyy-githash
+ */
+def generateTag() {
+    def timestamp = sh(
+        script: "date '+%H%M%S-%d%b%y'",
+        returnStdout: true
+    ).trim()
+
+    def gitHash = sh(
+        script: "git rev-parse --short=7 HEAD",
+        returnStdout: true
+    ).trim()
+
+    return "${timestamp}-${gitHash}"
+}
+
+/**
+ * Validate tag format matches expected pattern
+ * Expected: hhmmss-ddMmmyy-githash (e.g., 143025-11Nov25-a3f4b2c)
+ */
+def validateTagFormat(tag) {
+    def pattern = ~/^\d{6}-\d{2}[A-Za-z]{3}\d{2}-[a-f0-9]{7}$/
+    return tag =~ pattern
+}
+
+/**
+ * Get previous deployment tag for rollback
+ */
+def getPreviousTag() {
+    def tag = sh(
+        script: """
+            kubectl get deployment music -n ${NAMESPACE} -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null | \
+            cut -d':' -f2 || echo 'none'
+        """,
+        returnStdout: true
+    ).trim()
+
+    return tag == 'none' ? null : tag
+}
+
+/**
+ * Setup Docker buildx builder
+ */
+def setupBuildx() {
+    echo "Setting up Docker buildx builder..."
+
+    sh """
+        # Check if builder exists
+        if docker buildx inspect ${BUILDX_BUILDER} >/dev/null 2>&1; then
+            echo "Builder ${BUILDX_BUILDER} exists, using it"
+            docker buildx use ${BUILDX_BUILDER}
+        else
+            echo "Creating new builder: ${BUILDX_BUILDER}"
+            docker buildx create \
+                --name ${BUILDX_BUILDER} \
+                --driver docker-container \
+                --use \
+                --bootstrap
+        fi
+
+        # Verify builder
+        docker buildx inspect ${BUILDX_BUILDER} --bootstrap
+    """
+}
+
+/**
+ * Build multi-architecture Docker image
+ */
+def buildMultiArchImage(tag) {
+    echo "Building multi-arch image for tag: ${tag}"
+
+    sh """
+        docker buildx build \
+            --platform ${config.platforms} \
+            --tag ${FULL_IMAGE_NAME}:${tag} \
+            --tag ${FULL_IMAGE_NAME}:latest \
+            --builder ${BUILDX_BUILDER} \
+            --file ${config.dockerfilePath} \
+            --push \
+            ${config.buildContext}
+    """
+}
+
+/**
+ * Verify image in registry
+ */
+def verifyImage(tag) {
+    echo "Verifying image: ${FULL_IMAGE_NAME}:${tag}"
+
+    sh """
+        docker buildx imagetools inspect ${FULL_IMAGE_NAME}:${tag}
+    """
+
+    // Verify both architectures are present
+    def manifest = sh(
+        script: "docker buildx imagetools inspect ${FULL_IMAGE_NAME}:${tag}",
+        returnStdout: true
+    )
+
+    if (!manifest.contains('linux/amd64') || !manifest.contains('linux/arm64')) {
+        error("Image manifest missing required architectures!")
+    }
+
+    echo "✅ Verified multi-arch manifest contains amd64 and arm64"
+}
+
+/**
+ * Test Docker image
+ */
+def testImage(tag) {
+    echo "Running smoke tests on image..."
+
+    // Quick container startup test (amd64 only on Jenkins host)
+    sh """
+        # Pull amd64 image
+        docker pull --platform linux/amd64 ${FULL_IMAGE_NAME}:${tag}
+
+        # Start container
+        CONTAINER_ID=\$(docker run -d -p 15001:5001 ${FULL_IMAGE_NAME}:${tag})
+
+        # Wait for startup
+        sleep 20
+
+        # Test health endpoint
+        if curl -sf http://localhost:15001${config.healthCheckEndpoint} > /dev/null; then
+            echo "✅ Image health check passed"
+        else
+            echo "❌ Image health check failed"
+            docker logs \$CONTAINER_ID
+            docker stop \$CONTAINER_ID
+            docker rm \$CONTAINER_ID
+            exit 1
+        fi
+
+        # Cleanup
+        docker stop \$CONTAINER_ID
+        docker rm \$CONTAINER_ID
+    """
+}
+
+/**
+ * Update Kubernetes manifests with new image tag
+ */
+def updateKubernetesManifests(tag) {
+    echo "Updating Kubernetes manifests with tag: ${tag}"
+
+    sh """
+        # Update deployment.yaml with new image tag
+        sed -i.bak "s|image: .*music:.*|image: ${FULL_IMAGE_NAME}:${tag}|g" \
+            ${config.manifestPath}/deployment.yaml
+
+        # Show diff
+        echo "Manifest changes:"
+        diff ${config.manifestPath}/deployment.yaml.bak ${config.manifestPath}/deployment.yaml || true
+    """
+}
+
+/**
+ * Deploy to Kubernetes cluster
+ */
+def deployToKubernetes() {
+    echo "Deploying to Kubernetes cluster..."
+
+    sh """
+        # Apply namespace first
+        kubectl apply -f ${config.manifestPath}/namespace.yaml
+
+        # Apply all manifests
+        kubectl apply -f ${config.manifestPath}/deployment.yaml
+        kubectl apply -f ${config.manifestPath}/service.yaml
+        kubectl apply -f ${config.manifestPath}/ingress.yaml
+
+        # Apply kustomization if it exists
+        [ -f ${config.manifestPath}/kustomization.yaml ] && kubectl apply -k ${config.manifestPath}/ || true
+
+        # Wait for rollout
+        echo "Waiting for deployment rollout..."
+        kubectl rollout status deployment/music -n ${NAMESPACE} --timeout=${config.deploymentTimeout}s
+    """
+}
+
+/**
+ * Verify deployment across all architectures
+ */
+def verifyDeployment() {
+    echo "Verifying deployment across all node architectures..."
+
+    sh """
+        # Get all music pods
+        echo "Pod Status:"
+        kubectl get pods -n ${NAMESPACE} -l app=music -o wide
+
+        # Check pod count
+        EXPECTED_REPLICAS=\$(kubectl get deployment music -n ${NAMESPACE} -o jsonpath='{.spec.replicas}')
+        READY_REPLICAS=\$(kubectl get deployment music -n ${NAMESPACE} -o jsonpath='{.status.readyReplicas}')
+
+        echo ""
+        echo "Replicas: \${READY_REPLICAS}/\${EXPECTED_REPLICAS}"
+
+        if [ "\$READY_REPLICAS" != "\$EXPECTED_REPLICAS" ]; then
+            echo "❌ Not all replicas are ready!"
+            exit 1
+        fi
+
+        echo "✅ All replicas are ready"
+    """
+}
+
+/**
+ * Perform application health check
+ */
+def performHealthCheck() {
+    echo "Performing application health check..."
+
+    def retries = config.healthCheckRetries
+    def delay = config.healthCheckDelay
+
+    retry(retries) {
+        sh """
+            # Health check via kubectl port-forward
+            kubectl port-forward -n ${NAMESPACE} svc/music ${config.healthCheckPort}:${config.healthCheckPort} &
+            PF_PID=\$!
+
+            sleep ${delay}
+
+            # Test endpoint
+            if curl -sf http://localhost:${config.healthCheckPort}${config.healthCheckEndpoint} > /dev/null; then
+                echo "✅ Health check passed"
+                kill \$PF_PID 2>/dev/null || true
+                exit 0
+            else
+                echo "❌ Health check failed, retrying..."
+                kill \$PF_PID 2>/dev/null || true
+                exit 1
+            fi
+        """
+    }
+
+    echo "✅ Application is healthy and responding"
+}
+
+/**
+ * Rollback deployment to previous version
+ */
+def rollbackDeployment(previousTag) {
+    if (!previousTag) {
+        echo "⚠️ No previous version available for rollback"
+        return
+    }
+
+    echo "Rolling back to previous version: ${previousTag}"
+
+    try {
+        sh """
+            # Update manifest with previous tag
+            sed -i "s|image: .*music:.*|image: ${FULL_IMAGE_NAME}:${previousTag}|g" \
+                ${config.manifestPath}/deployment.yaml
+
+            # Apply rollback
+            kubectl apply -f ${config.manifestPath}/deployment.yaml
+
+            # Wait for rollout
+            kubectl rollout status deployment/music -n ${NAMESPACE} --timeout=180s
+
+            echo "✅ Rollback completed successfully"
+        """
+    } catch (Exception e) {
+        echo "❌ Rollback failed: ${e.message}"
+    }
+}
