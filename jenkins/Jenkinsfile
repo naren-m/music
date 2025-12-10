@@ -33,7 +33,7 @@ def config = [
 
     // Build settings
     platforms: 'linux/amd64,linux/arm64',
-    builderName: 'music-jenkins-builder',
+    builderName: 'homelab-builder',
     dockerfilePath: 'Dockerfile',
     buildContext: '.',
 
