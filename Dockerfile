@@ -15,7 +15,8 @@ RUN apt-get update && apt-get install -y \
 
 # Copy requirements and install Python dependencies
 COPY requirements-v2.txt .
-RUN pip install --no-cache-dir -r requirements-v2.txt
+# Use --prefer-binary to avoid compiling C extensions (important for arm64 emulation)
+RUN pip install --no-cache-dir --prefer-binary -r requirements-v2.txt
 
 # Copy application code structure
 COPY app_v2.py .
