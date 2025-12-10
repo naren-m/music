@@ -160,7 +160,7 @@ pipeline {
                     setupBuildx()
 
                     // Build and push multi-arch image
-                    buildMultiArchImage(imageTag)
+                    buildMultiArchImage(imageTag, config.platforms, config.dockerfilePath, config.buildContext)
 
                     buildSuccess = true
                 }
@@ -187,7 +187,7 @@ pipeline {
                     echo "═══════════════════════════════════════════════════════════"
 
                     // Run quick smoke tests on the image
-                    testImage(imageTag)
+                    testImage(imageTag, config.healthCheckEndpoint)
                 }
             }
         }
@@ -199,7 +199,7 @@ pipeline {
                     echo "Stage: Update Kubernetes Manifests"
                     echo "═══════════════════════════════════════════════════════════"
 
-                    updateKubernetesManifests(imageTag)
+                    updateKubernetesManifests(imageTag, config.manifestPath)
                 }
             }
         }
@@ -211,7 +211,7 @@ pipeline {
                     echo "Stage: Deploy to Kubernetes Cluster"
                     echo "═══════════════════════════════════════════════════════════"
 
-                    deployToKubernetes()
+                    deployToKubernetes(config.manifestPath, config.deploymentTimeout)
 
                     deploySuccess = true
                 }
@@ -237,7 +237,7 @@ pipeline {
                     echo "Stage: Application Health Check"
                     echo "═══════════════════════════════════════════════════════════"
 
-                    performHealthCheck()
+                    performHealthCheck(config.healthCheckRetries, config.healthCheckDelay, config.healthCheckPort, config.healthCheckEndpoint)
                 }
             }
         }
@@ -270,7 +270,7 @@ pipeline {
                 // Perform rollback if deployment failed
                 if (buildSuccess && deploySuccess == false && previousTag) {
                     echo "Attempting rollback to previous version: ${previousTag}"
-                    rollbackDeployment(previousTag)
+                    rollbackDeployment(previousTag, config.manifestPath)
                 }
             }
         }
@@ -360,18 +360,18 @@ def setupBuildx() {
 /**
  * Build multi-architecture Docker image
  */
-def buildMultiArchImage(tag) {
+def buildMultiArchImage(tag, platforms, dockerfilePath, buildContext) {
     echo "Building multi-arch image for tag: ${tag}"
 
     sh """
         docker buildx build \
-            --platform ${config.platforms} \
+            --platform ${platforms} \
             --tag ${FULL_IMAGE_NAME}:${tag} \
             --tag ${FULL_IMAGE_NAME}:latest \
             --builder ${BUILDX_BUILDER} \
-            --file ${config.dockerfilePath} \
+            --file ${dockerfilePath} \
             --push \
-            ${config.buildContext}
+            ${buildContext}
     """
 }
 
@@ -401,7 +401,7 @@ def verifyImage(tag) {
 /**
  * Test Docker image
  */
-def testImage(tag) {
+def testImage(tag, healthCheckEndpoint) {
     echo "Running smoke tests on image..."
 
     // Quick container startup test (amd64 only on Jenkins host)
@@ -416,7 +416,7 @@ def testImage(tag) {
         sleep 20
 
         # Test health endpoint
-        if curl -sf http://localhost:15001${config.healthCheckEndpoint} > /dev/null; then
+        if curl -sf http://localhost:15001${healthCheckEndpoint} > /dev/null; then
             echo "✅ Image health check passed"
         else
             echo "❌ Image health check failed"
@@ -435,41 +435,41 @@ def testImage(tag) {
 /**
  * Update Kubernetes manifests with new image tag
  */
-def updateKubernetesManifests(tag) {
+def updateKubernetesManifests(tag, manifestPath) {
     echo "Updating Kubernetes manifests with tag: ${tag}"
 
     sh """
         # Update deployment.yaml with new image tag
         sed -i.bak "s|image: .*music:.*|image: ${FULL_IMAGE_NAME}:${tag}|g" \
-            ${config.manifestPath}/deployment.yaml
+            ${manifestPath}/deployment.yaml
 
         # Show diff
         echo "Manifest changes:"
-        diff ${config.manifestPath}/deployment.yaml.bak ${config.manifestPath}/deployment.yaml || true
+        diff ${manifestPath}/deployment.yaml.bak ${manifestPath}/deployment.yaml || true
     """
 }
 
 /**
  * Deploy to Kubernetes cluster
  */
-def deployToKubernetes() {
+def deployToKubernetes(manifestPath, deploymentTimeout) {
     echo "Deploying to Kubernetes cluster..."
 
     sh """
         # Apply namespace first
-        kubectl apply -f ${config.manifestPath}/namespace.yaml
+        kubectl apply -f ${manifestPath}/namespace.yaml
 
         # Apply all manifests
-        kubectl apply -f ${config.manifestPath}/deployment.yaml
-        kubectl apply -f ${config.manifestPath}/service.yaml
-        kubectl apply -f ${config.manifestPath}/ingress.yaml
+        kubectl apply -f ${manifestPath}/deployment.yaml
+        kubectl apply -f ${manifestPath}/service.yaml
+        kubectl apply -f ${manifestPath}/ingress.yaml
 
         # Apply kustomization if it exists
-        [ -f ${config.manifestPath}/kustomization.yaml ] && kubectl apply -k ${config.manifestPath}/ || true
+        [ -f ${manifestPath}/kustomization.yaml ] && kubectl apply -k ${manifestPath}/ || true
 
         # Wait for rollout
         echo "Waiting for deployment rollout..."
-        kubectl rollout status deployment/music -n ${NAMESPACE} --timeout=${config.deploymentTimeout}s
+        kubectl rollout status deployment/music -n ${NAMESPACE} --timeout=${deploymentTimeout}s
     """
 }
 
@@ -503,22 +503,19 @@ def verifyDeployment() {
 /**
  * Perform application health check
  */
-def performHealthCheck() {
+def performHealthCheck(healthCheckRetries, healthCheckDelay, healthCheckPort, healthCheckEndpoint) {
     echo "Performing application health check..."
 
-    def retries = config.healthCheckRetries
-    def delay = config.healthCheckDelay
-
-    retry(retries) {
+    retry(healthCheckRetries) {
         sh """
             # Health check via kubectl port-forward
-            kubectl port-forward -n ${NAMESPACE} svc/music ${config.healthCheckPort}:${config.healthCheckPort} &
+            kubectl port-forward -n ${NAMESPACE} svc/music ${healthCheckPort}:${healthCheckPort} &
             PF_PID=\$!
 
-            sleep ${delay}
+            sleep ${healthCheckDelay}
 
             # Test endpoint
-            if curl -sf http://localhost:${config.healthCheckPort}${config.healthCheckEndpoint} > /dev/null; then
+            if curl -sf http://localhost:${healthCheckPort}${healthCheckEndpoint} > /dev/null; then
                 echo "✅ Health check passed"
                 kill \$PF_PID 2>/dev/null || true
                 exit 0
@@ -536,7 +533,7 @@ def performHealthCheck() {
 /**
  * Rollback deployment to previous version
  */
-def rollbackDeployment(previousTag) {
+def rollbackDeployment(previousTag, manifestPath) {
     if (!previousTag) {
         echo "⚠️ No previous version available for rollback"
         return
@@ -548,10 +545,10 @@ def rollbackDeployment(previousTag) {
         sh """
             # Update manifest with previous tag
             sed -i "s|image: .*music:.*|image: ${FULL_IMAGE_NAME}:${previousTag}|g" \
-                ${config.manifestPath}/deployment.yaml
+                ${manifestPath}/deployment.yaml
 
             # Apply rollback
-            kubectl apply -f ${config.manifestPath}/deployment.yaml
+            kubectl apply -f ${manifestPath}/deployment.yaml
 
             # Wait for rollout
             kubectl rollout status deployment/music -n ${NAMESPACE} --timeout=180s
