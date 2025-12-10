@@ -63,7 +63,7 @@ pipeline {
         // Build options
         buildDiscarder(logRotator(numToKeepStr: '10', artifactNumToKeepStr: '5'))
         disableConcurrentBuilds()
-        timeout(time: 1, unit: 'HOURS')
+        timeout(time: 2, unit: 'HOURS')
         timestamps()
     }
 
@@ -333,24 +333,31 @@ def getPreviousTag() {
 }
 
 /**
- * Setup Docker buildx builder
+ * Setup Docker buildx builder with insecure registry support
  */
 def setupBuildx() {
-    echo "Setting up Docker buildx builder..."
+    echo "Setting up Docker buildx builder with insecure registry..."
 
     sh """
-        # Check if builder exists
-        if docker buildx inspect ${BUILDX_BUILDER} >/dev/null 2>&1; then
-            echo "Builder ${BUILDX_BUILDER} exists, using it"
-            docker buildx use ${BUILDX_BUILDER}
-        else
-            echo "Creating new builder: ${BUILDX_BUILDER}"
-            docker buildx create \
-                --name ${BUILDX_BUILDER} \
-                --driver docker-container \
-                --use \
-                --bootstrap
-        fi
+        # Create buildkitd.toml config for insecure registry
+        mkdir -p /tmp/buildx-config
+        cat > /tmp/buildx-config/buildkitd.toml << 'TOML'
+[registry."192.168.68.124:30501"]
+  http = true
+  insecure = true
+TOML
+
+        # Remove existing builder to ensure fresh config
+        docker buildx rm ${BUILDX_BUILDER} 2>/dev/null || true
+
+        # Create new builder with insecure registry config
+        echo "Creating builder: ${BUILDX_BUILDER} with insecure registry config"
+        docker buildx create \
+            --name ${BUILDX_BUILDER} \
+            --driver docker-container \
+            --config /tmp/buildx-config/buildkitd.toml \
+            --use \
+            --bootstrap
 
         # Verify builder
         docker buildx inspect ${BUILDX_BUILDER} --bootstrap
