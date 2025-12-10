@@ -17,14 +17,14 @@
  * - GTX1080 Beast (srirama): amd64 worker with GPU
  * - Mac Mini: arm64 worker (Apple Silicon)
  *
- * Registry: 192.168.68.124:30502 (local K8s registry)
+ * Registry: 192.168.68.124:30501 (local K8s registry)
  */
 
 // Pipeline configuration
 def config = [
     // Registry settings
     registryHost: '192.168.68.124',
-    registryPort: '30502',
+    registryPort: '30501',
     imageName: 'music',
 
     // Kubernetes settings
