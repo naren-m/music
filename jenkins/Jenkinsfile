@@ -53,6 +53,7 @@ def imageTag = ''
 def previousTag = ''
 def buildSuccess = false
 def deploySuccess = false
+def kubectlBin = 'kubectl'  // Will be set to actual path in Setup Deploy Tools stage
 
 pipeline {
     agent {
@@ -192,6 +193,19 @@ pipeline {
             }
         }
 
+        stage('Setup Deploy Tools') {
+            steps {
+                script {
+                    echo "═══════════════════════════════════════════════════════════"
+                    echo "Stage: Setup Deploy Tools (kubectl)"
+                    echo "═══════════════════════════════════════════════════════════"
+
+                    kubectlBin = setupKubectl()
+                    echo "kubectl binary path: ${kubectlBin}"
+                }
+            }
+        }
+
         stage('Update Manifests') {
             steps {
                 script {
@@ -211,7 +225,7 @@ pipeline {
                     echo "Stage: Deploy to Kubernetes Cluster"
                     echo "═══════════════════════════════════════════════════════════"
 
-                    deployToKubernetes(config.manifestPath, config.deploymentTimeout)
+                    deployToKubernetes(config.manifestPath, config.deploymentTimeout, kubectlBin)
 
                     deploySuccess = true
                 }
@@ -225,7 +239,7 @@ pipeline {
                     echo "Stage: Verify Deployment Across Architectures"
                     echo "═══════════════════════════════════════════════════════════"
 
-                    verifyDeployment()
+                    verifyDeployment(kubectlBin)
                 }
             }
         }
@@ -237,7 +251,7 @@ pipeline {
                     echo "Stage: Application Health Check"
                     echo "═══════════════════════════════════════════════════════════"
 
-                    performHealthCheck(config.healthCheckRetries, config.healthCheckDelay, config.healthCheckPort, config.healthCheckEndpoint)
+                    performHealthCheck(config.healthCheckRetries, config.healthCheckDelay, config.healthCheckPort, config.healthCheckEndpoint, kubectlBin)
                 }
             }
         }
@@ -270,7 +284,11 @@ pipeline {
                 // Perform rollback if deployment failed
                 if (buildSuccess && deploySuccess == false && previousTag) {
                     echo "Attempting rollback to previous version: ${previousTag}"
-                    rollbackDeployment(previousTag, config.manifestPath)
+                    // Ensure kubectl is available for rollback
+                    if (kubectlBin == 'kubectl') {
+                        kubectlBin = setupKubectl()
+                    }
+                    rollbackDeployment(previousTag, config.manifestPath, kubectlBin)
                 }
             }
         }
@@ -289,6 +307,33 @@ pipeline {
 // ═══════════════════════════════════════════════════════════════════════════
 // Helper Functions
 // ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Setup kubectl binary for deploy stages
+ * Downloads kubectl to workspace since Jenkins container doesn't have it installed
+ */
+def setupKubectl() {
+    def kubectlPath = "${WORKSPACE}/bin/kubectl"
+
+    sh """
+        mkdir -p ${WORKSPACE}/bin
+
+        # Check if kubectl already exists and is executable
+        if [ -x "${kubectlPath}" ]; then
+            echo "✅ kubectl already available at ${kubectlPath}"
+            ${kubectlPath} version --client --short 2>/dev/null || true
+        else
+            echo "Downloading kubectl..."
+            curl -sLO "https://dl.k8s.io/release/v1.32.0/bin/linux/amd64/kubectl"
+            chmod +x kubectl
+            mv kubectl ${kubectlPath}
+            echo "✅ kubectl downloaded to ${kubectlPath}"
+            ${kubectlPath} version --client --short 2>/dev/null || true
+        fi
+    """
+
+    return kubectlPath
+}
 
 /**
  * Generate timestamp-based image tag
@@ -319,11 +364,17 @@ def validateTagFormat(tag) {
 
 /**
  * Get previous deployment tag for rollback
+ * Note: This runs before kubectlBin is set, so we try system kubectl or downloaded version
  */
 def getPreviousTag() {
     def tag = sh(
         script: """
-            kubectl get deployment music -n ${NAMESPACE} -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null | \
+            # Try downloaded kubectl first, fall back to system kubectl
+            KUBECTL_CMD="${WORKSPACE}/bin/kubectl"
+            if [ ! -x "\$KUBECTL_CMD" ]; then
+                KUBECTL_CMD="kubectl"
+            fi
+            \$KUBECTL_CMD get deployment music -n ${NAMESPACE} -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null | \
             cut -d':' -f2 || echo 'none'
         """,
         returnStdout: true
@@ -416,8 +467,8 @@ def testImage(tag, healthCheckEndpoint) {
         # Pull amd64 image
         docker pull --platform linux/amd64 ${FULL_IMAGE_NAME}:${tag}
 
-        # Start container
-        CONTAINER_ID=\$(docker run -d -p 15001:5001 ${FULL_IMAGE_NAME}:${tag})
+        # Start container with required environment variables
+        CONTAINER_ID=\$(docker run -d -p 15001:5001 -e SECRET_KEY=jenkins-test-key-not-for-production -e FLASK_ENV=development ${FULL_IMAGE_NAME}:${tag})
 
         # Wait for startup
         sleep 20
@@ -459,41 +510,41 @@ def updateKubernetesManifests(tag, manifestPath) {
 /**
  * Deploy to Kubernetes cluster
  */
-def deployToKubernetes(manifestPath, deploymentTimeout) {
+def deployToKubernetes(manifestPath, deploymentTimeout, kubectl) {
     echo "Deploying to Kubernetes cluster..."
 
     sh """
         # Apply namespace first
-        kubectl apply -f ${manifestPath}/namespace.yaml
+        ${kubectl} apply -f ${manifestPath}/namespace.yaml
 
         # Apply all manifests
-        kubectl apply -f ${manifestPath}/deployment.yaml
-        kubectl apply -f ${manifestPath}/service.yaml
-        kubectl apply -f ${manifestPath}/ingress.yaml
+        ${kubectl} apply -f ${manifestPath}/deployment.yaml
+        ${kubectl} apply -f ${manifestPath}/service.yaml
+        ${kubectl} apply -f ${manifestPath}/ingress.yaml
 
         # Apply kustomization if it exists
-        [ -f ${manifestPath}/kustomization.yaml ] && kubectl apply -k ${manifestPath}/ || true
+        [ -f ${manifestPath}/kustomization.yaml ] && ${kubectl} apply -k ${manifestPath}/ || true
 
         # Wait for rollout
         echo "Waiting for deployment rollout..."
-        kubectl rollout status deployment/music -n ${NAMESPACE} --timeout=${deploymentTimeout}s
+        ${kubectl} rollout status deployment/music -n ${NAMESPACE} --timeout=${deploymentTimeout}s
     """
 }
 
 /**
  * Verify deployment across all architectures
  */
-def verifyDeployment() {
+def verifyDeployment(kubectl) {
     echo "Verifying deployment across all node architectures..."
 
     sh """
         # Get all music pods
         echo "Pod Status:"
-        kubectl get pods -n ${NAMESPACE} -l app=music -o wide
+        ${kubectl} get pods -n ${NAMESPACE} -l app=music -o wide
 
         # Check pod count
-        EXPECTED_REPLICAS=\$(kubectl get deployment music -n ${NAMESPACE} -o jsonpath='{.spec.replicas}')
-        READY_REPLICAS=\$(kubectl get deployment music -n ${NAMESPACE} -o jsonpath='{.status.readyReplicas}')
+        EXPECTED_REPLICAS=\$(${kubectl} get deployment music -n ${NAMESPACE} -o jsonpath='{.spec.replicas}')
+        READY_REPLICAS=\$(${kubectl} get deployment music -n ${NAMESPACE} -o jsonpath='{.status.readyReplicas}')
 
         echo ""
         echo "Replicas: \${READY_REPLICAS}/\${EXPECTED_REPLICAS}"
@@ -510,13 +561,13 @@ def verifyDeployment() {
 /**
  * Perform application health check
  */
-def performHealthCheck(healthCheckRetries, healthCheckDelay, healthCheckPort, healthCheckEndpoint) {
+def performHealthCheck(healthCheckRetries, healthCheckDelay, healthCheckPort, healthCheckEndpoint, kubectl) {
     echo "Performing application health check..."
 
     retry(healthCheckRetries) {
         sh """
             # Health check via kubectl port-forward
-            kubectl port-forward -n ${NAMESPACE} svc/music ${healthCheckPort}:${healthCheckPort} &
+            ${kubectl} port-forward -n ${NAMESPACE} svc/music ${healthCheckPort}:${healthCheckPort} &
             PF_PID=\$!
 
             sleep ${healthCheckDelay}
@@ -540,7 +591,7 @@ def performHealthCheck(healthCheckRetries, healthCheckDelay, healthCheckPort, he
 /**
  * Rollback deployment to previous version
  */
-def rollbackDeployment(previousTag, manifestPath) {
+def rollbackDeployment(previousTag, manifestPath, kubectl) {
     if (!previousTag) {
         echo "⚠️ No previous version available for rollback"
         return
@@ -555,10 +606,10 @@ def rollbackDeployment(previousTag, manifestPath) {
                 ${manifestPath}/deployment.yaml
 
             # Apply rollback
-            kubectl apply -f ${manifestPath}/deployment.yaml
+            ${kubectl} apply -f ${manifestPath}/deployment.yaml
 
             # Wait for rollout
-            kubectl rollout status deployment/music -n ${NAMESPACE} --timeout=180s
+            ${kubectl} rollout status deployment/music -n ${NAMESPACE} --timeout=180s
 
             echo "✅ Rollback completed successfully"
         """
