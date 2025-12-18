@@ -3,88 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎵 Carnatic Music Learning - Real-time Shruti Detection</title>
+    <title>Carnatic Music Learning - Real-time Shruti Detection</title>
     <style>
-        :root {
-            --primary-color: #ff6b35;
-            --secondary-color: #2a2a2a;
-            --success-color: #4CAF50;
-            --error-color: #f44336;
-            --warning-color: #ff9800;
-            --background: #1a1a1a;
-            --text-primary: #e0e0e0;
-            --text-secondary: #b0b0b0;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, var(--background) 0%, #2d1810 100%);
-            color: var(--text-primary);
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #333;
             min-height: 100vh;
-            line-height: 1.6;
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
         }
 
         h1 {
-            font-size: 2.5rem;
-            color: var(--primary-color);
+            text-align: center;
             margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            font-size: 2.5em;
+            color: #2c5282;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .subtitle {
-            font-size: 1.2rem;
-            color: var(--text-secondary);
-            margin-bottom: 20px;
+            text-align: center;
+            color: #666;
+            margin-bottom: 25px;
+            font-size: 1.1em;
         }
 
         .nav-links {
             display: flex;
             justify-content: center;
-            gap: 15px;
+            gap: 20px;
             margin-bottom: 30px;
         }
 
         .nav-link {
-            padding: 10px 20px;
-            background: var(--secondary-color);
-            color: var(--text-primary);
+            padding: 12px 24px;
+            background: #2c5282;
+            border: none;
+            border-radius: 25px;
+            color: white;
             text-decoration: none;
-            border-radius: 8px;
+            font-weight: bold;
             transition: all 0.3s ease;
-            border: 2px solid transparent;
         }
 
         .nav-link:hover, .nav-link.active {
-            background: var(--primary-color);
-            border-color: var(--primary-color);
+            background: #667eea;
             transform: translateY(-2px);
         }
 
         .main-content {
             display: grid;
-            grid-template-columns: 1fr 400px;
-            gap: 30px;
-            margin-bottom: 30px;
+            grid-template-columns: 1fr 350px;
+            gap: 25px;
+            margin-bottom: 25px;
         }
 
-        @media (max-width: 1200px) {
+        @media (max-width: 900px) {
             .main-content {
                 grid-template-columns: 1fr;
             }
@@ -92,24 +77,23 @@
 
         /* Detection Panel */
         .detection-panel {
-            background: var(--secondary-color);
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
         }
 
         .status-card {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.15);
             border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 25px;
-            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            margin-bottom: 20px;
         }
 
         .status-indicator {
             display: flex;
             align-items: center;
-            margin-bottom: 15px;
         }
 
         .status-dot {
@@ -120,199 +104,269 @@
             animation: pulse 2s infinite;
         }
 
-        .status-dot.healthy { background-color: var(--success-color); }
-        .status-dot.unhealthy { background-color: var(--error-color); }
-        .status-dot.warning { background-color: var(--warning-color); }
+        .status-dot.healthy { background-color: #90EE90; }
+        .status-dot.unhealthy { background-color: #ff6b6b; }
+        .status-dot.warning { background-color: #ffd93d; }
 
         @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+            100% { opacity: 1; transform: scale(1); }
         }
 
         .controls {
             display: flex;
-            gap: 15px;
-            margin-bottom: 25px;
+            gap: 12px;
+            margin-bottom: 20px;
         }
 
         .btn {
             flex: 1;
-            padding: 12px 20px;
+            padding: 14px 20px;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
+            border-radius: 25px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 8px;
         }
 
         .btn-primary {
-            background: linear-gradient(45deg, var(--primary-color), #ff8555);
-            color: white;
+            background: white;
+            color: #667eea;
         }
 
         .btn-primary:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+            box-shadow: 0 5px 15px rgba(255, 255, 255, 0.3);
         }
 
         .btn-secondary {
-            background: linear-gradient(45deg, #666, #888);
+            background: rgba(255, 255, 255, 0.2);
             color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
         }
 
         .btn-secondary:hover:not(:disabled) {
-            background: linear-gradient(45deg, #777, #999);
+            background: rgba(255, 255, 255, 0.3);
         }
 
         .btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            transform: none !important;
-            box-shadow: none !important;
         }
 
         /* Detection Display */
         .detection-display {
             text-align: center;
-            padding: 30px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 10px;
-            margin-bottom: 20px;
+            padding: 30px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            margin-bottom: 15px;
         }
 
         .frequency-display {
-            font-size: 2.5rem;
+            font-size: 1.8rem;
             font-weight: bold;
-            color: var(--primary-color);
-            margin-bottom: 10px;
+            margin-bottom: 5px;
+            opacity: 0.9;
         }
 
         .note-display {
-            font-size: 3rem;
+            font-size: 3.5rem;
             font-weight: bold;
             margin: 15px 0;
-            min-height: 60px;
+            min-height: 70px;
             display: flex;
             align-items: center;
             justify-content: center;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
         }
 
         .cent-display {
-            font-size: 1.2rem;
-            color: var(--text-secondary);
+            font-size: 1rem;
+            opacity: 0.8;
         }
 
         .confidence-bar {
             width: 100%;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
             overflow: hidden;
-            margin: 15px 0;
+            margin-top: 15px;
         }
 
         .confidence-fill {
             height: 100%;
-            background: linear-gradient(90deg, var(--error-color), var(--warning-color), var(--success-color));
+            background: linear-gradient(90deg, #ff6b6b, #ffd93d, #90EE90);
             width: 0%;
             transition: width 0.3s ease;
+            border-radius: 5px;
         }
 
         /* Control Panel */
         .control-panel {
-            background: var(--secondary-color);
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
         }
 
-        .panel-section {
-            margin-bottom: 25px;
+        .panel-card {
+            background: linear-gradient(135deg, #f6f9fc 0%, #e9ecef 100%);
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 5px solid #667eea;
         }
 
-        .panel-section h3 {
-            color: var(--primary-color);
-            margin-bottom: 15px;
-            font-size: 1.3rem;
+        .panel-card h3 {
+            color: #2c5282;
+            margin: 0 0 15px 0;
+            font-size: 1.1rem;
         }
 
         .setting-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 5px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+
+        .setting-label {
+            color: #555;
+            font-size: 0.95rem;
         }
 
         .setting-value {
-            font-weight: bold;
-            color: var(--success-color);
+            font-weight: 600;
+            color: #28a745;
         }
 
+        /* Practice Mode */
+        .practice-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .practice-card h3 {
+            color: white;
+            margin: 0 0 15px 0;
+            font-size: 1.1rem;
+        }
+
+        .practice-setting {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .practice-setting:last-of-type {
+            border-bottom: none;
+        }
+
+        .practice-label {
+            opacity: 0.9;
+        }
+
+        .practice-value {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .practice-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .practice-controls .btn {
+            padding: 10px 15px;
+            font-size: 0.9rem;
+        }
+
+        .practice-score {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* Info Grid */
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 20px;
-            margin-top: 30px;
+            margin-top: 25px;
         }
 
         .info-card {
-            background: var(--secondary-color);
+            background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
             padding: 25px;
-            border-radius: 10px;
-            border-top: 4px solid var(--primary-color);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            border-radius: 12px;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
 
         .info-card h3 {
-            color: var(--primary-color);
-            margin-bottom: 15px;
-            font-size: 1.3rem;
+            color: #2c5282;
+            margin: 0 0 15px 0;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .info-card ul {
             list-style: none;
+            padding: 0;
+            margin: 0;
         }
 
         .info-card li {
-            margin-bottom: 8px;
-            padding-left: 20px;
+            padding: 6px 0;
+            padding-left: 25px;
             position: relative;
+            color: #555;
         }
 
         .info-card li:before {
-            content: "♫";
+            content: "✓";
             position: absolute;
             left: 0;
-            color: var(--primary-color);
+            color: #28a745;
+            font-weight: bold;
         }
 
         .error-message {
-            background: var(--error-color);
+            background: #ff6b6b;
             color: white;
             padding: 15px;
-            border-radius: 5px;
-            margin: 10px 0;
+            border-radius: 8px;
+            margin: 15px 0;
             display: none;
+            text-align: center;
         }
 
         .loading {
             display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
+            width: 18px;
+            height: 18px;
+            border: 3px solid rgba(102, 126, 234, 0.3);
             border-radius: 50%;
-            border-top: 3px solid var(--primary-color);
+            border-top: 3px solid #667eea;
             animation: spin 1s linear infinite;
         }
 
@@ -320,19 +374,22 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Match status colors */
+        .match-correct { color: #90EE90 !important; }
+        .match-wrong { color: #ff6b6b !important; }
+        .match-waiting { color: #ffd93d !important; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>🎵 Carnatic Music Learning</h1>
-            <p class="subtitle">Real-time 22-Shruti Detection System</p>
+        <h1>🎵 Real-time Shruti Detection</h1>
+        <p class="subtitle">22-Shruti Carnatic Music Training System</p>
 
-            <div class="nav-links">
-                <a href="/" class="nav-link">Western Notes</a>
-                <a href="/carnatic" class="nav-link active">Carnatic Shruti</a>
-                <a href="/learning" class="nav-link">Learning Modules</a>
-            </div>
+        <div class="nav-links">
+            <a href="/" class="nav-link">Home</a>
+            <a href="/carnatic" class="nav-link active">Shruti Detection</a>
+            <a href="/learning" class="nav-link">Learning Modules</a>
         </div>
 
         <div class="main-content">
@@ -346,10 +403,12 @@
 
                 <div class="controls">
                     <button id="startBtn" class="btn btn-primary" onclick="startDetection()" disabled>
-                        <span id="startBtnText">Start Detection</span>
+                        <span id="startBtnText">▶ Start Detection</span>
                         <div id="startSpinner" class="loading" style="display: none;"></div>
                     </button>
-                    <button id="stopBtn" class="btn btn-secondary" onclick="stopDetection()" disabled>Stop Detection</button>
+                    <button id="stopBtn" class="btn btn-secondary" onclick="stopDetection()" disabled>
+                        ⏹ Stop
+                    </button>
                 </div>
 
                 <div class="detection-display">
@@ -365,35 +424,58 @@
             </div>
 
             <div class="control-panel">
-                <div class="panel-section">
-                    <h3>System Status</h3>
+                <div class="panel-card">
+                    <h3>📊 System Status</h3>
                     <div class="setting-item">
-                        <span>API Health:</span>
+                        <span class="setting-label">API Health</span>
                         <span id="apiHealth" class="setting-value">Checking...</span>
                     </div>
                     <div class="setting-item">
-                        <span>WebSocket:</span>
+                        <span class="setting-label">WebSocket</span>
                         <span id="wsStatus" class="setting-value">Disconnected</span>
                     </div>
                     <div class="setting-item">
-                        <span>Microphone:</span>
+                        <span class="setting-label">Microphone</span>
                         <span id="micStatus" class="setting-value">Not accessed</span>
                     </div>
                 </div>
 
-                <div class="panel-section">
-                    <h3>Detection Settings</h3>
+                <div class="panel-card">
+                    <h3>⚙️ Detection Settings</h3>
                     <div class="setting-item">
-                        <span>Sample Rate:</span>
+                        <span class="setting-label">Sample Rate</span>
                         <span class="setting-value">44.1 kHz</span>
                     </div>
                     <div class="setting-item">
-                        <span>Buffer Size:</span>
-                        <span class="setting-value">1024 samples</span>
+                        <span class="setting-label">Base Sa</span>
+                        <span class="setting-value">261.63 Hz (C4)</span>
                     </div>
                     <div class="setting-item">
-                        <span>Shruti System:</span>
+                        <span class="setting-label">Shruti System</span>
                         <span class="setting-value">22-Shruti</span>
+                    </div>
+                </div>
+
+                <div class="practice-card">
+                    <h3>🎯 Practice Mode</h3>
+                    <div class="practice-setting">
+                        <span class="practice-label">Target Note</span>
+                        <span id="targetNote" class="practice-value">--</span>
+                    </div>
+                    <div class="practice-setting">
+                        <span class="practice-label">Match Status</span>
+                        <span id="matchStatus" class="practice-value">--</span>
+                    </div>
+                    <div class="practice-controls">
+                        <button class="btn btn-primary" onclick="startPractice()" id="practiceBtn">
+                            Start Practice
+                        </button>
+                        <button class="btn btn-secondary" onclick="nextNote()" id="nextNoteBtn" disabled>
+                            Next →
+                        </button>
+                    </div>
+                    <div class="practice-score">
+                        Score: <span id="scoreValue">0</span> / <span id="scoreTotal">0</span>
                     </div>
                 </div>
             </div>
@@ -401,10 +483,10 @@
 
         <div class="info-grid">
             <div class="info-card">
-                <h3>Real-time Features</h3>
+                <h3>🎤 Real-time Features</h3>
                 <ul>
                     <li>Microtonal pitch detection</li>
-                    <li>WebSocket communication</li>
+                    <li>WebSocket live streaming</li>
                     <li>Sub-25ms latency</li>
                     <li>Confidence scoring</li>
                     <li>Cent deviation display</li>
@@ -412,29 +494,31 @@
             </div>
 
             <div class="info-card">
-                <h3>22-Shruti System</h3>
+                <h3>🎼 22-Shruti System</h3>
                 <ul>
                     <li>Authentic Carnatic intervals</li>
-                    <li>Raga-specific detection</li>
+                    <li>Sa, Ri, Ga, Ma, Pa, Da, Ni</li>
                     <li>Microtonal precision</li>
                     <li>Traditional music theory</li>
-                    <li>Performance feedback</li>
+                    <li>Real-time feedback</li>
                 </ul>
             </div>
 
             <div class="info-card">
-                <h3>Technical Specifications</h3>
+                <h3>📱 How to Use</h3>
                 <ul>
-                    <li>Real-time audio processing</li>
-                    <li>Optimized FFT algorithms</li>
-                    <li>Parallel processing engine</li>
-                    <li>Docker deployment ready</li>
-                    <li>Cross-browser compatible</li>
+                    <li>Click "Start Detection"</li>
+                    <li>Allow microphone access</li>
+                    <li>Sing or play a note</li>
+                    <li>See swara name displayed</li>
+                    <li>Use Practice Mode to train</li>
                 </ul>
             </div>
         </div>
     </div>
 
+    <!-- Socket.IO client library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <script>
         let socket = null;
         let audioContext = null;
@@ -453,42 +537,34 @@
             try {
                 const response = await fetch('/api/v1/health', {
                     method: 'GET',
-                    headers: {
-                        'Accept': 'application/json'
-                    }
+                    headers: { 'Accept': 'application/json' }
                 });
 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
                 const data = await response.json();
 
                 if (data.status === 'healthy') {
-                    updateStatus('healthy', 'System Ready - API Connected');
-                    document.getElementById('apiHealth').textContent = 'Healthy';
+                    updateStatus('healthy', 'System Ready - Click Start');
+                    document.getElementById('apiHealth').textContent = '✅ Healthy';
                     document.getElementById('startBtn').disabled = false;
                 } else {
-                    throw new Error('API reported unhealthy status');
+                    throw new Error('API unhealthy');
                 }
             } catch (error) {
                 console.error('API health check failed:', error);
-                updateStatus('error', 'API Connection Failed');
-                document.getElementById('apiHealth').textContent = 'Unavailable';
+                updateStatus('unhealthy', 'API Connection Failed');
+                document.getElementById('apiHealth').textContent = '❌ Unavailable';
                 showError('Failed to connect to API. Please ensure the server is running.');
             }
         }
 
         function setupUI() {
-            // Add keyboard shortcuts
             document.addEventListener('keydown', (e) => {
-                if (e.key === ' ') { // Spacebar
+                if (e.key === ' ' && e.target.tagName !== 'BUTTON') {
                     e.preventDefault();
-                    if (isDetecting) {
-                        stopDetection();
-                    } else {
-                        startDetection();
-                    }
+                    if (isDetecting) stopDetection();
+                    else startDetection();
                 }
             });
         }
@@ -499,7 +575,6 @@
                 document.getElementById('startBtnText').textContent = 'Starting...';
                 document.getElementById('startSpinner').style.display = 'inline-block';
 
-                // Request microphone access
                 mediaStream = await navigator.mediaDevices.getUserMedia({
                     audio: {
                         sampleRate: 44100,
@@ -510,51 +585,54 @@
                     }
                 });
 
-                document.getElementById('micStatus').textContent = 'Active';
-                updateStatus('warning', 'Starting detection...');
+                document.getElementById('micStatus').textContent = '✅ Active';
+                updateStatus('warning', 'Connecting to server...');
 
-                // Initialize WebSocket connection
-                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                const wsUrl = `${protocol}//${window.location.host}/ws/carnatic`;
+                socket = io({
+                    transports: ['websocket', 'polling'],
+                    reconnection: true,
+                    reconnectionAttempts: maxReconnectAttempts,
+                    reconnectionDelay: 1000
+                });
 
-                socket = new WebSocket(wsUrl);
-
-                socket.onopen = () => {
-                    console.log('WebSocket connected');
-                    document.getElementById('wsStatus').textContent = 'Connected';
-                    updateStatus('healthy', 'Detection Active - Listening...');
+                socket.on('connect', () => {
+                    console.log('Socket.IO connected');
+                    document.getElementById('wsStatus').textContent = '✅ Connected';
+                    updateStatus('healthy', 'Detection Active - Sing Now!');
                     isDetecting = true;
 
                     document.getElementById('startBtn').disabled = true;
                     document.getElementById('stopBtn').disabled = false;
-                    document.getElementById('startBtnText').textContent = 'Start Detection';
+                    document.getElementById('startBtnText').textContent = '▶ Start Detection';
                     document.getElementById('startSpinner').style.display = 'none';
 
+                    socket.emit('start_detection', {});
                     startAudioProcessing();
-                };
+                });
 
-                socket.onmessage = (event) => {
-                    try {
-                        const data = JSON.parse(event.data);
-                        updateDetectionDisplay(data);
-                    } catch (error) {
-                        console.error('Error parsing WebSocket message:', error);
-                    }
-                };
+                socket.on('connected', (data) => {
+                    console.log('Server greeting:', data.message);
+                });
 
-                socket.onerror = (error) => {
-                    console.error('WebSocket error:', error);
-                    showError('WebSocket connection failed. Please check your connection.');
+                socket.on('shruti_detected', (data) => {
+                    updateDetectionDisplay(data);
+                });
+
+                socket.on('error', (data) => {
+                    console.error('Server error:', data.message);
+                    showError(data.message);
+                });
+
+                socket.on('connect_error', (error) => {
+                    console.error('Socket.IO connection error:', error);
+                    showError('Connection failed. Please check your connection.');
                     stopDetection();
-                };
+                });
 
-                socket.onclose = () => {
-                    console.log('WebSocket disconnected');
-                    document.getElementById('wsStatus').textContent = 'Disconnected';
-                    if (isDetecting) {
-                        attemptReconnect();
-                    }
-                };
+                socket.on('disconnect', () => {
+                    console.log('Socket.IO disconnected');
+                    document.getElementById('wsStatus').textContent = '❌ Disconnected';
+                });
 
             } catch (error) {
                 console.error('Failed to start detection:', error);
@@ -568,7 +646,8 @@
             reconnectAttempts = 0;
 
             if (socket) {
-                socket.close();
+                socket.emit('stop_detection');
+                socket.disconnect();
                 socket = null;
             }
 
@@ -584,17 +663,16 @@
 
             resetUI();
             updateStatus('healthy', 'Detection Stopped');
-            document.getElementById('micStatus').textContent = 'Not accessed';
-            document.getElementById('wsStatus').textContent = 'Disconnected';
+            document.getElementById('micStatus').textContent = '⏹ Stopped';
+            document.getElementById('wsStatus').textContent = '❌ Disconnected';
         }
 
         function resetUI() {
             document.getElementById('startBtn').disabled = false;
             document.getElementById('stopBtn').disabled = true;
-            document.getElementById('startBtnText').textContent = 'Start Detection';
+            document.getElementById('startBtnText').textContent = '▶ Start Detection';
             document.getElementById('startSpinner').style.display = 'none';
 
-            // Reset display
             document.getElementById('frequency').textContent = '---.-- Hz';
             document.getElementById('note').textContent = '♪';
             document.getElementById('cents').textContent = 'Cent deviation: ---';
@@ -620,17 +698,14 @@
                 if (!isDetecting) return;
 
                 analyser.getFloatFrequencyData(dataArray);
-
-                // Convert to regular array and send via WebSocket
                 const audioData = Array.from(dataArray);
 
-                if (socket && socket.readyState === WebSocket.OPEN) {
-                    socket.send(JSON.stringify({
-                        type: 'audio_chunk',
+                if (socket && socket.connected) {
+                    socket.emit('audio_chunk', {
                         data: audioData,
                         sampleRate: 44100,
                         timestamp: Date.now()
-                    }));
+                    });
                 }
 
                 requestAnimationFrame(processAudio);
@@ -658,13 +733,18 @@
                 const confidence = Math.max(0, Math.min(100, data.confidence));
                 document.getElementById('confidence').style.width = `${confidence}%`;
             }
+
+            // Check for practice mode match
+            if (practiceMode && data.note) {
+                checkNoteMatch(data.note, data.confidence || 0, data.simple_name || '');
+            }
         }
 
         function getNoteColor(confidence) {
-            if (confidence > 80) return '#4CAF50';
-            if (confidence > 60) return '#ff9800';
-            if (confidence > 40) return '#ff6b35';
-            return '#f44336';
+            if (confidence > 80) return '#90EE90';
+            if (confidence > 60) return '#ffd93d';
+            if (confidence > 40) return '#ffa500';
+            return '#ff6b6b';
         }
 
         function updateStatus(type, message) {
@@ -685,19 +765,137 @@
             }, 5000);
         }
 
-        function attemptReconnect() {
-            if (reconnectAttempts < maxReconnectAttempts) {
-                reconnectAttempts++;
-                updateStatus('warning', `Reconnecting... (${reconnectAttempts}/${maxReconnectAttempts})`);
+        // ============================
+        // Practice Mode Functions
+        // ============================
 
-                setTimeout(() => {
-                    if (isDetecting) {
-                        startDetection();
+        let practiceMode = false;
+        let currentTargetNote = null;
+        let practiceScore = 0;
+        let practiceTotal = 0;
+        let matchStartTime = null;
+        let matchHoldTime = 1000;
+        let matchTimer = null;
+
+        const practiceNotes = [
+            { name: 'Sa', western: 'C', ratio: 1.0 },
+            { name: 'Ri', western: 'D', ratio: 9/8 },
+            { name: 'Ga', western: 'E', ratio: 5/4 },
+            { name: 'Ma', western: 'F', ratio: 4/3 },
+            { name: 'Pa', western: 'G', ratio: 3/2 },
+            { name: 'Da', western: 'A', ratio: 5/3 },
+            { name: 'Ni', western: 'B', ratio: 15/8 },
+            { name: 'Sa\'', western: 'C\'', ratio: 2.0 }
+        ];
+
+        let practiceSequence = [];
+        let practiceIndex = 0;
+
+        function startPractice() {
+            if (!isDetecting) {
+                showError('Please start detection first');
+                return;
+            }
+
+            practiceMode = true;
+            practiceScore = 0;
+            practiceTotal = 0;
+            practiceIndex = 0;
+
+            practiceSequence = [...practiceNotes];
+
+            document.getElementById('practiceBtn').textContent = 'Stop Practice';
+            document.getElementById('practiceBtn').onclick = stopPractice;
+            document.getElementById('nextNoteBtn').disabled = false;
+
+            updateScore();
+            setTargetNote(practiceSequence[0]);
+        }
+
+        function stopPractice() {
+            practiceMode = false;
+            currentTargetNote = null;
+
+            if (matchTimer) {
+                clearTimeout(matchTimer);
+                matchTimer = null;
+            }
+
+            document.getElementById('practiceBtn').textContent = 'Start Practice';
+            document.getElementById('practiceBtn').onclick = startPractice;
+            document.getElementById('nextNoteBtn').disabled = true;
+            document.getElementById('targetNote').textContent = '--';
+            document.getElementById('matchStatus').textContent = '--';
+            document.getElementById('matchStatus').className = 'practice-value';
+        }
+
+        function nextNote() {
+            if (!practiceMode) return;
+
+            practiceIndex = (practiceIndex + 1) % practiceSequence.length;
+            setTargetNote(practiceSequence[practiceIndex]);
+
+            if (matchTimer) {
+                clearTimeout(matchTimer);
+                matchTimer = null;
+            }
+            matchStartTime = null;
+        }
+
+        function setTargetNote(note) {
+            currentTargetNote = note;
+            document.getElementById('targetNote').textContent = `${note.name}`;
+            document.getElementById('matchStatus').textContent = 'Sing now...';
+            document.getElementById('matchStatus').className = 'practice-value match-waiting';
+        }
+
+        function updateScore() {
+            document.getElementById('scoreValue').textContent = practiceScore;
+            document.getElementById('scoreTotal').textContent = practiceTotal;
+        }
+
+        function checkNoteMatch(detectedNote, confidence, simpleName) {
+            if (!practiceMode || !currentTargetNote || confidence < 30) return;
+
+            const targetName = currentTargetNote.name.replace("'", '').toLowerCase();
+            const detected = (simpleName || detectedNote || '').toLowerCase();
+            const detectedFull = (detectedNote || '').toLowerCase();
+
+            const isMatch = detected === targetName ||
+                           detected.startsWith(targetName.substring(0, 2)) ||
+                           detectedFull.includes(targetName);
+
+            if (isMatch && confidence > 50) {
+                if (!matchStartTime) {
+                    matchStartTime = Date.now();
+                    document.getElementById('matchStatus').textContent = 'Hold it...';
+                    document.getElementById('matchStatus').className = 'practice-value match-waiting';
+                } else {
+                    const holdDuration = Date.now() - matchStartTime;
+                    if (holdDuration >= matchHoldTime) {
+                        practiceScore++;
+                        practiceTotal++;
+                        updateScore();
+
+                        document.getElementById('matchStatus').textContent = '✓ Correct!';
+                        document.getElementById('matchStatus').className = 'practice-value match-correct';
+
+                        matchStartTime = null;
+
+                        setTimeout(() => {
+                            if (practiceMode) nextNote();
+                        }, 500);
+                    } else {
+                        const progress = Math.round((holdDuration / matchHoldTime) * 100);
+                        document.getElementById('matchStatus').textContent = `Holding ${progress}%`;
                     }
-                }, 2000 * reconnectAttempts);
+                }
             } else {
-                updateStatus('error', 'Connection failed - Please restart manually');
-                stopDetection();
+                matchStartTime = null;
+                if (detectedNote && detectedNote !== '♪') {
+                    document.getElementById('matchStatus').textContent = `Detected: ${detectedNote}`;
+                    document.getElementById('matchStatus').className = 'practice-value match-wrong';
+                }
             }
         }
     </script>

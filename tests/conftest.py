@@ -19,7 +19,6 @@ sys.path.insert(0, str(project_root))
 from api import create_app
 from core.models.user import UserProfile, SubscriptionTier
 from core.models.shruti import SHRUTI_SYSTEM
-from core.services.audio_engine import AdvancedPitchDetector
 
 
 @pytest.fixture(scope="session")
@@ -105,10 +104,7 @@ def sample_user():
     )
 
 
-@pytest.fixture
-def pitch_detector():
-    """Create pitch detector instance for testing."""
-    return AdvancedPitchDetector()
+
 
 
 @pytest.fixture

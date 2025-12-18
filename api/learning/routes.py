@@ -11,16 +11,13 @@ from datetime import datetime
 
 from core.models.user import UserProfile, SkillLevel, LearningGoal
 from core.models.shruti import ShrutiSystem
-from core.services.audio_engine import CarnaticAudioEngine, AudioConfig
 from modules.swara.trainer import SwaraTrainer, ExerciseType, SwaraProgressTracker
 
 learning_bp = Blueprint('learning', __name__)
 
 # Global instances (in production, these would be dependency injected)
 shruti_system = ShrutiSystem()
-audio_config = AudioConfig()
-audio_engine = CarnaticAudioEngine(audio_config)
-swara_trainer = SwaraTrainer(audio_engine)
+swara_trainer = SwaraTrainer()
 progress_tracker = SwaraProgressTracker()
 
 # In-memory user store (in production, this would be a database)
@@ -91,7 +88,7 @@ def start_swara_exercise():
     
     # Set base Sa frequency from user preferences
     user_profile = users_store[user_id]
-    audio_engine.set_base_sa_frequency(user_profile.preferences.base_sa_frequency)
+    # audio_engine.set_base_sa_frequency(user_profile.preferences.base_sa_frequency) # Client-side now
     
     # Start exercise
     exercise_config = swara_trainer.start_exercise(user_profile, exercise_type)
@@ -113,10 +110,10 @@ def start_swara_exercise():
             'with_drone': exercise_config.with_drone,
             'with_metronome': exercise_config.with_metronome
         },
-        'audio_config': {
+        'user_preferences': { # Provide user preferences for client-side audio setup
             'base_sa_frequency': user_profile.preferences.base_sa_frequency,
-            'sample_rate': audio_config.sample_rate,
-            'buffer_size': audio_config.buffer_size
+            # 'sample_rate': audio_config.sample_rate, # Client fetches from /api/v1/audio/config
+            # 'buffer_size': audio_config.buffer_size
         }
     })
 
@@ -198,7 +195,7 @@ def get_progress_analytics():
             'practice_streak': user_profile.practice_streak,
             'total_sessions': user_profile.total_sessions,
             'weekly_practice_time': user_profile.get_weekly_practice_time(),
-            'skill_distribution': user_profile.get_skill_distribution(),
+            'skill_distribution': user_profile.get_learning_recommendations(),
             'recommendations': user_profile.get_learning_recommendations()
         })
     
@@ -276,7 +273,7 @@ def set_sa_frequency():
     user_profile.preferences.base_sa_frequency = frequency
     
     # Update audio engine
-    audio_engine.set_base_sa_frequency(frequency)
+    # audio_engine.set_base_sa_frequency(frequency)
     
     return jsonify({
         'message': 'Sa frequency updated successfully',

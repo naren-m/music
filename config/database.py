@@ -2,21 +2,23 @@
 Database Configuration and Models for Carnatic Music Learning Platform
 """
 
-import os
 import logging
-from datetime import datetime, timezone
-from typing import Optional, Dict, Any, List
+import os
+from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Any, Dict, Optional
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, Text, JSON, ForeignKey, Index
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship, Session
-from sqlalchemy.pool import QueuePool
 import redis
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import (
+    Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, JSON,
+    String, Text, create_engine
+)
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import Session, relationship, sessionmaker
+from sqlalchemy.pool import QueuePool
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Database configuration
@@ -103,8 +105,8 @@ class User(Base):
     is_verified = Column(Boolean, default=False)
 
     # Metadata
-    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
-    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     last_login = Column(DateTime(timezone=True))
 
     # Relationships
@@ -147,8 +149,8 @@ class Exercise(Base):
     estimated_duration = Column(Integer)  # minutes
 
     # Metadata
-    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
-    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     is_active = Column(Boolean, default=True)
 
     # Relationships
@@ -183,8 +185,8 @@ class Progress(Base):
     total_sessions = Column(Integer, default=0)
 
     # Metadata
-    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
-    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # Relationships
     user = relationship("User", back_populates="progress_records")
@@ -223,7 +225,7 @@ class Recording(Base):
     feedback_data = Column(JSON, default=dict)
 
     # Metadata
-    recorded_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    recorded_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     processed_at = Column(DateTime(timezone=True))
     is_processed = Column(Boolean, default=False)
 
@@ -258,8 +260,8 @@ class Raga(Base):
     notation_examples = Column(JSON, default=list)
 
     # Metadata
-    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
-    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     is_active = Column(Boolean, default=True)
 
     # Relationships
@@ -288,7 +290,7 @@ class Tala(Base):
     difficulty_level = Column(Integer, default=1)
 
     # Metadata
-    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     is_active = Column(Boolean, default=True)
 
     # Relationships
@@ -323,8 +325,8 @@ class Composition(Base):
     practice_tips = Column(JSON, default=list)
 
     # Metadata
-    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
-    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     is_active = Column(Boolean, default=True)
 
     # Relationships
@@ -353,7 +355,7 @@ class Achievement(Base):
     achievement_data = Column(JSON, default=dict)  # Context-specific data
 
     # Metadata
-    earned_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    earned_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     is_visible = Column(Boolean, default=True)
 
     # Relationships
@@ -383,8 +385,8 @@ class Group(Base):
     settings = Column(JSON, default=dict)
 
     # Metadata
-    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
-    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     is_active = Column(Boolean, default=True)
 
 # Database initialization and connection management
@@ -574,8 +576,6 @@ def seed_initial_data(session: Session) -> None:
         raise
 
 # Session context manager
-from contextlib import contextmanager
-
 @contextmanager
 def get_db_session():
     """Context manager for database sessions"""

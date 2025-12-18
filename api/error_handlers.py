@@ -5,10 +5,9 @@ Secure error handling with consistent responses and logging
 
 import logging
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import Flask, request, jsonify, current_app
 from werkzeug.exceptions import HTTPException
-from werkzeug.http import HTTP_STATUS_CODES
 
 from api.validation import ValidationError
 from api.auth.middleware import AuthenticationError, RateLimitError
@@ -175,7 +174,7 @@ def register_error_handlers(app: Flask):
     @app.errorhandler(Exception)
     def handle_unexpected_error(error):
         """Handle unexpected errors with secure logging"""
-        error_id = datetime.utcnow().strftime('%Y%m%d_%H%M%S_%f')
+        error_id = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S_%f')
 
         # Log full error details for debugging
         logger.error(
@@ -280,7 +279,7 @@ def log_security_event(event_type: str, details: dict):
         f"SECURITY EVENT: {event_type} | "
         f"IP: {request.remote_addr} | "
         f"Details: {details} | "
-        f"Timestamp: {datetime.utcnow().isoformat()}"
+        f"Timestamp: {datetime.now(timezone.utc).isoformat()}"
     )
 
     # In production, this would integrate with SIEM/monitoring

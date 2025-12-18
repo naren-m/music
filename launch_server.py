@@ -6,14 +6,25 @@ Development server with all essential features enabled
 
 import os
 import sys
-from flask import Flask, render_template, send_from_directory, jsonify
+import time
+import numpy as np
+from flask import Flask, render_template, send_from_directory, jsonify, request
 from flask_cors import CORS
+from flask_socketio import SocketIO, emit
 import json
 import sqlite3
 from datetime import datetime
 
 # Ensure we can import from project directories
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# Import shruti detection system
+try:
+    from core.models.shruti import ShrutiSystem
+    SHRUTI_SYSTEM = ShrutiSystem()
+except ImportError:
+    SHRUTI_SYSTEM = None
+    print("⚠️  Warning: Shruti system not available, using fallback detection")
 
 def create_quick_app():
     """Create a simplified Flask app for quick launch"""
@@ -33,6 +44,15 @@ def create_quick_app():
     if app.config['SECRET_KEY'] == 'carnatic_learning_dev_key_CHANGE_IN_PRODUCTION':
         print("⚠️  WARNING: Using default SECRET_KEY - set SECRET_KEY environment variable for production")
 
+    # Initialize SocketIO for WebSocket support
+    socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+
+    # Store socketio on app for access
+    app.socketio = socketio
+
+    # Base Sa frequency (default A4 = 440Hz for testing, typically lower for Carnatic)
+    app.config['BASE_SA_FREQUENCY'] = 261.63  # Middle C as default Sa
+
     def get_db():
         """Get database connection"""
         conn = sqlite3.connect(app.config['DATABASE'])
@@ -41,22 +61,22 @@ def create_quick_app():
 
     @app.route('/')
     def index():
-        """Main application page"""
-        return render_template('carnatic.html')
+        """Main application page - Real-time shruti detection"""
+        return send_from_directory('static', 'carnatic.html')
 
     @app.route('/carnatic')
     def carnatic():
-        """Carnatic learning interface"""
-        return render_template('carnatic.html')
+        """Carnatic learning interface - Real-time audio detection"""
+        return send_from_directory('static', 'carnatic.html')
 
     @app.route('/learning')
     def learning():
         """Learning modules page"""
-        return render_template('carnatic.html')
+        return send_from_directory('static', 'learning.html')
 
     @app.route('/exercises')
     def exercises():
-        """Exercise modules page"""
+        """Exercise modules page - Exercise catalog"""
         return render_template('carnatic.html')
 
     @app.route('/api/exercises/janta')
@@ -156,6 +176,7 @@ def create_quick_app():
             })
 
     @app.route('/api/health')
+    @app.route('/api/v1/health')
     def health_check():
         """Health check endpoint"""
         return jsonify({
@@ -326,6 +347,223 @@ def create_quick_app():
             ]
         })
 
+    # ===============================
+    # WebSocket Event Handlers
+    # ===============================
+
+    # Session tracking for WebSocket connections
+    active_sessions = {}
+
+    def find_dominant_frequency(fft_data, sample_rate=44100):
+        """Find dominant frequency from FFT frequency data"""
+        fft_data = np.array(fft_data, dtype=np.float64)
+
+        # FFT data is in dB, convert to linear magnitude
+        # Clamp very low values to avoid issues
+        fft_data = np.clip(fft_data, -100, 0)
+        magnitudes = np.power(10, fft_data / 20)
+
+        # Only consider frequencies in musical range (80Hz to 2000Hz)
+        fft_size = len(magnitudes) * 2  # frequencyBinCount is half of fftSize
+        freq_resolution = sample_rate / fft_size
+
+        min_bin = int(80 / freq_resolution)
+        max_bin = min(int(2000 / freq_resolution), len(magnitudes) - 1)
+
+        if max_bin <= min_bin:
+            return None, 0
+
+        # Find peak in valid range
+        valid_range = magnitudes[min_bin:max_bin]
+        if len(valid_range) == 0:
+            return None, 0
+
+        peak_idx = int(np.argmax(valid_range)) + min_bin
+        peak_magnitude = float(magnitudes[peak_idx])
+
+        # Calculate frequency
+        frequency = float(peak_idx * freq_resolution)
+
+        # Simple confidence based on peak prominence
+        noise_floor = float(np.median(valid_range))
+        if noise_floor > 0:
+            confidence = min(100.0, (peak_magnitude / noise_floor) * 20)
+        else:
+            confidence = 50.0 if peak_magnitude > 0.01 else 0.0
+
+        return frequency, confidence
+
+    def detect_shruti_from_frequency(frequency, base_sa):
+        """Detect shruti/note from frequency - always returns Carnatic names"""
+        if not frequency or frequency <= 0:
+            return None
+
+        # Map semitones to Carnatic swaras (relative to Sa)
+        # Sa=0, Ri=2, Ga=4, Ma=5, Pa=7, Da=9, Ni=11
+        swara_map = {
+            0: 'Sa', 1: 'Ri₁', 2: 'Ri₂', 3: 'Ga₁', 4: 'Ga₂',
+            5: 'Ma₁', 6: 'Ma₂', 7: 'Pa', 8: 'Da₁', 9: 'Da₂',
+            10: 'Ni₁', 11: 'Ni₂'
+        }
+
+        # Simple swara names for practice mode matching
+        simple_swara_map = {
+            0: 'Sa', 1: 'Ri', 2: 'Ri', 3: 'Ga', 4: 'Ga',
+            5: 'Ma', 6: 'Ma', 7: 'Pa', 8: 'Da', 9: 'Da',
+            10: 'Ni', 11: 'Ni'
+        }
+
+        # Calculate semitones from base Sa frequency
+        if base_sa > 0:
+            cents_from_sa = float(1200 * np.log2(frequency / base_sa))
+            semitones_from_sa = int(round(cents_from_sa / 100))
+            cent_deviation = float(cents_from_sa - (semitones_from_sa * 100))
+
+            # Normalize to single octave (0-11)
+            normalized_semitone = semitones_from_sa % 12
+            if normalized_semitone < 0:
+                normalized_semitone += 12
+
+            # Determine octave indicator
+            octave_num = semitones_from_sa // 12
+            octave_suffix = ''
+            if octave_num > 0:
+                octave_suffix = "'" * octave_num  # Higher octave
+            elif octave_num < 0:
+                octave_suffix = "," * abs(octave_num)  # Lower octave
+
+            swara_name = swara_map.get(normalized_semitone, 'Sa')
+            simple_name = simple_swara_map.get(normalized_semitone, 'Sa')
+
+            # Calculate target frequency for this swara
+            target_freq = float(base_sa * (2 ** (normalized_semitone / 12)) * (2 ** octave_num))
+
+            return {
+                'note': f"{swara_name}{octave_suffix}",
+                'simple_name': simple_name,
+                'western': ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'][normalized_semitone],
+                'target_frequency': round(target_freq, 2),
+                'cent_deviation': round(cent_deviation, 1)
+            }
+
+        return None
+
+    @socketio.on('connect')
+    def handle_connect():
+        """Handle WebSocket connection"""
+        session_id = request.sid
+        active_sessions[session_id] = {
+            'connected_at': time.time(),
+            'base_sa': app.config['BASE_SA_FREQUENCY'],
+            'chunks_processed': 0
+        }
+        print(f"🔌 Client connected: {session_id}")
+        emit('connected', {
+            'message': 'Connected to Carnatic Learning Server',
+            'session_id': session_id,
+            'base_sa_frequency': app.config['BASE_SA_FREQUENCY']
+        })
+
+    @socketio.on('disconnect')
+    def handle_disconnect():
+        """Handle WebSocket disconnection"""
+        session_id = request.sid
+        if session_id in active_sessions:
+            duration = time.time() - active_sessions[session_id]['connected_at']
+            chunks = active_sessions[session_id]['chunks_processed']
+            print(f"🔌 Client disconnected: {session_id} (duration: {duration:.1f}s, chunks: {chunks})")
+            del active_sessions[session_id]
+
+    @socketio.on('audio_chunk')
+    def handle_audio_chunk(data):
+        """Process audio chunk for shruti detection"""
+        session_id = request.sid
+
+        if session_id not in active_sessions:
+            emit('error', {'message': 'Session not found'})
+            return
+
+        try:
+            # Extract FFT data from message
+            if isinstance(data, dict):
+                fft_data = data.get('data', [])
+                sample_rate = data.get('sampleRate', 44100)
+            else:
+                emit('error', {'message': 'Invalid data format'})
+                return
+
+            if not fft_data or len(fft_data) == 0:
+                return
+
+            # Find dominant frequency from FFT data
+            frequency, confidence = find_dominant_frequency(fft_data, sample_rate)
+
+            if frequency and frequency > 0 and confidence > 10:
+                base_sa = float(active_sessions[session_id]['base_sa'])
+                note_info = detect_shruti_from_frequency(frequency, base_sa)
+
+                active_sessions[session_id]['chunks_processed'] += 1
+
+                # Send detection result - ensure all values are Python native types
+                response = {
+                    'frequency': float(round(frequency, 2)),
+                    'confidence': float(round(confidence, 1)),
+                    'timestamp': float(time.time())
+                }
+
+                if note_info:
+                    response['note'] = str(note_info['note'])
+                    response['cent_deviation'] = float(note_info['cent_deviation'])
+                    response['simple_name'] = str(note_info.get('simple_name', ''))
+
+                emit('shruti_detected', response)
+
+        except Exception as e:
+            print(f"Audio processing error: {e}")
+            emit('error', {'message': 'Audio processing failed'})
+
+    @socketio.on('start_detection')
+    def handle_start_detection(data=None):
+        """Start audio detection session"""
+        emit('detection_started', {
+            'status': 'Audio detection started',
+            'buffer_size': 1024,
+            'sample_rate': 44100,
+            'shruti_system': 'enabled' if SHRUTI_SYSTEM else 'fallback'
+        })
+
+    @socketio.on('stop_detection')
+    def handle_stop_detection():
+        """Stop audio detection session"""
+        session_id = request.sid
+        chunks = active_sessions.get(session_id, {}).get('chunks_processed', 0)
+        emit('detection_stopped', {
+            'status': 'Audio detection stopped',
+            'total_chunks_processed': chunks
+        })
+
+    @socketio.on('set_base_frequency')
+    def handle_set_base_frequency(data):
+        """Set base Sa frequency"""
+        session_id = request.sid
+        if session_id in active_sessions:
+            try:
+                frequency = float(data.get('frequency', 261.63))
+                if 80 <= frequency <= 800:
+                    active_sessions[session_id]['base_sa'] = frequency
+                    emit('base_frequency_set', {
+                        'frequency': frequency,
+                        'status': 'Base Sa frequency updated'
+                    })
+                else:
+                    emit('error', {'message': 'Frequency must be between 80-800 Hz'})
+            except (TypeError, ValueError):
+                emit('error', {'message': 'Invalid frequency value'})
+
+    # ===============================
+    # End WebSocket Event Handlers
+    # ===============================
+
     # Static file serving
     @app.route('/static/<path:filename>')
     def static_files(filename):
@@ -340,7 +578,7 @@ def create_quick_app():
         # Serve React app for all other routes
         return app.send_static_file('index.html')
 
-    return app
+    return app, socketio
 
 if __name__ == '__main__':
     print("🎵 Launching Carnatic Music Learning Platform v2.0")
@@ -353,17 +591,20 @@ if __name__ == '__main__':
     print("   ✅ Raga Database (72 Melakarta Ragas)")
     print("   ✅ Tala Training System")
     print("   ✅ AI/ML Adaptive Learning")
+    print("   ✅ Real-time WebSocket Audio Processing")
     print("=" * 60)
 
-    app = create_quick_app()
+    app, socketio = create_quick_app()
 
     port = 5003
     print(f"🌐 Server starting on: http://localhost:{port}")
     print(f"🎼 Learning Interface: http://localhost:{port}/carnatic")
     print(f"📊 API Health Check: http://localhost:{port}/api/health")
+    print(f"🔌 WebSocket endpoint: ws://localhost:{port}/socket.io/")
     print("=" * 60)
     print("🎯 Ready for Carnatic music learning!")
     print("🎧 Please ensure microphone access is granted")
     print("=" * 60)
 
-    app.run(host='0.0.0.0', port=port, debug=True, threaded=True)
+    # Use socketio.run() for WebSocket support
+    socketio.run(app, host='0.0.0.0', port=port, debug=True, allow_unsafe_werkzeug=True)

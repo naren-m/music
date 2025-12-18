@@ -3,15 +3,15 @@ Advanced Rate Limiting System - Production Ready
 Prevents DoS attacks and API abuse with intelligent rate limiting
 """
 
-import time
-import redis
-import logging
 import hashlib
-from typing import Dict, Tuple, Optional
+import logging
+import time
+from dataclasses import dataclass
 from functools import wraps
-from flask import request, jsonify, current_app
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from typing import Dict, Optional
+
+import redis
+from flask import request, jsonify, current_app, make_response
 
 logger = logging.getLogger(__name__)
 
@@ -309,7 +309,6 @@ def rate_limit(
                 return add_rate_limit_headers(response)
             else:
                 # Handle different response types
-                from flask import make_response
                 response = make_response(response)
                 return add_rate_limit_headers(response)
 

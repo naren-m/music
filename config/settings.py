@@ -163,7 +163,7 @@ class ProductionConfig(Config):
 
     # Database - No fallbacks in production
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
-    if not SQLALCHEMY_DATABASE_URI:
+    if not SQLALCHEMY_DATABASE_URI and os.environ.get('FLASK_ENV') == 'production':
         raise RuntimeError("DATABASE_URL must be set in production")
 
     # Validate all production requirements on class creation

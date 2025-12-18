@@ -13,7 +13,6 @@ from scipy import signal
 from sklearn.preprocessing import StandardScaler
 import joblib
 
-from core.services.audio_engine import AudioEngine
 from core.models.shruti import ShrutiSystem, SwaraName
 
 @dataclass
@@ -551,37 +550,26 @@ class SwaraRecognitionEngine:
     def __init__(self, config: SwaraRecognitionConfig = None):
         self.config = config or SwaraRecognitionConfig()
         self.classifier = SwaraClassifier(self.config)
-        self.audio_engine = AudioEngine()
+
 
         # Temporal tracking
         self.recent_predictions = []
         self.stability_buffer = []
 
-    def analyze_swara(self, audio: np.ndarray, sr: int = None) -> Dict[str, Any]:
+    def analyze_swara(self, ml_result: Dict[str, Any], pitch_data: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze swara with temporal stability"""
-        if sr is None:
-            sr = self.config.sample_rate
-
         try:
-            # Basic pitch detection first
-            pitch_result = self.audio_engine.detect_pitch(audio, sr)
-
-            # ML-based swara classification
-            ml_result = self.classifier.predict_swara(audio, sr)
-
             # Combine results
             result = {
                 'timestamp': datetime.now(timezone.utc).isoformat(),
-                'audio_duration': len(audio) / sr,
-                'sample_rate': sr
             }
 
             # Add pitch information
-            if pitch_result:
+            if pitch_data:
                 result.update({
-                    'fundamental_frequency': pitch_result.get('frequency'),
-                    'pitch_confidence': pitch_result.get('confidence'),
-                    'voiced_probability': pitch_result.get('voiced_probability', 0)
+                    'fundamental_frequency': pitch_data.get('frequency'),
+                    'pitch_confidence': pitch_data.get('confidence'),
+                    'voiced_probability': pitch_data.get('voiced_probability', 0)
                 })
 
             # Add ML classification results
@@ -708,6 +696,3 @@ class SwaraRecognitionEngine:
                 return f"Uncertain {predicted_swara} detection. Check your intonation."
         else:
             return "Unclear swara. Practice with reference pitch and try again."
-
-# Initialize the recognition engine
-swara_recognition = SwaraRecognitionEngine()

@@ -4,11 +4,14 @@ Prevents DoS attacks and validates all input data
 """
 
 import base64
-import numpy as np
 import logging
-from flask import request, jsonify
+import os
+import re
 from functools import wraps
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
+import numpy as np
+from flask import request, jsonify
 
 logger = logging.getLogger(__name__)
 
@@ -237,8 +240,8 @@ def validate_user_input(data: Dict[str, Any], required_fields: list = None) -> D
 
 def rate_limit_check(key: str, limit: int, window: int = 60) -> bool:
     """
-    Simple in-memory rate limiting check
-    In production, use Redis or similar
+    Simple in-memory rate limiting check.
+    In production, use Redis or similar.
 
     Args:
         key: Unique identifier for rate limiting
@@ -248,13 +251,10 @@ def rate_limit_check(key: str, limit: int, window: int = 60) -> bool:
     Returns:
         bool: True if request should be allowed
     """
-    # This is a simple implementation
-    # In production, use Redis with sliding window
-    import time
-
-    # For now, just implement basic checks
-    # This would be replaced with proper Redis-based rate limiting
-    return True  # Placeholder
+    # Placeholder implementation - use Redis-based rate limiting in production
+    # See api/rate_limiting.py for full implementation
+    _ = key, limit, window  # Suppress unused warnings
+    return True
 
 
 def sanitize_filename(filename: str) -> str:
@@ -269,10 +269,6 @@ def sanitize_filename(filename: str) -> str:
     """
     if not filename:
         raise ValidationError("Filename cannot be empty")
-
-    # Remove directory separators and dangerous characters
-    import os
-    import re
 
     # Get just the filename without path
     filename = os.path.basename(filename)

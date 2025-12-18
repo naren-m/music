@@ -92,17 +92,15 @@ export default defineConfig({
         manualChunks: {
           vendor: ['react', 'react-dom'],
           router: ['react-router-dom'],
-          redux: ['@reduxjs/toolkit', 'react-redux'],
           ui: ['framer-motion', 'lucide-react'],
-          audio: ['tone', 'socket.io-client']
+          audio: ['socket.io-client']
         }
       }
     },
     chunkSizeWarningLimit: 1000
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'socket.io-client'],
-    exclude: ['tone']
+    include: ['react', 'react-dom', 'socket.io-client']
   },
   define: {
     global: 'globalThis'

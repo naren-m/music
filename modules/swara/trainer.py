@@ -13,7 +13,15 @@ from datetime import datetime, timedelta
 
 from core.models.shruti import ShrutiSystem, Shruti
 from core.models.user import UserProfile, PracticeSession, SkillLevel
-from core.services.audio_engine import CarnaticAudioEngine, ShrutiDetectionResult
+
+@dataclass
+class ShrutiDetectionResult:
+    """Represents a single shruti detection result from the client."""
+    shruti_name: Optional[str]
+    detected_frequency: float
+    cent_deviation: float
+    confidence: float
+    timestamp: float
 
 
 class ExerciseType(Enum):
@@ -182,9 +190,8 @@ class SwaraExerciseGenerator:
 class SwaraTrainer:
     """Main swara training engine with real-time feedback"""
     
-    def __init__(self, audio_engine: CarnaticAudioEngine):
-        self.audio_engine = audio_engine
-        self.shruti_system = audio_engine.shruti_system
+    def __init__(self):
+        self.shruti_system = ShrutiSystem()
         self.exercise_generator = SwaraExerciseGenerator(self.shruti_system)
         
         # Current exercise state
@@ -193,7 +200,7 @@ class SwaraTrainer:
         self.exercise_start_time: Optional[datetime] = None
         self.attempts: List[ExerciseAttempt] = []
         self.is_active = False
-        
+
         # Callbacks for real-time feedback
         self.callbacks: Dict[str, List[Callable]] = {
             'target_changed': [],
@@ -201,9 +208,22 @@ class SwaraTrainer:
             'exercise_completed': [],
             'milestone_achieved': []
         }
-        
-        # Register for audio engine callbacks
-        self.audio_engine.add_callback('shruti_detected', self._on_shruti_detected)
+    
+    def process_detection_result(self, detection_data: Dict[str, any], user_base_sa_frequency: float) -> None:
+        """
+        Processes a raw detection result from the client and feeds it into the trainer.
+        """
+        # Convert raw dict to dataclass (or validate and use directly)
+        detection = ShrutiDetectionResult(
+            shruti_name=detection_data.get('shruti_name'),
+            detected_frequency=detection_data['detected_frequency'],
+            cent_deviation=detection_data['cent_deviation'],
+            confidence=detection_data['confidence'],
+            timestamp=detection_data['timestamp']
+        )
+        self._on_shruti_detected(detection, user_base_sa_frequency)
+    
+
     
     def start_exercise(self, user_profile: UserProfile, 
                       exercise_type: ExerciseType) -> ExerciseConfig:
@@ -293,7 +313,7 @@ class SwaraTrainer:
         # Trigger callback
         self._trigger_callbacks('target_changed', self.current_target)
     
-    def _on_shruti_detected(self, detection: ShrutiDetectionResult) -> None:
+    def _on_shruti_detected(self, detection: ShrutiDetectionResult, user_base_sa_frequency: float) -> None:
         """Handle shruti detection from audio engine"""
         if not self.is_active or not self.current_target:
             return
@@ -310,7 +330,7 @@ class SwaraTrainer:
         
         # Calculate target frequency
         target_frequency = target_shruti.calculate_frequency(
-            self.audio_engine.base_sa_frequency
+            user_base_sa_frequency
         )
         
         # Determine if attempt is correct

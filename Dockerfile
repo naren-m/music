@@ -19,7 +19,7 @@ COPY requirements-v2.txt .
 RUN pip install --no-cache-dir --prefer-binary -r requirements-v2.txt
 
 # Copy application code structure
-COPY app_v2.py .
+COPY app.py .
 COPY api/ ./api/
 COPY core/ ./core/
 COPY modules/ ./modules/
@@ -36,7 +36,7 @@ USER carnatic
 EXPOSE 5001
 
 # Set environment variables
-ENV FLASK_APP=app_v2.py
+ENV FLASK_APP=app.py
 ENV FLASK_ENV=production
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
@@ -46,4 +46,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:5001/api/v1/health || exit 1
 
 # Run the Flask application with SocketIO support
-CMD ["python", "app_v2.py"]
+CMD ["python", "app.py"]
