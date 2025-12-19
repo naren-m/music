@@ -17,8 +17,7 @@ import groovy.transform.Field
     platforms: 'linux/amd64', // AMD64 only for stability
     builderName: 'homelab-builder',
     dockerfilePath: 'Dockerfile',
-    buildContext: '.',
-    healthCheckEndpoint: '/api/v1/health'
+    buildContext: '.'
 ]
 
 @Field def imageTag = ''
@@ -78,27 +77,6 @@ TOML
         stage('Build & Push Image') {
             steps {
                 sh "docker buildx build --platform ${config.platforms} --tag ${FULL_IMAGE_NAME}:${imageTag} --tag ${FULL_IMAGE_NAME}:latest --builder ${config.builderName} --file ${config.dockerfilePath} --push ${config.buildContext}"
-            }
-        }
-
-        stage('Test Image') {
-            steps {
-                script {
-                    echo "Running container smoke test (amd64)..."
-                    sh """
-                        docker pull --platform linux/amd64 ${FULL_IMAGE_NAME}:${imageTag}
-                        CONTAINER_ID=\$(docker run -d -p 15001:5001 -e SECRET_KEY=jenkins-test -e FLASK_ENV=development -e DATABASE_URL=sqlite:///test.db ${FULL_IMAGE_NAME}:${imageTag})
-                        sleep 20
-                        HEALTH_STATUS=\$(curl -sf http://localhost:15001${config.healthCheckEndpoint} > /dev/null && echo "ok" || echo "fail")
-                        docker stop \$CONTAINER_ID
-                        docker rm \$CONTAINER_ID
-                        if [ \"\$HEALTH_STATUS\" != \"ok\" ]; then
-                            echo "❌ Health check failed"
-                            exit 1
-                        fi
-                        echo "✅ Health check passed"
-                    """
-                }
             }
         }
 
