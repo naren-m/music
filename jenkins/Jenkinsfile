@@ -41,7 +41,7 @@ pipeline {
         stage('Preparation') {
             steps {
                 script {
-                    imageTag = sh(script: "date +%H%M%S-%d%b%y-$(git rev-parse --short HEAD)", returnStdout: true).trim()
+                    def ts = new Date().format("HHmmss-ddMMMyy"); def gitHash = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim(); imageTag = "${ts}-${gitHash}"
                     echo "🚀 Starting build for ${config.imageName} with tag: ${imageTag}"
                 }
             }
