@@ -41,7 +41,9 @@ pipeline {
         stage('Preparation') {
             steps {
                 script {
-                    def ts = new Date().format("HHmmss-ddMMMyy"); def gitHash = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim(); imageTag = "${ts}-${gitHash}"
+                    def ts = new Date().format("HHmmss-ddMMMyy")
+                    def gitHash = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    imageTag = "${ts}-${gitHash}"
                     echo "🚀 Starting build for ${config.imageName} with tag: ${imageTag}"
                 }
             }
@@ -85,12 +87,12 @@ TOML
                     echo "Running container smoke test (amd64)..."
                     sh """
                         docker pull --platform linux/amd64 ${FULL_IMAGE_NAME}:${imageTag}
-                        CONTAINER_ID=$(docker run -d -p 15001:5001 -e SECRET_KEY=jenkins-test -e FLASK_ENV=development -e DATABASE_URL=sqlite:///test.db ${FULL_IMAGE_NAME}:${imageTag})
+                        CONTAINER_ID=\$(docker run -d -p 15001:5001 -e SECRET_KEY=jenkins-test -e FLASK_ENV=development -e DATABASE_URL=sqlite:///test.db ${FULL_IMAGE_NAME}:${imageTag})
                         sleep 20
-                        HEALTH_STATUS=$(curl -sf http://localhost:15001${config.healthCheckEndpoint} > /dev/null && echo "ok" || echo "fail")
-                        docker stop $CONTAINER_ID
-                        docker rm $CONTAINER_ID
-                        if [ "$HEALTH_STATUS" != "ok" ]; then
+                        HEALTH_STATUS=\$(curl -sf http://localhost:15001${config.healthCheckEndpoint} > /dev/null && echo "ok" || echo "fail")
+                        docker stop \$CONTAINER_ID
+                        docker rm \$CONTAINER_ID
+                        if [ \"\$HEALTH_STATUS\" != \"ok\" ]; then
                             echo "❌ Health check failed"
                             exit 1
                         fi
