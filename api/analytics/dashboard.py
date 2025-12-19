@@ -142,11 +142,17 @@ class AdvancedAnalytics:
                 current_data = self._get_period_progress_data(db, user_id, current_start, current_end)
                 previous_data = self._get_period_progress_data(db, user_id, previous_start, previous_end)
 
+                if not current_data:
+                    return []
+
+                if not current_data:
+                    return []
+
                 metrics = []
 
                 # Accuracy metric
-                current_accuracy = np.mean([p.accuracy_score for p in current_data]) if current_data else 0
-                previous_accuracy = np.mean([p.accuracy_score for p in previous_data]) if previous_data else 0
+                current_accuracy = np.mean([p.average_accuracy for p in current_data]) if current_data else 0
+                previous_accuracy = np.mean([p.average_accuracy for p in previous_data]) if previous_data else 0
                 accuracy_change = ((current_accuracy - previous_accuracy) / previous_accuracy * 100) if previous_accuracy > 0 else 0
 
                 metrics.append(PerformanceMetric(
@@ -160,8 +166,8 @@ class AdvancedAnalytics:
                 ))
 
                 # Practice time metric
-                current_time = sum([(p.session_duration or 0) for p in current_data])
-                previous_time = sum([(p.session_duration or 0) for p in previous_data])
+                current_time = sum([(p.practice_time / 60) if p.practice_time is not None else 0 for p in current_data])
+                previous_time = sum([(p.practice_time / 60) if p.practice_time is not None else 0 for p in previous_data])
                 time_change = ((current_time - previous_time) / previous_time * 100) if previous_time > 0 else 0
 
                 metrics.append(PerformanceMetric(
@@ -217,7 +223,7 @@ class AdvancedAnalytics:
                     return insights
 
                 # Analyze accuracy patterns
-                accuracies = [p.accuracy_score for p in progress_data if p.accuracy_score]
+                accuracies = [p.average_accuracy for p in progress_data if p.average_accuracy]
                 if accuracies:
                     avg_accuracy = np.mean(accuracies)
                     accuracy_std = np.std(accuracies)
@@ -272,8 +278,7 @@ class AdvancedAnalytics:
                         priority=2
                     ))
 
-                # Analyze session durations
-                durations = [p.session_duration for p in progress_data if p.session_duration]
+                durations = [(p.practice_time / 60) if p.practice_time is not None else 0 for p in progress_data if p.practice_time is not None]
                 if durations:
                     avg_duration = np.mean(durations)
                     if avg_duration < 10:
@@ -358,7 +363,7 @@ class AdvancedAnalytics:
                     frequency = "Irregular"
 
                 # Average session duration
-                durations = [p.session_duration for p in progress_data if p.session_duration]
+                durations = [(p.practice_time / 60) if p.practice_time is not None else 0 for p in progress_data if p.practice_time is not None]
                 avg_duration = int(np.mean(durations)) if durations else 0
 
                 # Consistency score
@@ -397,14 +402,16 @@ class AdvancedAnalytics:
 
                 swara_data = {}
                 for record in progress_data:
-                    if record.exercise_data and 'target_swara' in record.exercise_data:
-                        swara = record.exercise_data['target_swara']
+                    # Assuming target_swara is stored within accuracy_metrics JSON
+                    target_swara = record.accuracy_metrics.get('target_swara')
+                    if target_swara:
+                        swara = target_swara
                         if swara not in swara_data:
                             swara_data[swara] = []
                         swara_data[swara].append({
-                            'accuracy': record.accuracy_score,
+                            'accuracy': record.average_accuracy,
                             'date': record.created_at,
-                            'duration': record.session_duration or 0
+                            'duration': (record.practice_time / 60) if record.practice_time is not None else 0
                         })
 
                 analyses = []
@@ -412,7 +419,7 @@ class AdvancedAnalytics:
                     if len(records) < 2:
                         continue
 
-                    accuracies = [r['accuracy'] for r in records]
+                    accuracies = [r['average_accuracy'] for r in records]
                     avg_accuracy = np.mean(accuracies)
                     accuracy_trend = self._calculate_trend_line([r['accuracy'] for r in sorted(records, key=lambda x: x['date'])])
 
@@ -503,7 +510,7 @@ class AdvancedAnalytics:
                 if swara not in swara_progress:
                     swara_progress[swara] = []
                 swara_progress[swara].append({
-                    'accuracy': record.accuracy_score,
+                    'accuracy': record.average_accuracy,
                     'date': record.created_at
                 })
 
@@ -512,7 +519,7 @@ class AdvancedAnalytics:
                 continue
 
             sorted_records = sorted(records, key=lambda x: x['date'])
-            accuracies = [r['accuracy'] for r in sorted_records]
+            accuracies = [r['average_accuracy'] for r in sorted_records]
 
             current_accuracy = np.mean(accuracies[-3:])  # Last 3 sessions
             if current_accuracy >= 0.9:
@@ -546,7 +553,7 @@ class AdvancedAnalytics:
     def _predict_level_advancement(self, progress_data: List[Progress]) -> Optional[ProgressPrediction]:
         """Predict when user will advance to next difficulty level"""
         # Simplified level advancement prediction
-        recent_accuracy = [p.accuracy_score for p in progress_data[-10:]]
+        recent_accuracy = [p.average_accuracy for p in progress_data[-10:]]
         if not recent_accuracy:
             return None
 
@@ -616,7 +623,7 @@ class AdvancedAnalytics:
         if not progress_data:
             return 0.0
 
-        accuracies = [p.accuracy_score for p in progress_data if p.accuracy_score]
+        accuracies = [p.average_accuracy for p in progress_data if p.average_accuracy]
         if not accuracies:
             return 0.0
 
@@ -863,7 +870,7 @@ class AdvancedAnalytics:
 
                 # Sort by date
                 sorted_data = sorted(progress_data, key=lambda x: x.created_at)
-                accuracies = [p.accuracy_score for p in sorted_data if p.accuracy_score is not None]
+                accuracies = [p.average_accuracy for p in sorted_data if p.average_accuracy is not None]
 
                 if not accuracies:
                     return {
@@ -882,10 +889,10 @@ class AdvancedAnalytics:
                 # Prepare daily/session trend data
                 trend_data = []
                 for i, record in enumerate(sorted_data):
-                    if record.accuracy_score is not None:
+                    if record.average_accuracy is not None:
                         trend_data.append({
                             "date": record.created_at.isoformat(),
-                            "accuracy": round(record.accuracy_score, 4),
+                            "accuracy": round(record.average_accuracy, 4),
                             "trend_value": round(trend_line[i], 4) if i < len(trend_line) else None
                         })
 
@@ -966,7 +973,7 @@ class AdvancedAnalytics:
                 for record in progress_data:
                     hour = str(record.created_at.hour).zfill(2)
                     day = record.created_at.strftime("%A")
-                    duration = record.session_duration or 0
+                    duration = (record.practice_time / 60) if record.practice_time is not None else 0
 
                     hourly_distribution[hour] += duration
                     hourly_sessions[hour] += 1
@@ -1071,8 +1078,8 @@ class AdvancedAnalytics:
                         level = record.exercise_data.get("difficulty", "beginner")
                         if level in level_sessions:
                             level_sessions[level].append(record)
-                            if record.accuracy_score is not None:
-                                level_accuracies[level].append(record.accuracy_score)
+                            if record.average_accuracy is not None:
+                                level_accuracies[level].append(record.average_accuracy)
 
                 # Determine current level based on recent activity
                 current_level = "beginner"
@@ -1167,16 +1174,16 @@ class AdvancedAnalytics:
                         "insights": ["Practice more to see how you compare with others"]
                     }
 
-                user_accuracies = [p.accuracy_score for p in user_progress if p.accuracy_score is not None]
+                user_accuracies = [p.average_accuracy for p in user_progress if p.average_accuracy is not None]
                 user_avg_accuracy = np.mean(user_accuracies) if user_accuracies else 0
-                user_practice_time = sum(p.session_duration or 0 for p in user_progress)
+                user_practice_time = sum((p.practice_time / 60) if p.practice_time is not None else 0 for p in user_progress)
                 user_session_count = len(user_progress)
 
                 # Get all users' aggregated data for the period (anonymized)
                 all_users_data = db.query(
                     Progress.user_id,
-                    func.avg(Progress.accuracy_score).label('avg_accuracy'),
-                    func.sum(Progress.session_duration).label('total_time'),
+                    func.avg(Progress.average_accuracy).label('avg_accuracy'),
+                    func.sum(Progress.practice_time).label('total_time'),
                     func.count(Progress.id).label('session_count')
                 ).filter(
                     Progress.created_at >= current_start,
@@ -1196,7 +1203,7 @@ class AdvancedAnalytics:
                     }
 
                 # Calculate rankings
-                accuracy_values = [u.avg_accuracy for u in all_users_data if u.avg_accuracy]
+                accuracy_values = [u.average_accuracy for u in all_users_data if u.average_accuracy]
                 time_values = [u.total_time for u in all_users_data if u.total_time]
                 session_values = [u.session_count for u in all_users_data]
 
@@ -1280,7 +1287,7 @@ class AdvancedAnalytics:
                     recommendations.append("Excellent consistency! Maintain your daily practice routine")
 
                 # Analyze accuracy
-                accuracies = [p.accuracy_score for p in recent_progress if p.accuracy_score is not None]
+                accuracies = [p.average_accuracy for p in recent_progress if p.average_accuracy is not None]
                 if accuracies:
                     avg_accuracy = np.mean(accuracies)
                     recent_accuracy = np.mean(accuracies[:5]) if len(accuracies) >= 5 else avg_accuracy
@@ -1301,7 +1308,7 @@ class AdvancedAnalytics:
                             recommendations.append("Recent performance dip detected - review fundamentals and ensure proper warmup")
 
                 # Analyze session duration
-                durations = [p.session_duration for p in recent_progress if p.session_duration]
+                durations = [(p.practice_time / 60) if p.practice_time is not None else 0 for p in recent_progress if p.practice_time is not None]
                 if durations:
                     avg_duration = np.mean(durations)
                     if avg_duration < 10:
@@ -1312,12 +1319,14 @@ class AdvancedAnalytics:
                 # Analyze weak areas from exercise data
                 swara_performance = {}
                 for record in recent_progress:
-                    if record.exercise_data and 'target_swara' in record.exercise_data:
-                        swara = record.exercise_data['target_swara']
+                    # Assuming target_swara is stored within accuracy_metrics JSON
+                    target_swara = record.accuracy_metrics.get('target_swara')
+                    if target_swara:
+                        swara = target_swara
                         if swara not in swara_performance:
                             swara_performance[swara] = []
-                        if record.accuracy_score is not None:
-                            swara_performance[swara].append(record.accuracy_score)
+                        if record.average_accuracy is not None:
+                            swara_performance[swara].append(record.average_accuracy)
 
                 if swara_performance:
                     weak_swaras = [

@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 from unittest.mock import Mock, patch
 from flask import Flask
-from playwright.async_api import async_playwright, Playwright, Browser, BrowserContext, Page
+
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -54,40 +54,16 @@ def app_context(flask_app):
         yield flask_app
 
 
-@pytest.fixture(scope="session")
-async def playwright():
-    """Create Playwright instance."""
-    async with async_playwright() as p:
-        yield p
 
 
-@pytest.fixture(scope="session")
-async def browser(playwright: Playwright):
-    """Create browser instance."""
-    browser = await playwright.chromium.launch(
-        headless=True,
-        args=['--no-sandbox', '--disable-dev-shm-usage']
-    )
-    yield browser
-    await browser.close()
 
 
-@pytest.fixture
-async def context(browser: Browser):
-    """Create browser context with permissions."""
-    context = await browser.new_context(
-        permissions=['microphone'],
-        viewport={'width': 1280, 'height': 720}
-    )
-    yield context
-    await context.close()
 
 
-@pytest.fixture
-async def page(context: BrowserContext):
-    """Create page instance."""
-    page = await context.new_page()
-    yield page
+
+
+
+
 
 
 @pytest.fixture
@@ -170,39 +146,10 @@ def mock_audio():
 
 
 # Playwright helper functions
-async def wait_for_audio_permission(page: Page):
-    """Wait for audio permission to be granted."""
-    await page.evaluate("""
-        navigator.mediaDevices.getUserMedia({ audio: true })
-            .then(() => console.log('Audio permission granted'))
-            .catch(() => console.log('Audio permission denied'));
-    """)
 
 
-async def simulate_microphone_input(page: Page, frequency: float = 440.0):
-    """Simulate microphone input for testing."""
-    await page.evaluate(f"""
-        // Mock AudioContext and microphone input
-        const mockAudioContext = {{
-            createAnalyser: () => ({{
-                fftSize: 2048,
-                frequencyBinCount: 1024,
-                getFloatFrequencyData: (data) => {{
-                    // Simulate frequency data for {frequency}Hz
-                    const binIndex = Math.floor({frequency} * 1024 / 22050);
-                    for (let i = 0; i < data.length; i++) {{
-                        data[i] = i === binIndex ? -20 : -100;
-                    }}
-                }}
-            }}),
-            createMediaStreamSource: () => ({{
-                connect: () => {{}}
-            }})
-        }};
-        
-        window.AudioContext = () => mockAudioContext;
-        window.webkitAudioContext = () => mockAudioContext;
-    """)
+
+
 
 
 # Performance testing helpers
@@ -217,13 +164,7 @@ def performance_metrics():
     return metrics
 
 
-async def measure_page_load_time(page: Page, url: str):
-    """Measure page load time."""
-    start_time = asyncio.get_event_loop().time()
-    await page.goto(url)
-    await page.wait_for_load_state('networkidle')
-    end_time = asyncio.get_event_loop().time()
-    return end_time - start_time
+
 
 
 # Test data

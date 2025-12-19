@@ -1,127 +1,32 @@
 #!/usr/bin/env groovy
-import groovy.transform.Field
 
 /**
- * Jenkins Pipeline for Music Multi-Architecture Build and Deployment
+ * Music Multi-Architecture Build and Deployment
+ * Using shared template from homelab repository
  */
 
-@Field def config = [
-    registryHost: '192.168.68.124',
-    registryPort: '30501',
-    imageName: 'music',
-    manifestRepoUrl: 'https://github.com/naren-m/homelab.git',
-    gitCredentialsId: 'github-credentials',
-    manifestRelativePath: 'base/applications/music',
-    namespace: 'music',
-    kubeconfigId: 'homelab-kubeconfig',
-    platforms: 'linux/amd64', // AMD64 only for stability
-    builderName: 'homelab-builder',
-    dockerfilePath: 'Dockerfile',
-    buildContext: '.'
-]
-
-@Field def imageTag = ''
-
-pipeline {
-    agent { any }
-
-    options {
-        buildDiscarder(logRotator(numToKeepStr: '10'))
-        disableConcurrentBuilds()
-        timestamps()
-    }
-
-    environment {
-        FULL_IMAGE_NAME = "${config.registryHost}:${config.registryPort}/${config.imageName}"
-        DOCKER_BUILDKIT = '1'
-    }
-
-    stages {
-        stage('Preparation') {
-            steps {
-                script {
-                    def ts = new Date().format("HHmmss-ddMMMyy")
-                    def gitHash = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
-                    imageTag = "${ts}-${gitHash}"
-                    echo "🚀 Starting build for ${config.imageName} with tag: ${imageTag}"
-                }
-            }
-        }
-
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
-
-        stage('Setup Buildx') {
-            steps {
-                script {
-                    sh """
-                        mkdir -p /tmp/buildx-config
-                        cat > /tmp/buildx-config/buildkitd.toml << 'TOML'
-[registry."192.168.68.124:30501"]
-  http = true
-  insecure = true
-TOML
-                        if docker buildx inspect ${config.builderName} >/dev/null 2>&1; then 
-                            echo "Builder exists"
-                        else
-                            docker buildx create --name ${config.builderName} --driver docker-container --config /tmp/buildx-config/buildkitd.toml --use --bootstrap
-                        fi
-                    """
-                }
-            }
-        }
-
-        stage('Build & Push Image') {
-            steps {
-                sh "docker buildx build --platform ${config.platforms} --tag ${FULL_IMAGE_NAME}:${imageTag} --tag ${FULL_IMAGE_NAME}:latest --builder ${config.builderName} --file ${config.dockerfilePath} --push ${config.buildContext}"
-            }
-        }
-
-        stage('Update GitOps') {
-            steps {
-                script {
-                    dir('homelab-gitops') {
-                        checkout([
-                            $class: 'GitSCM', 
-                            branches: [[name: 'main']], 
-                            userRemoteConfigs: [[url: config.manifestRepoUrl, credentialsId: config.gitCredentialsId]]
-                        ])
-                        
-                        sh """
-                            sed -i "s|image: .*music:.*|image: ${FULL_IMAGE_NAME}:${imageTag}|g" ${config.manifestRelativePath}/deployment.yaml
-                            git config user.email "jenkins@hanuma.com"
-                            git config user.name "Jenkins CI"
-                            git add .
-                            if git commit -m "chore(music): update image to ${imageTag} [skip ci]"; then
-                                git push origin main
-                            fi
-                        """
-                    }
-                }
-            }
-        }
-
-        stage('Sync & Verify') {
-            steps {
-                script {
-                    def kubectlPath = "${WORKSPACE}/bin/kubectl"
-                    sh "mkdir -p ${WORKSPACE}/bin && [ ! -x ${kubectlPath} ] && curl -sLO https://dl.k8s.io/release/v1.32.0/bin/linux/amd64/kubectl && chmod +x kubectl && mv kubectl ${kubectlPath} || true"
-                    
-                    withKubeConfig([credentialsId: config.kubeconfigId]) {
-                        sh "${kubectlPath} patch app homelab-applications -n argocd --type merge -p '{\"operation\":{\"initiatedBy\":{\"username\":\"jenkins\"},\"sync\":{\"revision\":\"HEAD\"}}}'"
-                        sh "${kubectlPath} rollout status deployment/music -n ${config.namespace} --timeout=300s"
-                    }
-                }
-            }
-        }
-    }
-
-    post {
-        always {
-            cleanWs()
+node {
+    stage('Fetch Pipeline Template') {
+        cleanWs()
+        // Checkout homelab repo to get the shared pipeline script
+        checkout([
+            $class: 'GitSCM', 
+            branches: [[name: 'main']], 
+            userRemoteConfigs: [[url: 'https://github.com/naren-m/homelab.git', credentialsId: 'github-credentials']]
+        ])
+        
+        // Load the shared pipeline script
+        def gitopsPipeline = load 'jenkins/gitops-pipeline.groovy'
+        
+        // Return to app workspace for the main build
+        dir('app') {
+            checkout scm
+            
+            // Execute the shared pipeline
+            gitopsPipeline([
+                appName: 'music',
+                manifestRelativePath: 'base/applications/music'
+            ])
         }
     }
 }

@@ -526,7 +526,10 @@ db_manager = DatabaseManager()
 # Flask-SQLAlchemy integration
 def init_db_with_flask(app) -> SQLAlchemy:
     """Initialize database with Flask app"""
-    app.config['SQLALCHEMY_DATABASE_URI'] = db_manager.config.postgresql_url
+    if app.config.get('TESTING'):
+        app.config['SQLALCHEMY_DATABASE_URI'] = app.config.get('SQLALCHEMY_DATABASE_URI', 'sqlite:///:memory:')
+    else:
+        app.config['SQLALCHEMY_DATABASE_URI'] = db_manager.config.postgresql_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
         'pool_size': db_manager.config.pool_size,
