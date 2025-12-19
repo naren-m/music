@@ -4,7 +4,7 @@ Tests for the Analytics API endpoints.
 
 import pytest
 from datetime import datetime, timedelta, timezone
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch, AsyncMock, MagicMock
 import os
 import json
 import random
@@ -13,12 +13,20 @@ import asyncio
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from config.database import User, Progress, Exercise, Group, FriendRequest, get_db_session, init_db_with_flask, db_manager, Base
+from config.database import User, Progress, Exercise, Group, FriendRequest, get_db_session, init_db_with_flask, db_manager, Base, DatabaseConfig
 from api import create_app
 from api.analytics.dashboard import AdvancedAnalytics, AnalyticsPeriod
 
-# Fixtures from conftest.py will be implicitly available if pytest is configured correctly.
-# We'll need a way to create and manage test database state.
+class TestDatabaseConfig(DatabaseConfig):
+    """Test-specific database configuration for in-memory SQLite."""
+    postgresql_host: str = 'sqlite'
+    postgresql_db: str = ':memory:'
+    postgresql_user: str = 'test'
+    postgresql_password: str = 'test'
+    pool_size: int = None
+    max_overflow: int = None
+    pool_timeout: int = None
+    pool_recycle: int = None
 
 @pytest.fixture(scope="session")
 def app_with_db():
@@ -27,42 +35,52 @@ def app_with_db():
     app, _ = create_app('testing')
     app.config.update({
         'TESTING': True,
-        'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
+        'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:', # Explicitly set SQLite in-memory DB
         'SQLALCHEMY_TRACK_MODIFICATIONS': False,
         'SECRET_KEY': 'a-super-secret-key-for-testing', # Set a dummy secret key
         'WTF_CSRF_ENABLED': False,
-        'SQLALCHEMY_ENGINE_OPTIONS': {} # Empty engine options for SQLite
+        'SQLALCHEMY_ENGINE_OPTIONS': {'connect_args': {'check_same_thread': False}} # SQLite specific for threading
     })
 
-    # Explicitly initialize db_manager for in-memory SQLite
     with app.app_context():
-        # Directly configure db_manager for SQLite in-memory
-        db_manager.config.postgresql_host = 'sqlite'
-        db_manager.config.postgresql_db = ':memory:'
-        db_manager.config.postgresql_user = 'test'
-        db_manager.config.postgresql_password = 'test'
-        db_manager.config.pool_size = None # Not applicable for in-memory SQLite in this context
-        db_manager.config.max_overflow = None
-        db_manager.config.pool_timeout = None
-        db_manager.config.pool_recycle = None
+        # Store original db_manager state to restore later
+        original_db_manager_config = db_manager.config
+        original_db_manager_engine = db_manager.engine
+        original_db_manager_session_factory = db_manager.session_factory
         
-        # Reset engine and session factory to force re-initialization with new config
-        db_manager.engine = None
-        db_manager.session_factory = None
+        # Create a mock db_manager instance and configure it for SQLite
+        mock_db_manager_instance = MagicMock()
+        mock_db_manager_instance.config = TestDatabaseConfig()
         
-        # Initialize the db_manager (this will now use the SQLite config)
-        db_manager.initialize_postgresql() # This will call create_engine internally
+        # Define the side effect for initialize_postgresql
+        def mock_init_postgresql():
+            mock_db_manager_instance.engine = create_engine(
+                'sqlite:///:memory:', connect_args={'check_same_thread': False}
+            )
+            mock_db_manager_instance.session_factory = sessionmaker(bind=mock_db_manager_instance.engine)
+        
+        mock_db_manager_instance.initialize_postgresql.side_effect = mock_init_postgresql
+        
+        # Patch the global db_manager with our mock instance
+        with patch('config.database.db_manager', new=mock_db_manager_instance):
+            # Now call the mocked initialize (which sets up engine/session_factory on the mock)
+            mock_db_manager_instance.initialize_postgresql()
 
-        # Initialize Flask-SQLAlchemy extension
-        db = init_db_with_flask(app)
-        
-        db.create_all() # Create tables using Flask-SQLAlchemy
-        
-        yield app
-        
-        # Teardown
-        db.session.remove() # Important for Flask-SQLAlchemy session management
-        db.drop_all() # Drop tables using Flask-SQLAlchemy
+            # Initialize Flask-SQLAlchemy extension with the app
+            db = init_db_with_flask(app)
+            
+            db.create_all() # Create tables using Flask-SQLAlchemy
+            
+            yield app
+            
+            # Teardown
+            db.session.remove() # Important for Flask-SQLAlchemy session management
+            db.drop_all() # Drop tables using Flask-SQLAlchemy
+
+        # Restore original db_manager state
+        db_manager.config = original_db_manager_config
+        db_manager.engine = original_db_manager_engine
+        db_manager.session_factory = original_db_manager_session_factory
 
 @pytest.fixture(scope="function")
 def client(app_with_db):
