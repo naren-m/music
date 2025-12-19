@@ -1,5 +1,5 @@
 # Carnatic Music Learning Platform v2.0 - Production Docker Image
-FROM python:3.9-slim
+FROM 192.168.68.124:30501/python:3.9-slim
 
 # Set working directory
 WORKDIR /app
