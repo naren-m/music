@@ -1,3 +1,4 @@
+import groovy.transform.Field
 #!/usr/bin/env groovy
 
 /**
@@ -13,7 +14,7 @@
  */
 
 // Pipeline configuration
-def config = [
+@Field def config = [
     // Registry settings
     registryHost: '192.168.68.124',
     registryPort: '30501',
@@ -42,7 +43,7 @@ def config = [
 ]
 
 // Global variables
-def imageTag = ''
+@Field def imageTag = ''
 def kubectlBin = 'kubectl'
 
 pipeline {
@@ -177,8 +178,8 @@ def setupBuildx() {
   http = true
   insecure = true
 TOML
-        docker buildx rm ${config.builderName} 2>/dev/null || true
-        docker buildx create --name ${config.builderName} --driver docker-container --config /tmp/buildx-config/buildkitd.toml --use --bootstrap
+        if docker buildx inspect ${config.builderName} >/dev/null 2>&1; then echo "Builder exists"; else
+        docker buildx create --name ${config.builderName} --driver docker-container --config /tmp/buildx-config/buildkitd.toml --use --bootstrap; fi
     """
 }
 
