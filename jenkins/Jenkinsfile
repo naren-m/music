@@ -1,6 +1,5 @@
-import groovy.transform.Field
 #!/usr/bin/env groovy
-
+import groovy.transform.Field
 /**
  * Jenkins Pipeline for Music (Carnatic Learning Platform) Multi-Architecture Build and Deployment
  * 
