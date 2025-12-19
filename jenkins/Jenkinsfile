@@ -23,7 +23,7 @@ import groovy.transform.Field
 @Field def imageTag = ''
 
 pipeline {
-    agent { label 'docker-buildx' }
+    agent { any }
 
     options {
         buildDiscarder(logRotator(numToKeepStr: '10'))
