@@ -29,7 +29,7 @@ import groovy.transform.Field
     kubeconfigId: 'homelab-kubeconfig',
 
     // Build settings
-    platforms: 'linux/amd64,linux/arm64',
+    platforms: 'linux/amd64',
     builderName: 'homelab-builder',
     dockerfilePath: 'Dockerfile',
     buildContext: '.',
