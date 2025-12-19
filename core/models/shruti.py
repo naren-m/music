@@ -210,3 +210,104 @@ class RagaAnalyzer:
             bonus += 0.3  # All raga notes present
             
         return min(1.0, base_score + bonus)
+
+
+# Global shruti system instance for convenience
+_shruti_system = ShrutiSystem()
+SHRUTI_SYSTEM = _shruti_system.shrutis
+
+
+def calculate_shruti_frequency(shruti_index: int, base_sa: float) -> float:
+    """
+    Calculate the frequency of a shruti given its index and base Sa frequency.
+
+    Args:
+        shruti_index: Index of the shruti in SHRUTI_SYSTEM (0-21)
+        base_sa: Base frequency for Sa in Hz
+
+    Returns:
+        Calculated frequency in Hz
+    """
+    if 0 <= shruti_index < len(SHRUTI_SYSTEM):
+        return SHRUTI_SYSTEM[shruti_index].calculate_frequency(base_sa)
+    raise IndexError(f"Shruti index {shruti_index} out of range (0-{len(SHRUTI_SYSTEM)-1})")
+
+
+def find_closest_shruti(frequency: float, base_sa: float, tolerance_cents: float = 50) -> Dict:
+    """
+    Find the closest shruti to a given frequency.
+
+    Args:
+        frequency: Detected frequency in Hz
+        base_sa: Base frequency for Sa in Hz
+        tolerance_cents: Maximum deviation in cents to consider a match
+
+    Returns:
+        Dictionary with shruti_index, shruti_name, deviation_cents, and frequency
+    """
+    best_match = {
+        'shruti_index': -1,
+        'shruti_name': None,
+        'deviation_cents': float('inf'),
+        'frequency': 0.0
+    }
+
+    for idx, shruti in enumerate(SHRUTI_SYSTEM):
+        deviation = shruti.cent_deviation(frequency, base_sa)
+        if abs(deviation) < abs(best_match['deviation_cents']):
+            best_match = {
+                'shruti_index': idx,
+                'shruti_name': shruti.name,
+                'deviation_cents': deviation,
+                'frequency': shruti.calculate_frequency(base_sa)
+            }
+
+    return best_match
+
+
+def analyze_pitch_deviation(detected_freq: float, base_sa: float, target_shruti_index: int = 0) -> Dict:
+    """
+    Analyze how a detected pitch deviates from the target shruti.
+
+    Args:
+        detected_freq: Detected frequency in Hz
+        base_sa: Base frequency for Sa in Hz
+        target_shruti_index: Index of the target shruti (default 0 for Sa)
+
+    Returns:
+        Dictionary with deviation_cents, accuracy_score, direction, and target_frequency
+    """
+    if target_shruti_index < 0 or target_shruti_index >= len(SHRUTI_SYSTEM):
+        target_shruti_index = 0
+
+    target_shruti = SHRUTI_SYSTEM[target_shruti_index]
+    target_freq = target_shruti.calculate_frequency(base_sa)
+    deviation_cents = target_shruti.cent_deviation(detected_freq, base_sa)
+
+    # Calculate accuracy score (1.0 = perfect, 0.0 = very off)
+    # Within 5 cents = excellent (>0.95)
+    # Within 15 cents = good (>0.85)
+    # Within 30 cents = acceptable (>0.70)
+    # Beyond 50 cents = poor (<0.50)
+    abs_deviation = abs(deviation_cents)
+    if abs_deviation <= 5:
+        accuracy_score = 1.0 - (abs_deviation / 100)
+    elif abs_deviation <= 15:
+        accuracy_score = 0.95 - ((abs_deviation - 5) / 200)
+    elif abs_deviation <= 30:
+        accuracy_score = 0.90 - ((abs_deviation - 15) / 100)
+    elif abs_deviation <= 50:
+        accuracy_score = 0.75 - ((abs_deviation - 30) / 100)
+    else:
+        accuracy_score = max(0.0, 0.55 - ((abs_deviation - 50) / 200))
+
+    direction = 'sharp' if deviation_cents > 0 else 'flat' if deviation_cents < 0 else 'perfect'
+
+    return {
+        'deviation_cents': deviation_cents,
+        'accuracy_score': accuracy_score,
+        'direction': direction,
+        'target_frequency': target_freq,
+        'detected_frequency': detected_freq,
+        'target_shruti': target_shruti.name
+    }

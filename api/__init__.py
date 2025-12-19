@@ -17,6 +17,7 @@ from .auth.routes import auth_bp
 from .learning.routes import learning_bp
 from .audio.routes import audio_bp
 from .social.routes import social_bp
+from .analytics.routes import analytics_bp
 
 
 def create_app(config_name: str = 'development') -> Tuple[Flask, SocketIO]:
@@ -40,7 +41,7 @@ def create_app(config_name: str = 'development') -> Tuple[Flask, SocketIO]:
     # Initialize SocketIO
     socketio_instance = SocketIO(app, cors_allowed_origins=app.config.get('ALLOWED_ORIGINS'), async_mode='threading')
 
-    # Register blueprints, routes, CLI commands, and WebSocket events
+    # Register blueprints
     register_blueprints(app)
     register_main_routes(app)
     register_cli_commands(app)
@@ -108,6 +109,7 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(learning_bp, url_prefix='/api/v1/learning')
     app.register_blueprint(audio_bp, url_prefix='/api/v1/audio')
     app.register_blueprint(social_bp, url_prefix='/api/v1/social')
+    app.register_blueprint(analytics_bp, url_prefix='/api/v1/analytics')
     app.logger.info("Registered API version 1 blueprints")
 
 def register_main_routes(app: Flask) -> None:

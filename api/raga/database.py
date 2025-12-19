@@ -5,17 +5,10 @@ Complete implementation of Carnatic raga system with 72 Melakarta ragas,
 100+ Janya ragas, AI-powered raga detection, and improvisation training.
 """
 
-from typing import List, Dict, Optional, Any, Tuple, Set
+from typing import List, Dict, Optional, Any, Tuple
 from dataclasses import dataclass, asdict
 from enum import Enum
-import numpy as np
 import json
-from datetime import datetime
-import tensorflow as tf
-from sqlalchemy.orm import Session
-
-from ..database import get_db_session
-from ..models import User, Progress
 
 class RagaCategory(Enum):
     MELAKARTA = "melakarta"  # Parent ragas (72)
@@ -34,6 +27,7 @@ class EmotionalRasa(Enum):
     BIBHATSA = "bibhatsa"     # Disgusting
     ADBHUTA = "adbhuta"       # Wonderful
     SHRNGARA = "shrngara"     # Romantic
+    BHAKTI = "bhakti"         # Devotional
 
 class TimeOfDay(Enum):
     EARLY_MORNING = "early_morning"    # 4-6 AM

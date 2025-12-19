@@ -7,6 +7,7 @@ import time
 import json
 import logging
 from datetime import datetime, timedelta
+from functools import wraps
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
 from collections import defaultdict, deque
@@ -364,6 +365,7 @@ performance_monitor = PerformanceMonitor()
 def monitor_request(endpoint: str):
     """Decorator to monitor request performance"""
     def decorator(func):
+        @wraps(func)
         def wrapper(*args, **kwargs):
             start_time = time.time()
             try:

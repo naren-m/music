@@ -13,7 +13,7 @@ import redis
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import (
     Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, JSON,
-    String, Text, create_engine
+    String, Text, create_engine, text
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, relationship, sessionmaker
@@ -389,6 +389,27 @@ class Group(Base):
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     is_active = Column(Boolean, default=True)
 
+class FriendRequest(Base):
+    """Model for tracking friend requests between users"""
+
+    __tablename__ = 'friend_requests'
+
+    id = Column(Integer, primary_key=True)
+    sender_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    receiver_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    status = Column(String(20), default='pending', nullable=False) # pending, accepted, rejected
+    sent_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    responded_at = Column(DateTime(timezone=True))
+
+    # Relationships
+    sender = relationship("User", foreign_keys=[sender_id], backref="sent_friend_requests")
+    receiver = relationship("User", foreign_keys=[receiver_id], backref="received_friend_requests")
+
+    __table_args__ = (
+        Index('idx_friend_request_sender_receiver', 'sender_id', 'receiver_id', unique=True),
+        Index('idx_friend_request_receiver_status', 'receiver_id', 'status'),
+    )
+
 # Database initialization and connection management
 class DatabaseManager:
     """Database connection and session management"""
@@ -477,7 +498,7 @@ class DatabaseManager:
         # Check PostgreSQL
         try:
             with self.get_session() as session:
-                session.execute('SELECT 1')
+                session.execute(text('SELECT 1'))
                 health['postgresql'] = True
         except Exception as e:
             logger.error(f"PostgreSQL health check failed: {e}")
