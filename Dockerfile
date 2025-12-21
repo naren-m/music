@@ -1,21 +1,28 @@
 # Carnatic Music Learning Platform v2.0 - Production Docker Image
-FROM 192.168.68.124:30501/python:3.9-slim
+# Multi-architecture support: linux/amd64, linux/arm64
+#
+# Base image: Official Python slim image with multi-arch support
+# Supported platforms: linux/amd64, linux/arm64
+FROM python:3.9-slim
 
 # Set working directory
 WORKDIR /app
 
 # Install system dependencies for audio processing and web server
-RUN apt-get update && apt-get install -y \
+# Note: Package names are the same across amd64 and arm64
+RUN apt-get update && apt-get install -y --no-install-recommends \
     portaudio19-dev \
     libsndfile1-dev \
     build-essential \
     pkg-config \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # Copy requirements and install Python dependencies
 COPY requirements-v2.txt .
-# Use --prefer-binary to avoid compiling C extensions (important for arm64 emulation)
+# Use --prefer-binary to avoid compiling C extensions (critical for arm64 cross-compilation)
+# Using pip's binary preference ensures faster builds on both architectures
 RUN pip install --no-cache-dir --prefer-binary -r requirements-v2.txt
 
 # Copy application code structure

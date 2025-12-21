@@ -3,6 +3,10 @@
 /**
  * Music Multi-Architecture Build and Deployment
  * Using shared template from homelab repository
+ *
+ * Builds for:
+ * - linux/amd64 (Intel/AMD x86_64 - hanuma, dell-mini)
+ * - linux/arm64 (Apple Silicon - macmini)
  */
 
 node {
@@ -10,22 +14,24 @@ node {
         cleanWs()
         // Checkout homelab repo to get the shared pipeline script
         checkout([
-            $class: 'GitSCM', 
-            branches: [[name: 'main']], 
+            $class: 'GitSCM',
+            branches: [[name: 'main']],
             userRemoteConfigs: [[url: 'https://github.com/naren-m/homelab.git', credentialsId: 'github-credentials']]
         ])
-        
+
         // Load the shared pipeline script
         def gitopsPipeline = load 'jenkins/gitops-pipeline.groovy'
-        
+
         // Return to app workspace for the main build
         dir('app') {
             checkout scm
-            
-            // Execute the shared pipeline
+
+            // Execute the shared pipeline with multi-architecture support
             gitopsPipeline([
                 appName: 'music',
-                manifestRelativePath: 'base/applications/music'
+                manifestRelativePath: 'base/applications/music',
+                // Enable multi-arch builds for homelab cluster nodes
+                platforms: 'linux/amd64,linux/arm64'
             ])
         }
     }
