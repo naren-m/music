@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   User,
   Settings,
-  CreditCard,
   Award,
   BarChart3,
   Bell,
@@ -63,12 +62,6 @@ const UserMenu: React.FC<UserMenuProps> = ({ user, isOpen, onClose, onLogout }) 
       nameDevanagari: 'उपलब्धियाँ',
       href: '/achievements',
       icon: Award
-    },
-    {
-      name: 'Subscription',
-      nameDevanagari: 'सदस्यता',
-      href: '/subscription',
-      icon: CreditCard
     },
     {
       name: 'Settings',

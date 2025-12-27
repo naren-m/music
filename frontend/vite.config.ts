@@ -72,12 +72,12 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:5001',
+        target: 'http://localhost:5002',
         changeOrigin: true,
         secure: false
       },
-      '/ws': {
-        target: 'ws://localhost:5001',
+      '/socket.io': {
+        target: 'http://localhost:5002',
         ws: true,
         changeOrigin: true
       }

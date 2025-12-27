@@ -5,6 +5,50 @@ import { CarnaticAudioEngine, DetectionResult, AudioEngineConfig } from '../lib/
 // Use a more specific type for Carnatic pitch info
 export type CarnaticPitchInfo = DetectionResult;
 
+// Practice feedback from server (when validating against exercise sequence)
+export interface PracticeFeedback {
+  shruti_name: string;
+  frequency: number;
+  cent_deviation: number;
+  confidence: number;
+  timestamp: number;
+  expected_note?: string;
+  next_note?: string;
+  feedback_type?: 'correct' | 'incorrect';
+  validation?: {
+    expected_note: string;
+    detected_note: string;
+    position: number;
+    total_notes: number;
+    is_correct: boolean;
+    accuracy_score: number;
+    message: string;
+    next_note?: string;  // Next expected note after correct answer
+    completed?: boolean;
+    final_score?: {
+      total_notes: number;
+      correct: number;
+      incorrect: number;
+      accuracy_percentage: number;
+      grade: string;
+    };
+    progress: {
+      current: number;
+      total: number;
+      percentage: number;
+      correct: number;
+      incorrect: number;
+    };
+  };
+  progress?: {
+    current: number;
+    total: number;
+    percentage: number;
+    correct: number;
+    incorrect: number;
+  };
+}
+
 export interface AudioState {
   isRecording: boolean;
   isAnalyzing: boolean;
@@ -14,6 +58,9 @@ export interface AudioState {
   deviceId: string | null;
   devices: MediaDeviceInfo[];
   isConnected: boolean; // WebSocket connection status
+  practiceFeedback: PracticeFeedback | null; // Real-time feedback from server
+  isPracticing: boolean; // Whether an exercise practice session is active
+  practiceProgress: { current: number; total: number; percentage: number } | null;
 }
 
 export interface AudioContextType extends AudioState {
@@ -24,6 +71,15 @@ export interface AudioContextType extends AudioState {
   setDevice: (deviceId: string) => Promise<void>;
   refreshDevices: () => Promise<void>;
   setBaseFrequency: (freq: number) => void;
+  // New methods for practice mode
+  startPracticeSession: (pattern: {
+    pattern_name: string;
+    arohanam: string[];
+    avarohanam: string[];
+    include_avarohanam?: boolean;
+  }) => void;
+  stopPracticeSession: () => void;
+  onPracticeFeedback: (callback: (feedback: PracticeFeedback) => void) => () => void;
 }
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -50,6 +106,9 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({ children }) => {
     deviceId: null,
     devices: [],
     isConnected: false,
+    practiceFeedback: null,
+    isPracticing: false,
+    practiceProgress: null,
   });
 
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -59,6 +118,8 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({ children }) => {
   const animationFrameRef = useRef<number | null>(null);
   const carnaticEngineRef = useRef<CarnaticAudioEngine | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  const practiceFeedbackCallbacksRef = useRef<Set<(feedback: PracticeFeedback) => void>>(new Set());
+  const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
 
   // Fetch config and initialize engine on mount
   useEffect(() => {
@@ -96,20 +157,87 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({ children }) => {
   };
 
   const connectWebSocket = () => {
-    // Assuming the server is on the same host
-    const socket = io('http://localhost:5001');
+    // In development, connect directly to backend to avoid Vite proxy WebSocket issues
+    // In production, use the same origin or configure via environment variable
+    const isDev = import.meta.env.DEV;
+    const wsUrl = import.meta.env.VITE_WS_URL || (isDev ? 'http://localhost:5002' : window.location.origin);
+    console.log('Connecting to WebSocket at:', wsUrl);
+    const socket = io(wsUrl, {
+      path: '/socket.io',
+      transports: ['polling', 'websocket'], // Start with polling, upgrade to websocket
+    });
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      setState(prev => ({ ...prev, isConnected: true }));
+      console.log('WebSocket connected');
+      setState(prev => ({ ...prev, isConnected: true, error: null }));
     });
 
     socket.on('disconnect', () => {
+      console.log('WebSocket disconnected');
       setState(prev => ({ ...prev, isConnected: false }));
     });
 
-    socket.on('error', (error) => {
-      setState(prev => ({ ...prev, error: `WebSocket error: ${error.message}` }));
+    socket.on('error', (error: any) => {
+      console.error('WebSocket error:', error);
+      setState(prev => ({ ...prev, error: `WebSocket error: ${error?.message || 'Unknown error'}` }));
+    });
+
+    // Listen for practice session started confirmation
+    socket.on('practice_session_started', (data: any) => {
+      console.log('Practice session started:', data);
+      setState(prev => ({
+        ...prev,
+        isPracticing: true,
+        practiceProgress: {
+          current: 0,
+          total: data.total_notes,
+          percentage: 0
+        }
+      }));
+    });
+
+    // Listen for real-time practice feedback from server
+    socket.on('practice_feedback', (feedback: PracticeFeedback) => {
+      console.log('Practice feedback received:', feedback);
+      setState(prev => ({
+        ...prev,
+        practiceFeedback: feedback,
+        practiceProgress: feedback.progress || prev.practiceProgress
+      }));
+
+      // Notify all registered callbacks
+      practiceFeedbackCallbacksRef.current.forEach(callback => {
+        try {
+          callback(feedback);
+        } catch (e) {
+          console.error('Error in practice feedback callback:', e);
+        }
+      });
+
+      // Check if exercise completed
+      if (feedback.validation?.completed) {
+        setState(prev => ({ ...prev, isPracticing: false }));
+      }
+    });
+
+    // Listen for shruti detection in free practice mode
+    socket.on('shruti_detected', (data: any) => {
+      // Update current pitch with server detection result
+      // Map server snake_case to frontend camelCase for DetectionResult compatibility
+      if (data.shruti_name) {
+        setState(prev => ({
+          ...prev,
+          currentPitch: {
+            shruti: { name: data.shruti_name, ratio: 1, westernEquiv: '', frequency: data.frequency },
+            shrutiName: data.shruti_name, // Convenience property for direct access
+            detectedFrequency: data.frequency,
+            centDeviation: data.cent_deviation,
+            confidence: data.confidence,
+            timestamp: Date.now(),
+          } as CarnaticPitchInfo
+        }));
+      }
     });
   };
 
@@ -246,8 +374,112 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({ children }) => {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
     }
+    // Also stop script processor for audio streaming
+    if (scriptProcessorRef.current) {
+      scriptProcessorRef.current.disconnect();
+      scriptProcessorRef.current = null;
+    }
     setState(prev => ({ ...prev, isAnalyzing: false, currentPitch: null }));
   };
+
+  // Start a practice session with a specific exercise pattern
+  const startPracticeSession = (pattern: {
+    pattern_name: string;
+    arohanam: string[];
+    avarohanam: string[];
+    include_avarohanam?: boolean;
+  }) => {
+    if (!socketRef.current?.connected) {
+      setState(prev => ({ ...prev, error: 'WebSocket not connected' }));
+      return;
+    }
+
+    console.log('Starting practice session:', pattern);
+    socketRef.current.emit('start_practice_session', {
+      pattern_name: pattern.pattern_name,
+      arohanam: pattern.arohanam,
+      avarohanam: pattern.avarohanam,
+      include_avarohanam: pattern.include_avarohanam ?? true,
+    });
+
+    setState(prev => ({
+      ...prev,
+      isPracticing: true,
+      practiceFeedback: null,
+      practiceProgress: null,
+    }));
+  };
+
+  // Stop the current practice session
+  const stopPracticeSession = () => {
+    if (socketRef.current?.connected) {
+      socketRef.current.emit('end_exercise');
+    }
+    setState(prev => ({
+      ...prev,
+      isPracticing: false,
+      practiceFeedback: null,
+      practiceProgress: null,
+    }));
+  };
+
+  // Subscribe to practice feedback events
+  const onPracticeFeedback = (callback: (feedback: PracticeFeedback) => void) => {
+    practiceFeedbackCallbacksRef.current.add(callback);
+    // Return unsubscribe function
+    return () => {
+      practiceFeedbackCallbacksRef.current.delete(callback);
+    };
+  };
+
+  // Stream audio to server for server-side pitch detection
+  const startAudioStreaming = useCallback(() => {
+    if (!audioContextRef.current || !microphoneRef.current || !socketRef.current?.connected) {
+      console.log('Cannot start audio streaming - missing requirements');
+      return;
+    }
+
+    const audioContext = audioContextRef.current;
+    const bufferSize = 4096; // Approximately 85ms at 48kHz
+
+    // Create script processor for audio streaming
+    // Note: ScriptProcessorNode is deprecated but AudioWorklet requires more setup
+    const scriptProcessor = audioContext.createScriptProcessor(bufferSize, 1, 1);
+    scriptProcessorRef.current = scriptProcessor;
+
+    scriptProcessor.onaudioprocess = (event) => {
+      if (!socketRef.current?.connected || !state.isPracticing) return;
+
+      const inputData = event.inputBuffer.getChannelData(0);
+
+      // Convert to regular array for transmission
+      // Downsample if needed to reduce bandwidth
+      const audioArray = Array.from(inputData);
+
+      // Send audio chunk to server for pitch detection
+      socketRef.current.emit('audio_chunk', {
+        audio_data: audioArray,
+        sample_rate: audioContext.sampleRate,
+        timestamp: Date.now(),
+      });
+    };
+
+    // Connect microphone -> script processor -> destination (for monitoring)
+    microphoneRef.current.connect(scriptProcessor);
+    scriptProcessor.connect(audioContext.destination);
+
+    console.log('Audio streaming started');
+  }, [state.isPracticing]);
+
+  // Effect to start/stop audio streaming when practice mode changes
+  useEffect(() => {
+    if (state.isPracticing && state.isRecording && microphoneRef.current) {
+      startAudioStreaming();
+    } else if (scriptProcessorRef.current) {
+      scriptProcessorRef.current.disconnect();
+      scriptProcessorRef.current = null;
+    }
+  }, [state.isPracticing, state.isRecording, startAudioStreaming]);
 
   const value: AudioContextType = {
     ...state,
@@ -258,6 +490,9 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({ children }) => {
     setDevice,
     refreshDevices,
     setBaseFrequency,
+    startPracticeSession,
+    stopPracticeSession,
+    onPracticeFeedback,
   };
 
   return (

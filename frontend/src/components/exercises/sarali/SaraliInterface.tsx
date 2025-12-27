@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/Button'
 import SwaraWheel from '@/components/carnatic/SwaraWheel'
-import TalaVisualizer from '@/components/carnatic/TalaVisualizer'
 import { cn } from '@/utils/cn'
-import { Play, Pause, RotateCcw, Volume2, VolumeX, Settings } from 'lucide-react'
+import { Play, Pause, RotateCcw, Volume2, VolumeX, Settings, Mic } from 'lucide-react'
+import { useAudio, PracticeFeedback } from '../../../contexts/AudioContext'
 
 interface SaraliPattern {
   id: number
@@ -47,6 +47,18 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
   onProgressUpdate,
   className
 }) => {
+  const {
+    currentPitch,
+    stopPitchDetection,
+    startRecording,
+    stopRecording,
+    isConnected,
+    startPracticeSession,
+    stopPracticeSession,
+    onPracticeFeedback,
+    practiceProgress,
+  } = useAudio()
+
   const [practiceState, setPracticeState] = useState<PracticeState>({
     isPlaying: false,
     currentTempo: 60,
@@ -63,15 +75,29 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
   const [showSettings, setShowSettings] = useState(false)
   const [volume, setVolume] = useState(0.7)
   const [isMuted, setIsMuted] = useState(false)
+  const [feedbackMessage, setFeedbackMessage] = useState<string>('')
+  const [serverFeedback, setServerFeedback] = useState<PracticeFeedback | null>(null)
   const [sessionStats, setSessionStats] = useState({
     startTime: Date.now(),
     totalTime: 0,
     accuracyHistory: [] as number[],
     mistakesCount: 0
   })
+  const [listeningModeActive, setListeningModeActive] = useState(false)
 
   const intervalRef = useRef<NodeJS.Timeout>()
   const audioContextRef = useRef<AudioContext>()
+
+  // Base frequencies for validation
+  const swaraFrequencies: Record<string, number> = {
+    'Sa': 261.63,   // C4
+    'Ri': 293.66,   // D4
+    'Ga': 329.63,   // E4
+    'Ma': 349.23,   // F4
+    'Pa': 392.00,   // G4
+    'Da': 440.00,   // A4
+    'Ni': 493.88    // B4
+  }
 
   useEffect(() => {
     loadSaraliPatterns()
@@ -79,8 +105,126 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
       if (audioContextRef.current) audioContextRef.current.close()
+      stopPitchDetection()
     }
   }, [])
+
+  // Subscribe to server practice feedback
+  useEffect(() => {
+    const unsubscribe = onPracticeFeedback((feedback: PracticeFeedback) => {
+      setServerFeedback(feedback)
+
+      // Update current detected swara
+      if (feedback.shruti_name) {
+        setCurrentSwara(feedback.shruti_name)
+      }
+
+      // Update feedback message based on validation
+      if (feedback.validation) {
+        if (feedback.validation.is_correct) {
+          setFeedbackMessage(`✓ Correct! ${feedback.validation.expected_note}`)
+          setSessionStats(prev => ({
+            ...prev,
+            accuracyHistory: [...prev.accuracyHistory, 100]
+          }))
+          // Update target to next note when current note is correct
+          if (feedback.validation.next_note) {
+            setTargetSwara(feedback.validation.next_note)
+          }
+        } else {
+          setFeedbackMessage(`Expected ${feedback.validation.expected_note}, heard ${feedback.validation.detected_note}`)
+          setSessionStats(prev => ({
+            ...prev,
+            accuracyHistory: [...prev.accuracyHistory, 0],
+            mistakesCount: prev.mistakesCount + 1
+          }))
+          // Keep target as the expected note when incorrect
+          if (feedback.validation.expected_note) {
+            setTargetSwara(feedback.validation.expected_note)
+          }
+        }
+
+        // Update progress from server
+        if (feedback.validation.progress) {
+          setPracticeState(prev => ({
+            ...prev,
+            swaraIndex: feedback.validation!.progress.current,
+            accuracy: feedback.validation!.progress.percentage
+          }))
+        }
+
+        // Check if exercise completed
+        if (feedback.validation.completed) {
+          setFeedbackMessage('🎉 Exercise Completed!')
+          setPracticeState(prev => ({
+            ...prev,
+            isPlaying: false,
+            completedCycles: prev.completedCycles + 1
+          }))
+          setListeningModeActive(false)
+        }
+      }
+    })
+
+    return unsubscribe
+  }, [onPracticeFeedback])
+
+  // Handle detection activation based on mode
+  // In practice/assessment mode, we use server-side detection via audio streaming
+  useEffect(() => {
+    if (practiceState.practiceMode !== 'listen' && practiceState.isPlaying && listeningModeActive) {
+      // Start recording for server-side detection
+      startRecording().catch(console.error)
+    } else if (!practiceState.isPlaying || practiceState.practiceMode === 'listen') {
+      stopRecording()
+    }
+  }, [practiceState.practiceMode, practiceState.isPlaying, listeningModeActive])
+
+  // Real-time Validation Logic
+  useEffect(() => {
+    if (!currentPitch || !targetSwara || practiceState.practiceMode === 'listen') {
+      setFeedbackMessage('')
+      return
+    }
+
+    const targetFreq = swaraFrequencies[targetSwara]
+    if (!targetFreq) return
+
+    // Calculate accuracy (simplified cent deviation check)
+    // 1200 * log2(f1/f2)
+    const deviation = 1200 * Math.log2(currentPitch.detectedFrequency / targetFreq)
+    const absDeviation = Math.abs(deviation)
+
+    if (absDeviation < 20) {
+      setFeedbackMessage('Perfect! 🌟')
+      // Update session stats (simplified)
+      setSessionStats(prev => ({
+        ...prev,
+        accuracyHistory: [...prev.accuracyHistory, 100]
+      }))
+    } else if (absDeviation < 50) {
+      setFeedbackMessage('Good')
+      setSessionStats(prev => ({
+        ...prev,
+        accuracyHistory: [...prev.accuracyHistory, 80]
+      }))
+    } else {
+      setFeedbackMessage(deviation > 0 ? 'Too High ▼' : 'Too Low ▲')
+      setSessionStats(prev => ({
+        ...prev,
+        accuracyHistory: [...prev.accuracyHistory, 40]
+      }))
+    }
+
+    // Update running average accuracy
+    const history = sessionStats.accuracyHistory
+    if (history.length > 0) {
+      const avg = history.reduce((a, b) => a + b, 0) / history.length
+      setPracticeState(prev => ({ ...prev, accuracy: avg }))
+    }
+
+  }, [currentPitch, targetSwara])
+
 
   useEffect(() => {
     if (practiceState.isPlaying && currentPattern) {
@@ -199,6 +343,14 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
   const startPracticeSequence = () => {
     if (!currentPattern) return
 
+    // In practice/assessment mode, the server handles sequence tracking
+    // We only run the interval for listen mode to play sounds
+    if (practiceState.practiceMode !== 'listen') {
+      // Server-side practice session is already started in handlePlayPause
+      // Don't run client-side interval
+      return
+    }
+
     const sequence = practiceState.currentSequence === 'arohanam'
       ? currentPattern.arohanam
       : practiceState.currentSequence === 'avarohanam'
@@ -213,7 +365,7 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
       setCurrentSwara(swara)
       setTargetSwara(swara)
 
-      // Play audio tone for the swara
+      // Play audio tone for the swara (ONLY in listen mode)
       if (!isMuted) {
         playSwara(swara)
       }
@@ -245,17 +397,7 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
   const playSwara = (swara: string) => {
     if (!audioContextRef.current) return
 
-    const swaraFrequencies = {
-      'Sa': 261.63,   // C4
-      'Ri': 293.66,   // D4
-      'Ga': 329.63,   // E4
-      'Ma': 349.23,   // F4
-      'Pa': 392.00,   // G4
-      'Da': 440.00,   // A4
-      'Ni': 493.88    // B4
-    }
-
-    const frequency = swaraFrequencies[swara as keyof typeof swaraFrequencies] || 261.63
+    const frequency = swaraFrequencies[swara] || 261.63
     const duration = (60 / practiceState.currentTempo) * 0.8 // 80% of beat duration
 
     const oscillator = audioContextRef.current.createOscillator()
@@ -276,10 +418,51 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
   }
 
   const handlePlayPause = () => {
-    setPracticeState(prev => ({
-      ...prev,
-      isPlaying: !prev.isPlaying
-    }))
+    if (!practiceState.isPlaying) {
+      // Starting practice
+      if (practiceState.practiceMode !== 'listen' && currentPattern) {
+        // For practice/assessment mode, start server-side practice session
+        if (!isConnected) {
+          setFeedbackMessage('Not connected to server. Please wait...')
+          return
+        }
+
+        // Build the sequence based on selected mode
+        const arohanam = currentPattern.arohanam
+        const avarohanam = practiceState.currentSequence === 'arohanam'
+          ? []
+          : currentPattern.avarohanam
+
+        startPracticeSession({
+          pattern_name: currentPattern.name,
+          arohanam: practiceState.currentSequence === 'avarohanam' ? [] : arohanam,
+          avarohanam: practiceState.currentSequence === 'arohanam' ? [] : avarohanam,
+          include_avarohanam: practiceState.currentSequence !== 'arohanam',
+        })
+
+        // Set target to first note
+        if (arohanam.length > 0) {
+          setTargetSwara(arohanam[0])
+        }
+        setListeningModeActive(true)
+        setFeedbackMessage(`🎤 Listening... Play ${arohanam[0] || avarohanam[0]}`)
+      }
+
+      setPracticeState(prev => ({
+        ...prev,
+        isPlaying: true
+      }))
+    } else {
+      // Stopping practice
+      if (practiceState.practiceMode !== 'listen') {
+        stopPracticeSession()
+        setListeningModeActive(false)
+      }
+      setPracticeState(prev => ({
+        ...prev,
+        isPlaying: false
+      }))
+    }
   }
 
   const handleTempoChange = (newTempo: number) => {
@@ -290,11 +473,18 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
   }
 
   const handleModeChange = (mode: 'listen' | 'practice' | 'assessment') => {
+    // Stop any active practice session when changing modes
+    if (practiceState.practiceMode !== 'listen' && practiceState.isPlaying) {
+      stopPracticeSession()
+      setListeningModeActive(false)
+    }
     setPracticeState(prev => ({
       ...prev,
       practiceMode: mode,
       isPlaying: false
     }))
+    setFeedbackMessage('')
+    setServerFeedback(null)
   }
 
   const handleSequenceChange = (sequence: 'arohanam' | 'avarohanam' | 'both') => {
@@ -316,6 +506,13 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
     }))
     setCurrentSwara('')
     setTargetSwara('')
+    setFeedbackMessage('')
+    setSessionStats({
+      startTime: Date.now(),
+      totalTime: 0,
+      accuracyHistory: [],
+      mistakesCount: 0
+    })
   }
 
   const getDifficultyColor = (difficulty: string) => {
@@ -431,18 +628,83 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
       </motion.div>
 
       {/* Swara Wheel */}
-      <div className="flex justify-center">
+      <div className="flex flex-col items-center justify-center space-y-4">
         <SwaraWheel
-          currentSwara={currentSwara}
+          currentSwara={currentPitch?.shrutiName || currentPitch?.shruti?.name || currentSwara}
           targetSwara={targetSwara}
-          confidence={0.8}
-          centDeviation={Math.random() * 10 - 5}
+          confidence={currentPitch?.confidence || 0}
+          centDeviation={currentPitch?.centDeviation || 0}
           className="w-80 h-80"
         />
+        
+        {/* Feedback Message */}
+        <AnimatePresence>
+          {feedbackMessage && (
+            <motion.div
+              key="feedback-message"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className={cn(
+                "px-4 py-2 rounded-full font-bold text-lg",
+                feedbackMessage.includes('Perfect') ? "bg-green-100 text-green-700" :
+                feedbackMessage.includes('Good') ? "bg-blue-100 text-blue-700" :
+                "bg-red-100 text-red-700"
+              )}
+            >
+              {feedbackMessage}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Controls */}
       <div className="bg-white rounded-lg border shadow-sm p-6 space-y-4">
+        {/* Connection & Listening Status */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className={cn(
+              "w-3 h-3 rounded-full",
+              isConnected ? "bg-green-500" : "bg-red-500"
+            )} />
+            <span className="text-sm text-gray-600">
+              {isConnected ? 'Connected' : 'Disconnected'}
+            </span>
+          </div>
+          {listeningModeActive && (
+            <div className="flex items-center space-x-2 text-orange-600">
+              <Mic className="h-4 w-4 animate-pulse" />
+              <span className="text-sm font-medium">Listening...</span>
+            </div>
+          )}
+        </div>
+
+        {/* Server Progress Display */}
+        {practiceProgress && listeningModeActive && (
+          <div className="bg-orange-50 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">Exercise Progress</span>
+              <span className="text-sm text-orange-600 font-bold">
+                {practiceProgress.current} / {practiceProgress.total}
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-orange-500 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${practiceProgress.percentage}%` }}
+              />
+            </div>
+            {serverFeedback?.expected_note && (
+              <div className="mt-2 text-center">
+                <span className="text-sm text-gray-600">Next note: </span>
+                <span className="text-lg font-bold text-orange-700">
+                  {serverFeedback.expected_note}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Mode Selection */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">Practice Mode</label>
@@ -455,6 +717,7 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
                 onClick={() => handleModeChange(mode)}
                 className="capitalize"
               >
+                {mode === 'listen' ? <Volume2 className="h-4 w-4 mr-1" /> : <Mic className="h-4 w-4 mr-1" />}
                 {mode}
               </Button>
             ))}
@@ -521,7 +784,7 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
             className="flex items-center space-x-2"
           >
             {practiceState.isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-            <span>{practiceState.isPlaying ? 'Pause' : 'Play'}</span>
+            <span>{practiceState.isPlaying ? 'Pause' : 'Start'}</span>
           </Button>
 
           <Button
@@ -603,6 +866,7 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
       <AnimatePresence>
         {showSettings && (
           <motion.div
+            key="settings-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -610,6 +874,7 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
             onClick={() => setShowSettings(false)}
           >
             <motion.div
+              key="settings-modal"
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}

@@ -1,15 +1,57 @@
-import React from 'react'
+import React, { useState, useCallback } from 'react'
 import { SaraliInterface } from '../../components/exercises/sarali/SaraliInterface'
 
-const SaraliExercisePage: React.FC = () => {
-  const exerciseConfig = {
-    id: 'sarali-practice',
-    type: 'sarali' as const,
-    name: 'Sarali Varisai Practice',
-    raga: 'Sankarabharanam',
-    tempo: 120,
-    level: 1
+interface SaraliPattern {
+  id?: number
+  level: number
+  name: string
+  arohanam: string[] | { swara_sequence: string[] }
+  avarohanam: string[] | { swara_sequence: string[] }
+  tempo_range?: [number, number]
+  difficulty?: 'beginner' | 'intermediate' | 'advanced'
+  description?: string
+  learning_objectives?: string[]
+  practice_tips?: string[]
+  completion_requirements?: {
+    min_accuracy: number
+    min_sessions: number
+    tempo_progression: number[]
   }
+}
+
+const SaraliExercisePage: React.FC = () => {
+  const [currentPattern, setCurrentPattern] = useState<SaraliPattern | undefined>(undefined)
+  const [progress, setProgress] = useState<any>({})
+
+  const handlePatternSelect = useCallback((pattern: SaraliPattern) => {
+    // Transform API response to expected format if needed
+    const transformedPattern: SaraliPattern = {
+      id: pattern.level,
+      level: pattern.level,
+      name: pattern.name,
+      arohanam: Array.isArray(pattern.arohanam)
+        ? pattern.arohanam
+        : (pattern.arohanam as any).swara_sequence || [],
+      avarohanam: Array.isArray(pattern.avarohanam)
+        ? pattern.avarohanam
+        : (pattern.avarohanam as any).swara_sequence || [],
+      tempo_range: pattern.tempo_range || [60, 120],
+      difficulty: pattern.level <= 4 ? 'beginner' : pattern.level <= 8 ? 'intermediate' : 'advanced',
+      description: pattern.description || '',
+      learning_objectives: pattern.learning_objectives || [],
+      practice_tips: pattern.practice_tips || [],
+      completion_requirements: pattern.completion_requirements || {
+        min_accuracy: 80,
+        min_sessions: 3,
+        tempo_progression: [60, 80, 100, 120]
+      }
+    }
+    setCurrentPattern(transformedPattern)
+  }, [])
+
+  const handleProgressUpdate = useCallback((newProgress: any) => {
+    setProgress((prev: any) => ({ ...prev, ...newProgress }))
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -36,7 +78,11 @@ const SaraliExercisePage: React.FC = () => {
 
       {/* Exercise Interface */}
       <div className="carnatic-card">
-        <SaraliInterface />
+        <SaraliInterface
+          currentPattern={currentPattern as any}
+          onPatternSelect={handlePatternSelect as any}
+          onProgressUpdate={handleProgressUpdate}
+        />
       </div>
 
       {/* Practice Tips */}
