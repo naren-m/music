@@ -97,6 +97,33 @@ def get_session_info():
         }), 500
 
 
+@auth_bp.route('/verify', methods=['GET'])
+@standard_rate_limit
+def verify_session():
+    """Verify if the current session is valid - alias for /session"""
+    try:
+        user_info = get_current_user()
+
+        if not user_info:
+            return jsonify({
+                'authenticated': False,
+                'message': 'No valid session found'
+            }), 401
+
+        return jsonify({
+            'authenticated': True,
+            'user_id': user_info['user_id'],
+            'user_type': user_info['user_type']
+        })
+
+    except Exception as e:
+        logger.error(f"Session verify error: {str(e)}")
+        return jsonify({
+            'authenticated': False,
+            'error': 'Session verification failed'
+        }), 500
+
+
 @auth_bp.route('/logout', methods=['POST'])
 @auth_rate_limit
 def logout():

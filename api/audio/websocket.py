@@ -9,11 +9,11 @@ import logging
 import time
 from datetime import datetime
 from typing import Dict, List, Optional, Any
-from collections import defaultdict
 from dataclasses import dataclass, field
-import uuid
+from collections import deque
 
-# Import shruti analysis functions
+# Import core managers and models
+from core.managers.session_manager import session_manager
 from core.models.shruti import (
     find_closest_shruti,
     analyze_pitch_deviation,
@@ -23,25 +23,185 @@ from core.models.shruti import (
 
 logger = logging.getLogger(__name__)
 
-# Global shruti system instance
-_shruti_system = ShrutiSystem()
+# Constants
+MAX_HISTORY_SIZE = 1000  # Limit history to prevent memory leaks
+
+# Swara name to shruti index mapping for validation
+# Includes both short names (Sa, Ri, Ga) and full shruti names (Shadja, Rishaba, etc.)
+SWARA_TO_SHRUTI_INDEX = {
+    # Shadja (Sa) - index 0
+    'S': 0, 'Sa': 0, 'Shadja': 0,
+    # Rishaba variants - indices 1-3
+    'R1': 1, 'Ri1': 1, 'SuddhaRishaba': 1, 'Suddha Rishaba': 1,
+    'R2': 2, 'Ri2': 2, 'Ri': 2, 'ChatussrutiRishaba': 2, 'Chatussruti Rishaba': 2,
+    'R3': 3, 'Ri3': 3, 'ShatsrutiRishaba': 3, 'Shatsruti Rishaba': 3,
+    # Gandhara variants - indices 4-6
+    'G1': 4, 'Ga1': 4, 'SuddhaGandhara': 4, 'Suddha Gandhara': 4,
+    'G2': 5, 'Ga2': 5, 'SadharanaGandhara': 5, 'Sadharana Gandhara': 5,
+    'G3': 6, 'Ga3': 6, 'Ga': 6, 'AntaraGandhara': 6, 'Antara Gandhara': 6,
+    # Madhyama variants - indices 7-8
+    'M1': 7, 'Ma1': 7, 'Ma': 7, 'SuddhaMadhyama': 7, 'Suddha Madhyama': 7,
+    'M2': 8, 'Ma2': 8, 'PratiMadhyama': 8, 'Prati Madhyama': 8,
+    # Panchama - index 9
+    'P': 9, 'Pa': 9, 'Panchama': 9,
+    # Dhaivata variants - indices 10-12
+    'D1': 10, 'Da1': 10, 'SuddhaDhaivata': 10, 'Suddha Dhaivata': 10,
+    'D2': 11, 'Da2': 11, 'Da': 11, 'ChatussrutiDhaivata': 11, 'Chatussruti Dhaivata': 11,
+    'D3': 12, 'Da3': 12, 'ShatsrutiDhaivata': 12, 'Shatsruti Dhaivata': 12,
+    # Nishada variants - indices 13-15
+    'N1': 13, 'Ni1': 13, 'SuddhaNishada': 13, 'Suddha Nishada': 13,
+    'N2': 14, 'Ni2': 14, 'KaisikaNishada': 14, 'Kaisika Nishada': 14,
+    'N3': 15, 'Ni3': 15, 'Ni': 15, 'KakaliNishada': 15, 'Kakali Nishada': 15,
+    # Upper Sa
+    'Ṡ': 16, 'S\'': 16, 'Sa\'': 16,
+}
 
 
-@dataclass
-class DetectionSession:
-    """Tracks detection results for a practice session."""
-    session_id: str
-    user_id: Optional[str]
-    base_sa: float = 261.63  # Default C4
-    target_shruti_index: int = 0  # Default to Sa
-    exercise_type: str = "free_practice"
-    start_time: datetime = field(default_factory=datetime.utcnow)
-    detection_results: List[Dict] = field(default_factory=list)
-    accuracy_scores: List[float] = field(default_factory=list)
-    deviation_history: List[float] = field(default_factory=list)
-    notes_detected: List[str] = field(default_factory=list)
-    total_detections: int = 0
-    correct_detections: int = 0
+class ExerciseSequence:
+    """
+    Tracks the expected note sequence for an exercise and validates student's playing.
+    """
+    def __init__(self, pattern_sequence: List[str], tolerance_cents: float = 50.0):
+        self.pattern_sequence = pattern_sequence  # e.g., ['Sa', 'Ri', 'Ga', 'Ma', 'Pa', ...]
+        self.current_position = 0
+        self.tolerance_cents = tolerance_cents
+        self.correct_notes = 0
+        self.incorrect_notes = 0
+        self.completed = False
+        self.note_history = []  # Track all attempts
+
+    def get_expected_note(self) -> Optional[str]:
+        """Get the currently expected note."""
+        if self.completed or self.current_position >= len(self.pattern_sequence):
+            return None
+        return self.pattern_sequence[self.current_position]
+
+    def get_expected_shruti_index(self) -> Optional[int]:
+        """Get shruti index for expected note."""
+        expected = self.get_expected_note()
+        if expected:
+            return SWARA_TO_SHRUTI_INDEX.get(expected, 0)
+        return None
+
+    def validate_note(self, detected_shruti_name: str, accuracy_score: float) -> Dict[str, Any]:
+        """
+        Validate a detected note against the expected sequence.
+        Returns validation result with feedback.
+        """
+        if self.completed:
+            return {
+                'valid': False,
+                'message': 'Exercise completed',
+                'completed': True,
+                'position': self.current_position
+            }
+
+        expected_note = self.get_expected_note()
+        if not expected_note:
+            return {
+                'valid': False,
+                'message': 'No expected note',
+                'completed': True
+            }
+
+        # Normalize names for comparison
+        detected_normalized = detected_shruti_name.replace(' ', '')
+        expected_normalized = expected_note.replace(' ', '')
+
+        # Check if detected note matches expected
+        # We consider a match if either:
+        # 1. Names match directly
+        # 2. Both map to same shruti index
+        detected_index = SWARA_TO_SHRUTI_INDEX.get(detected_normalized)
+        expected_index = SWARA_TO_SHRUTI_INDEX.get(expected_normalized, 0)
+
+        is_correct = (detected_index == expected_index) and accuracy_score >= 0.70
+
+        result = {
+            'expected_note': expected_note,
+            'detected_note': detected_shruti_name,
+            'position': self.current_position,
+            'total_notes': len(self.pattern_sequence),
+            'is_correct': is_correct,
+            'accuracy_score': accuracy_score
+        }
+
+        # Record attempt
+        self.note_history.append({
+            'expected': expected_note,
+            'detected': detected_shruti_name,
+            'correct': is_correct,
+            'accuracy': accuracy_score
+        })
+
+        if is_correct:
+            self.correct_notes += 1
+            self.current_position += 1
+            result['message'] = f'Correct! {expected_note} ✓'
+            result['next_note'] = self.get_expected_note()
+
+            # Check if completed
+            if self.current_position >= len(self.pattern_sequence):
+                self.completed = True
+                result['completed'] = True
+                result['message'] = 'Exercise completed! 🎉'
+                result['final_score'] = self._calculate_final_score()
+        else:
+            self.incorrect_notes += 1
+            result['message'] = f'Expected {expected_note}, heard {detected_shruti_name}'
+            result['completed'] = False
+
+        result['progress'] = {
+            'current': self.current_position,
+            'total': len(self.pattern_sequence),
+            'percentage': round((self.current_position / len(self.pattern_sequence)) * 100, 1),
+            'correct': self.correct_notes,
+            'incorrect': self.incorrect_notes
+        }
+
+        return result
+
+    def _calculate_final_score(self) -> Dict[str, Any]:
+        """Calculate final exercise score."""
+        total_attempts = self.correct_notes + self.incorrect_notes
+        accuracy = (self.correct_notes / total_attempts * 100) if total_attempts > 0 else 0
+        return {
+            'total_notes': len(self.pattern_sequence),
+            'correct': self.correct_notes,
+            'incorrect': self.incorrect_notes,
+            'accuracy_percentage': round(accuracy, 1),
+            'grade': 'A' if accuracy >= 90 else 'B' if accuracy >= 80 else 'C' if accuracy >= 70 else 'D' if accuracy >= 60 else 'F'
+        }
+
+    def reset(self):
+        """Reset exercise to start."""
+        self.current_position = 0
+        self.correct_notes = 0
+        self.incorrect_notes = 0
+        self.completed = False
+        self.note_history = []
+
+
+class DetectionTracker:
+    """
+    Tracks detection results for a practice session with memory limits.
+    Stored in SessionData.current_context.
+    """
+    def __init__(self, base_sa: float = 261.63):
+        self.base_sa = base_sa
+        self.target_shruti_index = 0
+        self.exercise_type = "free_practice"
+        self.start_time = datetime.utcnow()
+        
+        # Use deque with maxlen for automatic memory management
+        self.detection_results = deque(maxlen=MAX_HISTORY_SIZE)
+        self.accuracy_scores = deque(maxlen=MAX_HISTORY_SIZE)
+        self.deviation_history = deque(maxlen=MAX_HISTORY_SIZE)
+        self.notes_detected = deque(maxlen=MAX_HISTORY_SIZE)
+        
+        # Cumulative stats (counters don't leak memory)
+        self.total_detections = 0
+        self.correct_detections = 0
 
     def add_detection(self, result: Dict) -> None:
         """Add a detection result and update statistics."""
@@ -61,6 +221,7 @@ class DetectionSession:
 
     def get_statistics(self) -> Dict[str, Any]:
         """Get session statistics."""
+        # Calculate averages safely
         avg_accuracy = sum(self.accuracy_scores) / len(self.accuracy_scores) if self.accuracy_scores else 0.0
         avg_deviation = sum(abs(d) for d in self.deviation_history) / len(self.deviation_history) if self.deviation_history else 0.0
         accuracy_rate = (self.correct_detections / self.total_detections * 100) if self.total_detections > 0 else 0.0
@@ -71,13 +232,19 @@ class DetectionSession:
             'accuracy_rate': round(accuracy_rate, 2),
             'average_accuracy_score': round(avg_accuracy, 4),
             'average_deviation_cents': round(avg_deviation, 2),
-            'unique_notes_detected': list(set(self.notes_detected)),
+            'unique_notes_detected': list(set(self.notes_detected)), # Convert to set to deduplicate
             'duration_seconds': (datetime.utcnow() - self.start_time).total_seconds()
         }
-
-
-# Active sessions storage (in production, use Redis or database)
-_active_sessions: Dict[str, DetectionSession] = {}
+        
+    def reset(self):
+        """Reset statistics for a new exercise"""
+        self.detection_results.clear()
+        self.accuracy_scores.clear()
+        self.deviation_history.clear()
+        self.notes_detected.clear()
+        self.total_detections = 0
+        self.correct_detections = 0
+        self.start_time = datetime.utcnow()
 
 
 def get_coaching_feedback(analysis: Dict, target_shruti_name: str) -> Dict[str, Any]:
@@ -104,20 +271,10 @@ def get_coaching_feedback(analysis: Dict, target_shruti_name: str) -> Dict[str, 
         feedback['suggestion'] = f"Slightly {direction} by {abs(deviation):.1f} cents. Minor adjustment needed."
     elif accuracy >= 0.70:
         feedback['message'] = f"Fair attempt at {target_shruti_name}."
-        if direction == 'sharp':
-            feedback['suggestion'] = f"Lower your pitch by about {abs(deviation):.0f} cents."
-        elif direction == 'flat':
-            feedback['suggestion'] = f"Raise your pitch by about {abs(deviation):.0f} cents."
-        else:
-            feedback['suggestion'] = "Focus on the tanpura drone for reference."
+        feedback['suggestion'] = f"Adjust pitch ({direction}). Listen to the drone."
     else:
         feedback['message'] = f"Keep practicing {target_shruti_name}."
-        if direction == 'sharp':
-            feedback['suggestion'] = f"Your pitch is too high by {abs(deviation):.0f} cents. Listen to the Sa drone."
-        elif direction == 'flat':
-            feedback['suggestion'] = f"Your pitch is too low by {abs(deviation):.0f} cents. Listen to the Sa drone."
-        else:
-            feedback['suggestion'] = "Try matching the tanpura drone more closely."
+        feedback['suggestion'] = "Try matching the tanpura drone more closely."
 
     return feedback
 
@@ -131,18 +288,24 @@ def register_audio_events(socketio):
         session_id = request.sid
         user_id = auth.get('user_id') if auth else None
         base_sa = auth.get('base_sa', 261.63) if auth else 261.63
+        try:
+            base_sa = float(base_sa)
+        except (ValueError, TypeError):
+            base_sa = 261.63
 
         logger.info(f"Client connected: {session_id}, User: {user_id}")
         join_room('audio_detection')
         if user_id:
             join_room(f'user_{user_id}')
 
-        # Create detection session
-        _active_sessions[session_id] = DetectionSession(
-            session_id=session_id,
-            user_id=user_id,
-            base_sa=base_sa
-        )
+        # Create managed session
+        session = session_manager.create_session(session_id, user_id)
+        
+        # Initialize tracker in context
+        session.current_context['tracker'] = DetectionTracker(base_sa=base_sa)
+        
+        # Update engine config if needed
+        session.audio_engine.set_base_frequency(base_sa)
 
         emit('connected', {
             'message': 'Connected to real-time audio service.',
@@ -158,13 +321,13 @@ def register_audio_events(socketio):
         logger.info(f"Client disconnected: {session_id}")
 
         # Get session statistics before cleanup
-        if session_id in _active_sessions:
-            session = _active_sessions[session_id]
-            stats = session.get_statistics()
+        session = session_manager.get_session(session_id)
+        if session and 'tracker' in session.current_context:
+            stats = session.current_context['tracker'].get_statistics()
             logger.info(f"Session {session_id} stats: {stats}")
             # In production, save session data to database here
-            del _active_sessions[session_id]
-
+        
+        session_manager.remove_session(session_id)
         leave_room('audio_detection')
 
     @socketio.on('set_base_frequency')
@@ -172,6 +335,11 @@ def register_audio_events(socketio):
         """Set the base Sa frequency for the user's practice session."""
         session_id = request.sid
         frequency = data.get('frequency', 261.63)
+        try:
+            frequency = float(frequency)
+        except (ValueError, TypeError):
+             emit('error', {'message': 'Invalid frequency format'})
+             return
 
         # Validate frequency range (reasonable singing range)
         if not (100 <= frequency <= 500):
@@ -181,16 +349,22 @@ def register_audio_events(socketio):
             })
             return
 
-        logger.info(f"Session {session_id} set base frequency to {frequency}Hz")
+        session = session_manager.get_session(session_id)
+        if session:
+            tracker = session.current_context.get('tracker')
+            if tracker:
+                tracker.base_sa = frequency
+            session.audio_engine.set_base_frequency(frequency)
+            
+            logger.info(f"Session {session_id} set base frequency to {frequency}Hz")
 
-        if session_id in _active_sessions:
-            _active_sessions[session_id].base_sa = frequency
-
-        emit('base_frequency_set', {
-            'frequency': frequency,
-            'status': 'success',
-            'message': f'Base Sa set to {frequency:.2f}Hz'
-        })
+            emit('base_frequency_set', {
+                'frequency': frequency,
+                'status': 'success',
+                'message': f'Base Sa set to {frequency:.2f}Hz'
+            })
+        else:
+            emit('error', {'type': 'no_session', 'message': 'Session expired or not found'})
 
     @socketio.on('set_target_shruti')
     def handle_set_target_shruti(data):
@@ -216,21 +390,23 @@ def register_audio_events(socketio):
 
         target_shruti = SHRUTI_SYSTEM[shruti_index]
 
-        if session_id in _active_sessions:
-            session = _active_sessions[session_id]
-            session.target_shruti_index = shruti_index
-            target_freq = target_shruti.calculate_frequency(session.base_sa)
+        session = session_manager.get_session(session_id)
+        if session:
+            tracker = session.current_context.get('tracker')
+            if tracker:
+                tracker.target_shruti_index = shruti_index
+                target_freq = target_shruti.calculate_frequency(tracker.base_sa)
 
-            emit('target_shruti_set', {
-                'shruti_index': shruti_index,
-                'shruti_name': target_shruti.name,
-                'western_equiv': target_shruti.western_equiv,
-                'target_frequency': round(target_freq, 2),
-                'cent_value': target_shruti.cent_value,
-                'raga_usage': target_shruti.raga_usage[:5]  # Limit to 5 ragas
-            })
+                emit('target_shruti_set', {
+                    'shruti_index': shruti_index,
+                    'shruti_name': target_shruti.name,
+                    'western_equiv': target_shruti.western_equiv,
+                    'target_frequency': round(target_freq, 2),
+                    'cent_value': target_shruti.cent_value,
+                    'raga_usage': target_shruti.raga_usage[:5]
+                })
         else:
-            emit('error', {'type': 'no_session', 'message': 'No active session found'})
+            emit('error', {'type': 'no_session', 'message': 'Session expired or not found'})
 
     @socketio.on('start_exercise')
     def handle_start_exercise(data):
@@ -239,25 +415,76 @@ def register_audio_events(socketio):
         exercise_type = data.get('exercise_type', 'free_practice')
         target_notes = data.get('target_notes', [])
 
-        if session_id in _active_sessions:
-            session = _active_sessions[session_id]
-            session.exercise_type = exercise_type
-            session.start_time = datetime.utcnow()
-            session.detection_results = []
-            session.accuracy_scores = []
-            session.deviation_history = []
-            session.notes_detected = []
-            session.total_detections = 0
-            session.correct_detections = 0
+        session = session_manager.get_session(session_id)
+        if session:
+            tracker = session.current_context.get('tracker')
+            if tracker:
+                tracker.reset()
+                tracker.exercise_type = exercise_type
 
-            emit('exercise_started', {
-                'exercise_type': exercise_type,
-                'target_notes': target_notes,
-                'start_time': session.start_time.isoformat(),
-                'base_sa': session.base_sa
-            })
+                emit('exercise_started', {
+                    'exercise_type': exercise_type,
+                    'target_notes': target_notes,
+                    'start_time': tracker.start_time.isoformat(),
+                    'base_sa': tracker.base_sa
+                })
         else:
-            emit('error', {'type': 'no_session', 'message': 'No active session found'})
+            emit('error', {'type': 'no_session', 'message': 'Session expired or not found'})
+
+    @socketio.on('start_practice_session')
+    def handle_start_practice_session(data):
+        """
+        Start a practice session with a specific exercise pattern.
+        The system will validate each note the student plays against the expected sequence.
+
+        Args:
+            pattern_name: Name of the exercise (e.g., 'Sarali Varisai 1')
+            arohanam: Ascending sequence (e.g., ['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni', 'Sa\''])
+            avarohanam: Descending sequence (e.g., ['Sa\'', 'Ni', 'Da', 'Pa', 'Ma', 'Ga', 'Ri', 'Sa'])
+            include_avarohanam: Whether to include descending (default: True)
+        """
+        session_id = request.sid
+        pattern_name = data.get('pattern_name', 'Practice')
+        arohanam = data.get('arohanam', [])
+        avarohanam = data.get('avarohanam', [])
+        include_avarohanam = data.get('include_avarohanam', True)
+
+        # Build the full sequence
+        full_sequence = list(arohanam)
+        if include_avarohanam and avarohanam:
+            full_sequence.extend(avarohanam)
+
+        if not full_sequence:
+            emit('error', {
+                'type': 'invalid_pattern',
+                'message': 'Pattern must have at least one note'
+            })
+            return
+
+        session = session_manager.get_session(session_id)
+        if not session:
+            emit('error', {'type': 'no_session', 'message': 'Session expired or not found'})
+            return
+
+        tracker = session.current_context.get('tracker')
+        if tracker:
+            tracker.reset()
+            tracker.exercise_type = pattern_name
+
+        # Create exercise sequence for validation
+        exercise = ExerciseSequence(full_sequence)
+        session.current_context['exercise_sequence'] = exercise
+
+        logger.info(f"Practice session started: {pattern_name} with {len(full_sequence)} notes")
+
+        emit('practice_session_started', {
+            'pattern_name': pattern_name,
+            'sequence': full_sequence,
+            'total_notes': len(full_sequence),
+            'first_note': exercise.get_expected_note(),
+            'base_sa': tracker.base_sa if tracker else 261.63,
+            'message': f'Play the first note: {exercise.get_expected_note()}'
+        })
 
     @socketio.on('detection_result')
     def handle_detection_result(data):
@@ -271,23 +498,21 @@ def register_audio_events(socketio):
         confidence = data.get('confidence', 1.0)
 
         if detected_frequency is None:
-            emit('result_received', {
-                'status': 'error',
-                'message': 'No frequency provided'
-            })
             return
 
-        # Get session data
-        session = _active_sessions.get(session_id)
+        session = session_manager.get_session(session_id)
         if not session:
-            emit('result_received', {
-                'status': 'error',
-                'message': 'No active session'
-            })
+            emit('error', {'type': 'no_session', 'message': 'Session expired'})
             return
 
-        base_sa = session.base_sa
-        target_shruti_index = session.target_shruti_index
+        tracker = session.current_context.get('tracker')
+        if not tracker:
+            # Should not happen if connected properly, but safety fallback
+            tracker = DetectionTracker()
+            session.current_context['tracker'] = tracker
+
+        base_sa = tracker.base_sa
+        target_shruti_index = tracker.target_shruti_index
 
         # Find closest shruti to detected frequency
         closest_match = find_closest_shruti(detected_frequency, base_sa)
@@ -328,66 +553,127 @@ def register_audio_events(socketio):
         }
 
         # Update session statistics
-        session.add_detection(result)
+        tracker.add_detection(result)
 
         # Add session stats to result
         result['session_stats'] = {
-            'total_detections': session.total_detections,
+            'total_detections': tracker.total_detections,
             'accuracy_rate': round(
-                (session.correct_detections / session.total_detections * 100)
-                if session.total_detections > 0 else 0, 2
+                (tracker.correct_detections / tracker.total_detections * 100)
+                if tracker.total_detections > 0 else 0, 2
             )
         }
 
-        logger.debug(f"Detection from {session_id}: {detected_frequency}Hz → {closest_match['shruti_name']} (accuracy: {analysis['accuracy_score']:.2f})")
+        # Only log occasional debug to reduce noise
+        if tracker.total_detections % 50 == 0:
+            logger.debug(f"Detection from {session_id}: {detected_frequency}Hz (Accuracy: {analysis['accuracy_score']:.2f})")
 
         emit('detection_feedback', result)
+        
+    @socketio.on('audio_chunk')
+    def handle_audio_chunk(data):
+        """
+        Handle raw audio chunk for server-side processing.
+        This is the main listening mode where the server detects what note
+        the student is playing and validates it against the expected sequence.
+        """
+        session_id = request.sid
+        session = session_manager.get_session(session_id)
+
+        if not session:
+            emit('error', {'message': 'Session expired'})
+            return
+
+        try:
+            import numpy as np
+            # Convert list/buffer to numpy array
+            audio_data = np.array(data.get('audio_data', []), dtype=np.float32)
+
+            # Use the engine to detect pitch
+            result = session.audio_engine.detect_shruti(audio_data)
+
+            if result and result.shruti:
+                detected_shruti = result.shruti.name
+                confidence = result.confidence
+                frequency = result.detected_frequency
+                cent_deviation = result.cent_deviation
+
+                # Build base response
+                response = {
+                    'shruti_name': detected_shruti,
+                    'frequency': round(frequency, 2),
+                    'cent_deviation': round(cent_deviation, 1),
+                    'confidence': round(confidence, 3),
+                    'timestamp': result.timestamp
+                }
+
+                # Check if there's an active exercise sequence to validate against
+                exercise = session.current_context.get('exercise_sequence')
+                if exercise and not exercise.completed:
+                    # Validate the detected note against expected sequence
+                    # Convert confidence to accuracy score (0-1)
+                    accuracy_score = min(1.0, confidence) if abs(cent_deviation) < 50 else 0.5
+
+                    validation = exercise.validate_note(detected_shruti, accuracy_score)
+                    response['validation'] = validation
+                    response['expected_note'] = exercise.get_expected_note()
+
+                    # If note was correct, tell frontend what's next
+                    if validation.get('is_correct'):
+                        response['next_note'] = exercise.get_expected_note()
+                        response['feedback_type'] = 'correct'
+                    else:
+                        response['feedback_type'] = 'incorrect'
+
+                    # Include progress
+                    response['progress'] = validation.get('progress', {})
+
+                    # Emit exercise-specific feedback
+                    emit('practice_feedback', response)
+                else:
+                    # Free practice mode - just emit detection
+                    emit('shruti_detected', response)
+
+                # Update tracker stats
+                tracker = session.current_context.get('tracker')
+                if tracker:
+                    tracker.add_detection({
+                        'shruti_name': detected_shruti,
+                        'frequency': frequency,
+                        'deviation_cents': cent_deviation,
+                        'accuracy_score': confidence
+                    })
+
+        except Exception as e:
+            logger.error(f"Error processing audio chunk: {e}")
+            # Don't crash on bad audio data
 
     @socketio.on('end_exercise')
     def handle_end_exercise(data=None):
         """End the current exercise and return comprehensive results."""
         session_id = request.sid
+        session = session_manager.get_session(session_id)
 
-        if session_id in _active_sessions:
-            session = _active_sessions[session_id]
-            stats = session.get_statistics()
+        if session and 'tracker' in session.current_context:
+            tracker = session.current_context['tracker']
+            stats = tracker.get_statistics()
 
             # Calculate performance grade
             accuracy_rate = stats['accuracy_rate']
-            if accuracy_rate >= 90:
-                grade = 'A'
-                message = 'Excellent performance!'
-            elif accuracy_rate >= 80:
-                grade = 'B'
-                message = 'Good job! Keep practicing.'
-            elif accuracy_rate >= 70:
-                grade = 'C'
-                message = 'Fair performance. Focus on pitch accuracy.'
-            elif accuracy_rate >= 60:
-                grade = 'D'
-                message = 'Needs improvement. Practice with the tanpura.'
-            else:
-                grade = 'F'
-                message = 'Keep practicing! Listen carefully to the drone.'
+            grade = _calculate_grade(accuracy_rate)
+            message = _get_grade_message(grade)
 
             result = {
-                'exercise_type': session.exercise_type,
+                'exercise_type': tracker.exercise_type,
                 'duration_seconds': stats['duration_seconds'],
                 'statistics': stats,
                 'grade': grade,
                 'message': message,
-                'recommendations': _get_recommendations(stats, session.exercise_type)
+                'recommendations': _get_recommendations(stats, tracker.exercise_type)
             }
 
             emit('exercise_completed', result)
-
-            # Reset for next exercise
-            session.detection_results = []
-            session.accuracy_scores = []
-            session.deviation_history = []
-            session.notes_detected = []
-            session.total_detections = 0
-            session.correct_detections = 0
+            tracker.reset()
         else:
             emit('error', {'type': 'no_session', 'message': 'No active session found'})
 
@@ -395,14 +681,15 @@ def register_audio_events(socketio):
     def handle_get_session_stats():
         """Get current session statistics."""
         session_id = request.sid
+        session = session_manager.get_session(session_id)
 
-        if session_id in _active_sessions:
-            session = _active_sessions[session_id]
+        if session and 'tracker' in session.current_context:
+            tracker = session.current_context['tracker']
             emit('session_stats', {
-                'statistics': session.get_statistics(),
-                'base_sa': session.base_sa,
-                'exercise_type': session.exercise_type,
-                'target_shruti': SHRUTI_SYSTEM[session.target_shruti_index].name
+                'statistics': tracker.get_statistics(),
+                'base_sa': tracker.base_sa,
+                'exercise_type': tracker.exercise_type,
+                'target_shruti': SHRUTI_SYSTEM[tracker.target_shruti_index].name
             })
         else:
             emit('error', {'type': 'no_session', 'message': 'No active session found'})
@@ -411,8 +698,11 @@ def register_audio_events(socketio):
     def handle_get_shruti_list():
         """Get the complete list of 22 shrutis with their properties."""
         session_id = request.sid
-        session = _active_sessions.get(session_id)
-        base_sa = session.base_sa if session else 261.63
+        session = session_manager.get_session(session_id)
+        
+        base_sa = 261.63
+        if session and 'tracker' in session.current_context:
+            base_sa = session.current_context['tracker'].base_sa
 
         shruti_list = []
         for idx, shruti in enumerate(SHRUTI_SYSTEM):
@@ -436,6 +726,22 @@ def register_audio_events(socketio):
         """Handle ping for latency measurement."""
         emit('pong', {'timestamp': time.time()})
 
+def _calculate_grade(accuracy_rate: float) -> str:
+    if accuracy_rate >= 90: return 'A'
+    if accuracy_rate >= 80: return 'B'
+    if accuracy_rate >= 70: return 'C'
+    if accuracy_rate >= 60: return 'D'
+    return 'F'
+
+def _get_grade_message(grade: str) -> str:
+    messages = {
+        'A': 'Excellent performance!',
+        'B': 'Good job! Keep practicing.',
+        'C': 'Fair performance. Focus on pitch accuracy.',
+        'D': 'Needs improvement. Practice with the tanpura.',
+        'F': 'Keep practicing! Listen carefully to the drone.'
+    }
+    return messages.get(grade, 'Keep practicing!')
 
 def _get_recommendations(stats: Dict, exercise_type: str) -> List[str]:
     """Generate practice recommendations based on session statistics."""

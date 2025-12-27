@@ -3,11 +3,41 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
-This is a music experiment repository focusing on audio processing, music generation, and note recognition. The codebase contains various Python scripts for playing audio, detecting notes from microphone input, generating music sequences, and experimenting with neural networks for music generation.
+
+**Carnatic Music Learning Platform** - A full-stack application for teaching Carnatic music fundamentals through real-time note recognition and structured practice exercises.
+
+**Core Mission**: Enable students to practice playing correct notes through lessons with real-time feedback on their pitch accuracy.
+
+### Key Features
+- **22-Shruti System**: Authentic Carnatic microtonal pitch detection (not Western 12-tone)
+- **Sarali/Janta/Alankaram Exercises**: Traditional progressive exercise patterns
+- **Real-time Feedback**: WebSocket-based live pitch detection with cent deviation display
+- **Gamification**: Streaks, achievements, and progress tracking
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Frontend (React/TS)                   │
+│  SaraliInterface → AudioContext → WebSocket → Backend   │
+└─────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────┐
+│                   Backend (Flask/Python)                 │
+│  api/audio/websocket.py → core/services/audio_engine.py │
+└─────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────┐
+│                      Core Services                       │
+│  Shruti Model → Pitch Detection → Exercise Validation   │
+└─────────────────────────────────────────────────────────┘
+```
 
 ## Development Environment Setup
 
-### Dependencies Installation
+### Backend Setup
 ```bash
 # Install system dependencies (macOS)
 brew install portaudio
@@ -18,95 +48,136 @@ source .venv/bin/activate
 
 # Install Python dependencies
 make install
+
+# Run Flask backend
+python app.py
+```
+
+### Frontend Setup
+```bash
+cd frontend
+npm install
+npm run dev
 ```
 
 ### Key Dependencies
-- **pyaudio**: Real-time audio I/O
-- **numpy**: Numerical operations for audio processing
-- **scipy**: Signal processing functions
-- **librosa**: Music and audio analysis
-- **sounddevice**: Alternative audio interface
-- **music21**: Music theory and MIDI processing
-- **tensorflow**: Neural network framework for music generation
+**Backend:**
+- Flask + Flask-SocketIO (real-time WebSocket)
+- numpy/scipy (audio signal processing)
+- librosa (music analysis)
 
-## Common Development Commands
-
-### Environment Management
-```bash
-make venv          # Create virtual environment
-make activate      # Activate virtual environment (instructions only)
-make install       # Install dependencies from requirements.txt
-```
-
-### Code Quality
-```bash
-make format        # Format code using yapf
-make test          # Run tests with coverage report
-make clean         # Remove coverage files
-```
-
-### Running Scripts
-```bash
-python play.py     # Play musical sequences using PyAudio
-python sd.py       # Real-time note detection from microphone
-python keyboard.py # Basic audio recording and note detection
-python test.py     # Note playing with MusicPlayer class
-python gen.py      # Neural network music generation (incomplete)
-```
+**Frontend:**
+- React + TypeScript
+- Framer Motion (animations)
+- Web Audio API (browser audio capture)
 
 ## Code Architecture
 
 ### Core Components
 
-#### Audio Generation (`play.py`)
-- **MusicGenerator**: Main class for audio synthesis and playback
-- **NOTE_FREQS**: Complete frequency mapping for musical notes (C0-B8)
-- Methods: `generate_sinewave()`, `play_sound()`, `play_sequence()`, `play_song()`
+#### Pitch Detection (`core/services/audio_engine.py`)
+- **Autocorrelation algorithm** for pitch detection (more accurate than FFT for music)
+- Maps detected frequencies to 22 Carnatic shrutis
+- Returns confidence score and cent deviation
 
-#### Real-time Note Detection (`sd.py`)
-- Uses **sounddevice** for continuous audio input processing
-- **audio_callback()**: Real-time frequency analysis and note identification
-- **find_closest_note_freq()**: Maps detected frequencies to musical notes
-- FFT-based frequency domain analysis
+#### Shruti System (`core/models/shruti.py`)
+- Defines all 22 shrutis with just intonation frequency ratios
+- `find_closest_shruti()` - Maps any frequency to nearest shruti
+- Base frequency: Sa = 240Hz (configurable)
 
-#### Music Player (`test.py`)
-- **MusicPlayer**: Tempo-based music playback system
-- MIDI note number format (69 = A4 = 440Hz)
-- Configurable tempo, volume, and note duration
+#### Exercise Patterns (`modules/exercises/`)
+- **Sarali Varisai** (`sarali/patterns.py`): 12 levels of ascending/descending patterns
+- **Janta Varisai** (`janta/`): Double-note patterns
+- **Alankaram** (`alankaram/`): Complex melodic ornaments
 
-#### Audio Recording (`keyboard.py`)
-- **librosa**-based audio recording and onset detection
-- Microphone input processing with PyAudio
-- Basic note detection from recorded audio
+#### Practice Interface (`frontend/src/components/exercises/sarali/SaraliInterface.tsx`)
+- Three modes: Listen, Practice, Assessment
+- Real-time shruti detection display
+- Visual feedback on pitch accuracy (green/yellow/red)
 
-#### Neural Network Generation (`gen.py`)
-- **music21** for MIDI file processing
-- **TensorFlow/Keras** LSTM model for note sequence generation
-- Incomplete implementation for AI music composition
+### API Endpoints (`api/`)
 
-### Key Technical Details
+| Module | Purpose |
+|--------|---------|
+| `audio/` | WebSocket for real-time pitch streaming |
+| `learning/` | Lesson progress and exercise data |
+| `auth/` | User authentication |
+| `gamification/` | Achievements, streaks, leaderboards |
+| `analytics/` | Practice session analytics |
+| `raga/` | Raga definitions and patterns |
+| `tala/` | Rhythm/beat patterns |
 
-#### Note Frequency System
-- Standard equal temperament tuning (A4 = 440Hz)
-- Complete chromatic scale from C0 (16.35Hz) to B8 (7902Hz)
-- MIDI note numbers: 69 = A4, conversion formula: freq = 440 * 2^((note-69)/12)
+## Common Development Commands
 
-#### Audio Processing
-- Default sample rate: 44.1kHz
-- Audio format: 32-bit float
-- Real-time processing with configurable buffer sizes
+```bash
+# Backend
+make venv          # Create virtual environment
+make install       # Install dependencies
+make format        # Format code using yapf
+make test          # Run tests with coverage
 
-#### Music Representation
-- Note sequences as frequency/duration pairs
-- MIDI-compatible note numbering system
-- Support for both note names (C4, A#5) and MIDI numbers
+# Frontend
+cd frontend
+npm run dev        # Start dev server
+npm run build      # Production build
+npm run lint       # ESLint check
+```
 
-## File Structure Context
-- `*.py` files are standalone experiment scripts
-- No package structure - each file is meant to be run independently
-- `requirements.txt` contains all necessary Python dependencies
-- `makefile` provides development workflow automation
-- `*.wav` files are generated audio outputs
+## Key Technical Details
 
-## Testing Strategy
-The repository uses pytest for testing with coverage reporting. Tests are located in the main directory as individual test files rather than a separate tests/ directory.
+### 22-Shruti System (vs Western 12-tone)
+Carnatic music uses 22 microtones per octave with just intonation ratios:
+- Sa (1/1), Ri1 (256/243), Ri2 (16/15), Ri3 (10/9)...
+- This provides more nuanced pitch detection than Western equal temperament
+
+### Audio Processing Pipeline
+1. Browser captures audio via Web Audio API
+2. Audio chunks sent via WebSocket to backend
+3. `audio_engine.py` performs autocorrelation pitch detection
+4. Detected frequency mapped to closest shruti
+5. Result (shruti, cents deviation, confidence) sent back to frontend
+
+### Exercise Validation
+- Each exercise has expected shruti sequence
+- Real-time comparison of sung/played notes vs expected
+- Tolerance: typically ±25 cents for "correct" assessment
+
+## File Structure
+
+```
+music/
+├── app.py                 # Flask entry point
+├── api/                   # REST + WebSocket endpoints
+│   ├── audio/            # Real-time audio WebSocket
+│   ├── learning/         # Lesson/exercise APIs
+│   └── ...
+├── core/
+│   ├── models/shruti.py  # 22-shruti definitions
+│   ├── services/audio_engine.py  # Pitch detection
+│   └── ml/adaptive_engine.py     # Adaptive difficulty
+├── modules/exercises/     # Exercise pattern definitions
+│   ├── sarali/
+│   ├── janta/
+│   └── alankaram/
+├── frontend/             # React/TypeScript app
+│   └── src/components/exercises/  # Practice UIs
+├── tests/                # pytest tests
+└── k8s/                  # Kubernetes deployment
+```
+
+## Testing
+
+```bash
+# Run all tests
+make test
+
+# Run specific test file
+pytest tests/test_carnatic_simple.py -v
+
+# E2E tests (requires Playwright)
+pytest tests/e2e/ -v
+```
+
+## Deployment
+
+The application is containerized and deployed to a homelab Kubernetes cluster. See `k8s/` for manifests and `jenkins/Jenkinsfile` for CI/CD pipeline.

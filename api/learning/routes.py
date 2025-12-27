@@ -12,6 +12,7 @@ from datetime import datetime
 from core.models.user import UserProfile, SkillLevel, LearningGoal
 from core.models.shruti import ShrutiSystem
 from modules.swara.trainer import SwaraTrainer, ExerciseType, SwaraProgressTracker
+from modules.exercises.sarali.patterns import sarali_generator, get_sarali_pattern
 
 learning_bp = Blueprint('learning', __name__)
 
@@ -662,4 +663,104 @@ def get_achievements():
         'by_category': category_counts,
         'by_rarity': rarity_counts,
         'achievements': achievement_list
+    })
+
+
+# ============================================================================
+# SARALI VARISAI EXERCISE ENDPOINTS
+# ============================================================================
+
+@learning_bp.route('/exercises/sarali/patterns', methods=['GET'])
+def get_sarali_patterns():
+    """
+    Get all Sarali Varisai patterns.
+
+    Query Parameters:
+        level (int, optional): Filter by specific level (1-12)
+
+    Returns:
+        JSON with list of all Sarali Varisai patterns
+    """
+    import json
+
+    level = request.args.get('level', type=int)
+
+    if level is not None:
+        pattern = get_sarali_pattern(level)
+        if not pattern:
+            return jsonify({'error': f'Pattern level {level} not found'}), 404
+
+        # Return single pattern
+        patterns_json = sarali_generator.export_patterns_json()
+        all_patterns = json.loads(patterns_json)
+        for p in all_patterns:
+            if p['level'] == level:
+                return jsonify(p)
+        return jsonify({'error': f'Pattern level {level} not found'}), 404
+
+    # Return all patterns
+    patterns_json = sarali_generator.export_patterns_json()
+    return jsonify(json.loads(patterns_json))
+
+
+@learning_bp.route('/exercises/sarali/practice-session', methods=['POST'])
+def create_sarali_practice_session():
+    """
+    Generate a practice session for a specific Sarali level.
+
+    Request Body:
+        level (int): Target Sarali level (1-12)
+        duration (int): Session duration in minutes (default: 15)
+
+    Returns:
+        JSON with practice sequence including warmup, main practice, and cooldown
+    """
+    data = request.get_json() or {}
+
+    level = data.get('level', 1)
+    duration = data.get('duration', 15)
+
+    if not 1 <= level <= 12:
+        return jsonify({'error': 'Level must be between 1 and 12'}), 400
+
+    if not 5 <= duration <= 60:
+        return jsonify({'error': 'Duration must be between 5 and 60 minutes'}), 400
+
+    practice_sequence = sarali_generator.generate_practice_sequence(level, duration)
+
+    if not practice_sequence:
+        return jsonify({'error': f'Could not generate practice session for level {level}'}), 500
+
+    # Convert to JSON-serializable format
+    result = []
+    for item in practice_sequence:
+        pattern = item['pattern']
+        result.append({
+            'type': item['type'],
+            'duration': item['duration'],
+            'tempo': item['tempo'],
+            'instructions': item.get('instructions', pattern.practice_tips),
+            'pattern': {
+                'level': pattern.level,
+                'name': pattern.name,
+                'arohanam': {
+                    'name': pattern.arohanam.name,
+                    'swara_sequence': pattern.arohanam.swara_sequence,
+                    'description': pattern.arohanam.description
+                },
+                'avarohanam': {
+                    'name': pattern.avarohanam.name,
+                    'swara_sequence': pattern.avarohanam.swara_sequence,
+                    'description': pattern.avarohanam.description
+                },
+                'learning_objectives': pattern.learning_objectives,
+                'common_mistakes': pattern.common_mistakes,
+                'practice_tips': pattern.practice_tips
+            }
+        })
+
+    return jsonify({
+        'target_level': level,
+        'total_duration': duration,
+        'sequence': result
     })

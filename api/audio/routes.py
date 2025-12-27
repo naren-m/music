@@ -12,14 +12,14 @@ logger = logging.getLogger(__name__)
 audio_bp = Blueprint('audio', __name__)
 
 # This is a static configuration for the client.
-# In a real-world scenario, this could be loaded from a config file.
+# Keys use camelCase to match the frontend AudioEngineConfig interface.
 CLIENT_AUDIO_CONFIG = {
-    'sample_rate': 44100,
-    'fft_size': 4096,
-    'buffer_size': 4096,
-    'confidence_threshold': 0.85,
-    'frequency_range': [80, 1200],
-    'supported_formats': ['wav', 'mp3'],
+    'sampleRate': 44100,
+    'fftSize': 4096,
+    'bufferSize': 4096,
+    'confidenceThreshold': 0.85,
+    'frequencyRange': [80, 1200],
+    'supportedFormats': ['wav', 'mp3'],
 }
 
 @audio_bp.route('/config', methods=['GET'])

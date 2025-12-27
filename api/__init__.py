@@ -72,7 +72,7 @@ def load_config(app: Flask, config_name: str) -> None:
         'SECRET_KEY': os.environ.get('SECRET_KEY'),
         'DATABASE_URL': os.environ.get('DATABASE_URL', 'postgresql://localhost/carnatic_music'),
         'MAX_CONTENT_LENGTH': 2 * 1024 * 1024,
-        'ALLOWED_ORIGINS': os.environ.get('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5001').split(','),
+        'ALLOWED_ORIGINS': os.environ.get('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:3002,http://localhost:5001,http://localhost:5002').split(','),
     })
     if config_name == 'development':
         app.config['DEBUG'] = True
@@ -130,9 +130,101 @@ def register_main_routes(app: Flask) -> None:
     def health_check():
         return {'status': 'healthy', 'version': '2.0.0'}
 
+    @app.route('/api/exercises/sarali/patterns', methods=['GET'])
+    def sarali_patterns_shortcut():
+        """Shortcut route for Sarali patterns (frontend compatibility)."""
+        import json
+        from modules.exercises.sarali.patterns import sarali_generator, get_sarali_pattern
+        from flask import request, jsonify
+
+        level = request.args.get('level', type=int)
+
+        if level is not None:
+            pattern = get_sarali_pattern(level)
+            if not pattern:
+                return jsonify({'error': f'Pattern level {level} not found'}), 404
+            patterns_json = sarali_generator.export_patterns_json()
+            all_patterns = json.loads(patterns_json)
+            for p in all_patterns:
+                if p['level'] == level:
+                    return jsonify(p)
+            return jsonify({'error': f'Pattern level {level} not found'}), 404
+
+        patterns_json = sarali_generator.export_patterns_json()
+        return jsonify(json.loads(patterns_json))
+
     @app.route('/favicon.ico')
     def favicon():
         return app.send_static_file('favicon.ico')
+
+    # Practice endpoints for frontend compatibility
+    @app.route('/api/practice/settings', methods=['GET', 'POST'])
+    def practice_settings():
+        """Get or update practice settings."""
+        from flask import request, jsonify, session
+
+        if request.method == 'GET':
+            # Return default settings for now (in production, fetch from DB)
+            return jsonify({
+                'preferredTempo': 60,
+                'showVisualGuides': True,
+                'autoAdvance': False,
+                'metronomeEnabled': True,
+                'feedbackLevel': 'detailed'
+            })
+        else:
+            # POST - save settings
+            data = request.get_json() or {}
+            # In production, save to database
+            return jsonify({'success': True, 'settings': data})
+
+    @app.route('/api/practice/stats', methods=['GET'])
+    def practice_stats():
+        """Get practice statistics."""
+        from flask import jsonify
+
+        # Return default stats (in production, calculate from DB)
+        return jsonify({
+            'totalSessions': 0,
+            'totalPracticeTime': 0,
+            'currentStreak': 0,
+            'bestStreak': 0,
+            'averageAccuracy': 0,
+            'lastPracticeDate': None,
+            'weeklyGoalProgress': 0
+        })
+
+    # Auth alias routes for frontend compatibility (frontend calls /api/auth/*, backend has /api/v1/auth/*)
+    @app.route('/api/auth/guest', methods=['POST'])
+    def auth_guest_alias():
+        """Alias for /api/v1/auth/guest"""
+        from .auth.routes import create_guest_session
+        return create_guest_session()
+
+    @app.route('/api/auth/session', methods=['GET'])
+    def auth_session_alias():
+        """Alias for /api/v1/auth/session"""
+        from .auth.routes import get_session_info
+        return get_session_info()
+
+    @app.route('/api/auth/verify', methods=['GET'])
+    def auth_verify_alias():
+        """Alias for /api/v1/auth/verify"""
+        from .auth.routes import verify_session
+        return verify_session()
+
+    @app.route('/api/auth/logout', methods=['POST'])
+    def auth_logout_alias():
+        """Alias for /api/v1/auth/logout"""
+        from .auth.routes import logout
+        return logout()
+
+    # Audio config alias for frontend compatibility
+    @app.route('/api/audio/config', methods=['GET'])
+    def audio_config_alias():
+        """Alias for /api/v1/audio/config"""
+        from .audio.routes import get_audio_config
+        return get_audio_config()
 
 
 def register_socketio_events(socketio_instance: SocketIO) -> None:

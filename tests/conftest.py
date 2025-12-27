@@ -147,6 +147,36 @@ def mock_audio():
 
 # Playwright helper functions
 
+async def wait_for_audio_permission(page):
+    """Wait for audio permission to be granted."""
+    await page.context.grant_permissions(['microphone'], origin=page.url)
+
+
+async def simulate_microphone_input(page, frequency: float):
+    """Simulate microphone input with a specific frequency."""
+    await page.evaluate(f"""
+        window.__mockAudioFrequency = {frequency};
+    """)
+
+
+async def measure_page_load_time(page, url: str) -> float:
+    """Measure page load time and return in seconds."""
+    import time
+    start = time.time()
+    await page.goto(url, wait_until='domcontentloaded')
+    end = time.time()
+    return end - start
+
+
+@pytest.fixture(scope="session")
+def browser_context_args(browser_context_args):
+    """Configure browser context for audio testing."""
+    return {
+        **browser_context_args,
+        "permissions": ["microphone"],
+        "viewport": {"width": 1280, "height": 720}
+    }
+
 
 
 
