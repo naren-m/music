@@ -11,14 +11,17 @@ The Carnatic Music Shruti Detection System provides real-time audio analysis and
 Analyzes an input frequency and returns the closest shruti in the 22-shruti system.
 
 #### Parameters
+
 - `frequency` (float): Input frequency in Hz (typically 80-1200 Hz range)
 - `baseFreq` (float): Tonic (Sa) frequency in Hz (default: 261.63 Hz)
 
 #### Returns
+
 ```javascript
 {
     note: "Shruti name",           // e.g., "Shadja", "Chatussruti Ri"
-    western_equiv: "Western notation", // e.g., "Sa", "R₂"
+    western_note: "C4",            // Actual Western note (calculated)
+    western_equiv: "Sa",           // Carnatic Solfege notation
     frequency: 261.63,             // Theoretical frequency for this shruti
     detected_frequency: 265.40,    // Actual detected frequency
     confidence: 0.85,              // Detection confidence (0.0-1.0)
@@ -29,6 +32,7 @@ Analyzes an input frequency and returns the closest shruti in the 22-shruti syst
 ```
 
 #### Implementation
+
 ```javascript
 function detectCarnaticShruti(frequency) {
     const baseFreq = parseFloat(document.getElementById('baseFreq').value);
@@ -70,7 +74,8 @@ function detectCarnaticShruti(frequency) {
         
         return {
             note: closestShruti.name,
-            western_equiv: closestShruti.western,
+            western_note: closestShruti.western_note, // Calculated note
+            western_equiv: closestShruti.western,     // Solfege
             frequency: parseFloat((baseFreq * Math.pow(2, closestShruti.cents / 1200)).toFixed(2)),
             detected_frequency: parseFloat(frequency.toFixed(2)),
             confidence: confidence,
@@ -87,6 +92,7 @@ function detectCarnaticShruti(frequency) {
 ## Audio Processing Pipeline
 
 ### 1. Microphone Input
+
 ```javascript
 // Request microphone access
 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -102,6 +108,7 @@ analyser.smoothingTimeConstant = 0.8;
 ```
 
 ### 2. Frequency Analysis
+
 ```javascript
 function analyzeCarnaticAudio() {
     const bufferLength = analyser.frequencyBinCount;
@@ -150,19 +157,25 @@ function analyzeCarnaticAudio() {
 ### Client → Server
 
 #### `set_base_frequency`
+
 Set the tonic (Sa) frequency for shruti calculations.
+
 ```javascript
 socket.emit('set_base_frequency', {frequency: 261.63});
 ```
 
 #### `start_detection`
+
 Begin real-time shruti detection.
+
 ```javascript
 socket.emit('start_detection', {base_frequency: 261.63});
 ```
 
 #### `stop_detection`
+
 Stop shruti detection.
+
 ```javascript
 socket.emit('stop_detection');
 ```
@@ -170,7 +183,9 @@ socket.emit('stop_detection');
 ### Server → Client
 
 #### `detection_status`
+
 Status updates for detection system.
+
 ```javascript
 socket.on('detection_status', function(data) {
     // data.status: 'started', 'stopped', 'error', 'connected'
@@ -180,7 +195,9 @@ socket.on('detection_status', function(data) {
 ```
 
 #### `note_detected`
+
 Real-time shruti detection results.
+
 ```javascript
 socket.on('note_detected', function(data) {
     // Complete shruti detection object
@@ -192,18 +209,21 @@ socket.on('note_detected', function(data) {
 ## Configuration Options
 
 ### Audio Settings
+
 - **Sample Rate**: 44.1 kHz (default browser rate)
 - **FFT Size**: 8192 (high resolution for microtonal precision)
 - **Smoothing**: 0.8 (balanced responsiveness and stability)
 - **Frequency Range**: 80-1200 Hz (Carnatic vocal/instrumental range)
 
 ### Detection Parameters
+
 - **Volume Threshold**: 15 (minimum signal strength)
 - **Confidence Threshold**: 0.3 (minimum detection confidence)
 - **Tolerance**: ±60 cents (forgiving mode for learning)
 - **Update Rate**: ~60 FPS (real-time responsiveness)
 
 ### Tonic (Sa) Configuration
+
 - **Default**: 261.63 Hz (Middle C)
 - **Range**: 100-500 Hz (practical vocal range)
 - **Auto-Detection**: Available for automatic Sa identification
@@ -211,6 +231,7 @@ socket.on('note_detected', function(data) {
 ## Error Handling
 
 ### Microphone Access
+
 ```javascript
 try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -227,6 +248,7 @@ try {
 ```
 
 ### Detection Validation
+
 ```javascript
 function validateDetection(result) {
     return result && 
@@ -234,6 +256,7 @@ function validateDetection(result) {
            result.frequency > 80 && 
            result.frequency < 1200 &&
            result.note && 
+           result.western_note &&
            result.western_equiv;
 }
 ```
@@ -241,12 +264,14 @@ function validateDetection(result) {
 ## Performance Optimization
 
 ### Efficient Processing
+
 - **Batch Updates**: Group UI updates to prevent flickering
 - **Frequency Filtering**: Pre-filter audio to Carnatic range
 - **Confidence Gating**: Only process high-confidence detections
 - **History Limiting**: Maintain fixed-size detection history
 
 ### Memory Management
+
 - **Audio Context Cleanup**: Properly close contexts on stop
 - **Buffer Reuse**: Reuse typed arrays for analysis
 - **Event Listener Cleanup**: Remove listeners on component unmount
@@ -254,12 +279,14 @@ function validateDetection(result) {
 ## Cultural Considerations
 
 ### Traditional Accuracy
+
 - Frequency ratios based on Sangita Ratnakara specifications
 - Shruti names using traditional Sanskrit terminology
 - Raga context determination following classical patterns
 - Historical validation against medieval music theory
 
 ### Modern Adaptation
+
 - Equal temperament compatibility for practical use
 - Western notation equivalents for cross-cultural understanding
 - Digital precision while maintaining traditional essence

@@ -63,6 +63,52 @@ export interface AudioState {
   practiceProgress: { current: number; total: number; percentage: number } | null;
 }
 
+// Session Mode Types
+export interface SessionExercise {
+  name: string;
+  arohanam: string[];
+  avarohanam: string[];
+}
+
+export interface SessionProgress {
+  current_exercise_index: number;
+  total_exercises: number;
+  exercises_completed: number;
+  current_exercise_name: string;
+  is_current_completed: boolean;
+  session_active: boolean;
+}
+
+export interface ExerciseResult {
+  index: number;
+  name: string;
+  total_notes: number;
+  correct: number;
+  incorrect: number;
+  accuracy: number;
+  grade: string;
+}
+
+export interface SessionSummary {
+  total_exercises: number;
+  exercises_completed: number;
+  total_notes_played: number;
+  total_correct_notes: number;
+  total_incorrect_notes: number;
+  session_accuracy: number;
+  session_grade: string;
+  session_duration_seconds: number;
+  exercise_results: ExerciseResult[];
+}
+
+export type SessionEventType =
+  | { type: 'session_mode_started'; data: { total_exercises: number; current_exercise_name: string; first_note: string } }
+  | { type: 'session_exercise_advanced'; data: { current_exercise_index: number; current_exercise_name: string; first_note: string; previous_result?: ExerciseResult } }
+  | { type: 'session_exercise_retried'; data: { current_exercise_name: string; first_note: string } }
+  | { type: 'session_completed'; data: { summary: SessionSummary } }
+  | { type: 'session_ended'; data: { summary: SessionSummary } }
+  | { type: 'exercise_completed'; data: { exercise_name: string } };
+
 export interface AudioContextType extends AudioState {
   startRecording: () => Promise<void>;
   stopRecording: () => void;
@@ -80,6 +126,12 @@ export interface AudioContextType extends AudioState {
   }) => void;
   stopPracticeSession: () => void;
   onPracticeFeedback: (callback: (feedback: PracticeFeedback) => void) => () => void;
+  // Session Mode methods
+  startSessionMode: (exercises: SessionExercise[]) => void;
+  sessionRetryExercise: () => void;
+  sessionNextExercise: () => void;
+  sessionEnd: () => void;
+  onSessionEvent: (callback: (event: SessionEventType) => void) => () => void;
 }
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -119,7 +171,15 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({ children }) => {
   const carnaticEngineRef = useRef<CarnaticAudioEngine | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const practiceFeedbackCallbacksRef = useRef<Set<(feedback: PracticeFeedback) => void>>(new Set());
+  const sessionEventCallbacksRef = useRef<Set<(event: SessionEventType) => void>>(new Set());
   const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
+  const isPracticingRef = useRef<boolean>(false);  // Ref to avoid stale closure in audio callback
+  const currentExercisePatternRef = useRef<{
+    pattern_name: string;
+    arohanam: string[];
+    avarohanam: string[];
+    include_avarohanam?: boolean;
+  } | null>(null);  // Store current exercise for reconnection
 
   // Fetch config and initialize engine on mount
   useEffect(() => {
@@ -171,6 +231,17 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({ children }) => {
     socket.on('connect', () => {
       console.log('WebSocket connected');
       setState(prev => ({ ...prev, isConnected: true, error: null }));
+
+      // Restore exercise state if we were practicing before reconnection
+      if (isPracticingRef.current && currentExercisePatternRef.current) {
+        console.log('Restoring exercise state after reconnection:', currentExercisePatternRef.current);
+        socket.emit('start_practice_session', {
+          pattern_name: currentExercisePatternRef.current.pattern_name,
+          arohanam: currentExercisePatternRef.current.arohanam,
+          avarohanam: currentExercisePatternRef.current.avarohanam,
+          include_avarohanam: currentExercisePatternRef.current.include_avarohanam ?? true,
+        });
+      }
     });
 
     socket.on('disconnect', () => {
@@ -238,6 +309,149 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({ children }) => {
           } as CarnaticPitchInfo
         }));
       }
+    });
+
+    // Session Mode Event Listeners
+    socket.on('session_mode_started', (data: any) => {
+      console.log('Session mode started:', data);
+
+      // CRITICAL: Only start practicing AFTER server confirms session is ready
+      // This ensures exercise_sequence is set before audio chunks are processed
+      isPracticingRef.current = true;
+      setState(prev => ({
+        ...prev,
+        isPracticing: true,
+        practiceFeedback: null,
+        practiceProgress: null,
+      }));
+
+      const event: SessionEventType = {
+        type: 'session_mode_started',
+        data: {
+          total_exercises: data.total_exercises,
+          current_exercise_name: data.current_exercise_name,
+          first_note: data.first_note,
+        }
+      };
+      sessionEventCallbacksRef.current.forEach(callback => {
+        try { callback(event); } catch (e) { console.error('Error in session event callback:', e); }
+      });
+    });
+
+    socket.on('session_exercise_advanced', (data: any) => {
+      console.log('Session exercise advanced:', data);
+      const event: SessionEventType = {
+        type: 'session_exercise_advanced',
+        data: {
+          current_exercise_index: data.current_exercise_index,
+          current_exercise_name: data.current_exercise_name,
+          first_note: data.first_note,
+          previous_result: data.previous_result ? {
+            index: data.previous_result.exercise_index,
+            name: data.previous_result.exercise_name,
+            total_notes: data.previous_result.total_notes,
+            correct: data.previous_result.correct_notes,
+            incorrect: data.previous_result.incorrect_notes,
+            accuracy: data.previous_result.accuracy_percentage,
+            grade: data.previous_result.grade,
+          } : undefined,
+        }
+      };
+      sessionEventCallbacksRef.current.forEach(callback => {
+        try { callback(event); } catch (e) { console.error('Error in session event callback:', e); }
+      });
+    });
+
+    socket.on('session_exercise_retried', (data: any) => {
+      console.log('Session exercise retried:', data);
+      const event: SessionEventType = {
+        type: 'session_exercise_retried',
+        data: {
+          current_exercise_name: data.current_exercise_name,
+          first_note: data.first_note,
+        }
+      };
+      sessionEventCallbacksRef.current.forEach(callback => {
+        try { callback(event); } catch (e) { console.error('Error in session event callback:', e); }
+      });
+    });
+
+    socket.on('session_completed', (data: any) => {
+      console.log('Session completed:', data);
+      const summary = data.summary;
+      const event: SessionEventType = {
+        type: 'session_completed',
+        data: {
+          summary: {
+            total_exercises: summary.total_exercises,
+            exercises_completed: summary.exercises_completed,
+            total_notes_played: summary.total_notes_played,
+            total_correct_notes: summary.total_correct_notes,
+            total_incorrect_notes: summary.total_incorrect_notes,
+            session_accuracy: summary.session_accuracy,
+            session_grade: summary.session_grade,
+            session_duration_seconds: summary.session_duration_seconds,
+            exercise_results: summary.exercise_results.map((r: any) => ({
+              index: r.exercise_index,
+              name: r.exercise_name,
+              total_notes: r.total_notes,
+              correct: r.correct_notes,
+              incorrect: r.incorrect_notes,
+              accuracy: r.accuracy_percentage,
+              grade: r.grade,
+            })),
+          }
+        }
+      };
+      sessionEventCallbacksRef.current.forEach(callback => {
+        try { callback(event); } catch (e) { console.error('Error in session event callback:', e); }
+      });
+    });
+
+    socket.on('session_ended', (data: any) => {
+      console.log('Session ended early:', data);
+      const summary = data.summary;
+      const event: SessionEventType = {
+        type: 'session_ended',
+        data: {
+          summary: {
+            total_exercises: summary.total_exercises,
+            exercises_completed: summary.exercises_completed,
+            total_notes_played: summary.total_notes_played,
+            total_correct_notes: summary.total_correct_notes,
+            total_incorrect_notes: summary.total_incorrect_notes,
+            session_accuracy: summary.session_accuracy,
+            session_grade: summary.session_grade,
+            session_duration_seconds: summary.session_duration_seconds,
+            exercise_results: summary.exercise_results.map((r: any) => ({
+              index: r.exercise_index,
+              name: r.exercise_name,
+              total_notes: r.total_notes,
+              correct: r.correct_notes,
+              incorrect: r.incorrect_notes,
+              accuracy: r.accuracy_percentage,
+              grade: r.grade,
+            })),
+          }
+        }
+      };
+      sessionEventCallbacksRef.current.forEach(callback => {
+        try { callback(event); } catch (e) { console.error('Error in session event callback:', e); }
+      });
+    });
+
+    // Listen for individual exercise completion during session mode
+    socket.on('exercise_completed_in_session', (data: any) => {
+      console.log('Exercise completed in session:', data);
+      const event: SessionEventType = {
+        type: 'exercise_completed',
+        data: {
+          exercise_name: data.exercise_name,
+        }
+      };
+      sessionEventCallbacksRef.current.forEach(callback => {
+        try { callback(event); } catch (e) { console.error('Error in session event callback:', e); }
+      });
     });
   };
 
@@ -395,6 +609,10 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({ children }) => {
     }
 
     console.log('Starting practice session:', pattern);
+
+    // Store the pattern for reconnection recovery
+    currentExercisePatternRef.current = pattern;
+
     socketRef.current.emit('start_practice_session', {
       pattern_name: pattern.pattern_name,
       arohanam: pattern.arohanam,
@@ -402,6 +620,7 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({ children }) => {
       include_avarohanam: pattern.include_avarohanam ?? true,
     });
 
+    isPracticingRef.current = true;  // Update ref immediately for audio callback
     setState(prev => ({
       ...prev,
       isPracticing: true,
@@ -412,6 +631,8 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({ children }) => {
 
   // Stop the current practice session
   const stopPracticeSession = () => {
+    isPracticingRef.current = false;  // Update ref immediately
+    currentExercisePatternRef.current = null;  // Clear stored pattern
     if (socketRef.current?.connected) {
       socketRef.current.emit('end_exercise');
     }
@@ -432,10 +653,94 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({ children }) => {
     };
   };
 
+  // Session Mode Functions
+  const startSessionMode = (exercises: SessionExercise[]) => {
+    if (!socketRef.current?.connected) {
+      setState(prev => ({ ...prev, error: 'WebSocket not connected' }));
+      return;
+    }
+
+    console.log('Starting session mode with exercises:', exercises.map(e => e.name));
+    socketRef.current.emit('start_session_mode', {
+      exercises: exercises.map(ex => ({
+        name: ex.name,
+        arohanam: ex.arohanam,
+        avarohanam: ex.avarohanam,
+      })),
+    });
+
+    // NOTE: We DON'T set isPracticing = true here!
+    // Audio streaming will start when 'session_mode_started' event is received from server.
+    // This ensures the backend has the exercise_sequence context ready before
+    // we start sending audio chunks for validation.
+  };
+
+  const sessionRetryExercise = () => {
+    if (!socketRef.current?.connected) {
+      setState(prev => ({ ...prev, error: 'WebSocket not connected' }));
+      return;
+    }
+
+    console.log('Retrying current exercise');
+    socketRef.current.emit('session_retry_exercise');
+
+    setState(prev => ({
+      ...prev,
+      practiceFeedback: null,
+      practiceProgress: null,
+    }));
+  };
+
+  const sessionNextExercise = () => {
+    if (!socketRef.current?.connected) {
+      setState(prev => ({ ...prev, error: 'WebSocket not connected' }));
+      return;
+    }
+
+    console.log('Advancing to next exercise');
+    socketRef.current.emit('session_next_exercise');
+
+    setState(prev => ({
+      ...prev,
+      practiceFeedback: null,
+      practiceProgress: null,
+    }));
+  };
+
+  const sessionEnd = () => {
+    if (!socketRef.current?.connected) {
+      setState(prev => ({ ...prev, error: 'WebSocket not connected' }));
+      return;
+    }
+
+    console.log('Ending session');
+    socketRef.current.emit('session_end');
+
+    isPracticingRef.current = false;
+    setState(prev => ({
+      ...prev,
+      isPracticing: false,
+      practiceFeedback: null,
+      practiceProgress: null,
+    }));
+  };
+
+  const onSessionEvent = (callback: (event: SessionEventType) => void) => {
+    sessionEventCallbacksRef.current.add(callback);
+    // Return unsubscribe function
+    return () => {
+      sessionEventCallbacksRef.current.delete(callback);
+    };
+  };
+
   // Stream audio to server for server-side pitch detection
   const startAudioStreaming = useCallback(() => {
     if (!audioContextRef.current || !microphoneRef.current || !socketRef.current?.connected) {
-      console.log('Cannot start audio streaming - missing requirements');
+      console.log('Cannot start audio streaming - missing requirements:', {
+        hasAudioContext: !!audioContextRef.current,
+        hasMicrophone: !!microphoneRef.current,
+        socketConnected: socketRef.current?.connected
+      });
       return;
     }
 
@@ -448,7 +753,8 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({ children }) => {
     scriptProcessorRef.current = scriptProcessor;
 
     scriptProcessor.onaudioprocess = (event) => {
-      if (!socketRef.current?.connected || !state.isPracticing) return;
+      // Use ref instead of state to avoid stale closure
+      if (!socketRef.current?.connected || !isPracticingRef.current) return;
 
       const inputData = event.inputBuffer.getChannelData(0);
 
@@ -468,8 +774,8 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({ children }) => {
     microphoneRef.current.connect(scriptProcessor);
     scriptProcessor.connect(audioContext.destination);
 
-    console.log('Audio streaming started');
-  }, [state.isPracticing]);
+    console.log('Audio streaming started - sending chunks to server');
+  }, []); // No dependencies needed since we use refs
 
   // Effect to start/stop audio streaming when practice mode changes
   useEffect(() => {
@@ -493,6 +799,12 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({ children }) => {
     startPracticeSession,
     stopPracticeSession,
     onPracticeFeedback,
+    // Session Mode
+    startSessionMode,
+    sessionRetryExercise,
+    sessionNextExercise,
+    sessionEnd,
+    onSessionEvent,
   };
 
   return (

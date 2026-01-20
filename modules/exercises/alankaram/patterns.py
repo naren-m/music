@@ -3,6 +3,8 @@ Alankaram Exercise Patterns
 
 Implementation of traditional Carnatic ornamentation and pattern exercises
 with raga integration and advanced melodic complexity frameworks.
+
+Supports loading patterns from text files for easy content updates.
 """
 
 from typing import List, Dict, Tuple, Optional, Any, Set
@@ -11,6 +13,18 @@ from enum import Enum
 import numpy as np
 import json
 from datetime import datetime
+import logging
+
+# Import the exercise loader
+from modules.exercises.loader import (
+    load_exercises_from_folder,
+    get_level_config,
+    extract_octave_shift,
+    ParsedExercise,
+    ExerciseConfig
+)
+
+logger = logging.getLogger(__name__)
 
 class AlanakaramType(Enum):
     SIMPLE = "simple"
@@ -75,9 +89,13 @@ class AlanakaramPatternGenerator:
     """
     Comprehensive Alankaram pattern generator with traditional authenticity
     and advanced pedagogical frameworks for Carnatic music education.
+
+    Supports loading patterns from text files for easy content updates.
+    Falls back to hardcoded patterns if text files are not available.
     """
 
-    def __init__(self):
+    def __init__(self, raga: str = 'mayamalavagowla'):
+        self.raga = raga
         self.base_swaras = ['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni']
         self.swara_variants = {
             'Ri': ['Ri1', 'Ri2', 'Ri3'],  # Shuddha, Chathushruti, Shatshruti
@@ -86,6 +104,9 @@ class AlanakaramPatternGenerator:
             'Da': ['Da1', 'Da2', 'Da3'],  # Shuddha, Chathushruti, Shatshruti
             'Ni': ['Ni1', 'Ni2', 'Ni3']   # Shuddha, Kaisika, Kaakali
         }
+
+        # Configuration from file (if available)
+        self.config: Optional[ExerciseConfig] = None
 
         self.raga_database = self._initialize_raga_database()
         self.alankaram_patterns = self._generate_all_patterns()
@@ -173,7 +194,24 @@ class AlanakaramPatternGenerator:
         return ragas
 
     def _generate_all_patterns(self) -> List[AlanakaramPattern]:
-        """Generate comprehensive set of Alankaram patterns"""
+        """
+        Generate comprehensive set of Alankaram patterns.
+
+        First attempts to load from text files. Falls back to hardcoded
+        patterns if text files are not available.
+        """
+        # Try loading from text files first
+        file_patterns = self._load_from_files()
+        if file_patterns:
+            logger.info(f"Loaded {len(file_patterns)} Alankaram patterns from text files")
+            return file_patterns
+
+        # Fall back to hardcoded patterns
+        logger.info("Using hardcoded Alankaram patterns (text files not found)")
+        return self._generate_hardcoded_patterns()
+
+    def _generate_hardcoded_patterns(self) -> List[AlanakaramPattern]:
+        """Generate hardcoded Alankaram patterns (fallback)"""
         patterns = []
 
         # Simple patterns (1-7)
@@ -189,6 +227,160 @@ class AlanakaramPatternGenerator:
         patterns.extend(self._generate_advanced_patterns())
 
         return patterns
+
+    def _load_from_files(self) -> List[AlanakaramPattern]:
+        """
+        Load Alankaram patterns from text files.
+
+        Returns:
+            List of AlanakaramPattern objects, or empty list if loading fails.
+        """
+        try:
+            # Load exercises and config from the Alankarams folder
+            exercises, config = load_exercises_from_folder(
+                'Alankarams',
+                f'{self.raga}.txt'
+            )
+
+            if not exercises:
+                logger.debug(f"No exercises found for raga '{self.raga}' in Alankarams folder")
+                return []
+
+            self.config = config
+
+            # Convert parsed exercises to AlanakaramPattern objects
+            patterns = []
+            for exercise in exercises:
+                pattern = self._convert_to_alankaram_pattern(exercise, config)
+                if pattern:
+                    patterns.append(pattern)
+
+            return patterns
+
+        except Exception as e:
+            logger.warning(f"Error loading Alankaram patterns from files: {e}")
+            return []
+
+    def _convert_to_alankaram_pattern(
+        self,
+        exercise: ParsedExercise,
+        config: Optional[ExerciseConfig]
+    ) -> Optional[AlanakaramPattern]:
+        """
+        Convert a ParsedExercise to an AlanakaramPattern.
+
+        Args:
+            exercise: ParsedExercise from text file
+            config: Optional ExerciseConfig for metadata
+
+        Returns:
+            AlanakaramPattern object or None if conversion fails
+        """
+        try:
+            # Get level-specific config if available
+            level_config = get_level_config(config, exercise.level) if config else {}
+
+            # Process arohanam (ascending) phrase
+            arohanam_swaras = []
+            arohanam_octaves = []
+            for swara in exercise.arohanam:
+                base_swara, octave_shift = extract_octave_shift(swara)
+                arohanam_swaras.append(base_swara)
+                arohanam_octaves.append(octave_shift)
+
+            # Process avarohanam (descending) phrase
+            avarohanam_swaras = []
+            avarohanam_octaves = []
+            for swara in exercise.avarohanam:
+                base_swara, octave_shift = extract_octave_shift(swara)
+                avarohanam_swaras.append(base_swara)
+                avarohanam_octaves.append(octave_shift)
+
+            # Create melodic phrases for arohanam and avarohanam
+            phrases = []
+
+            # Arohanam phrase
+            if arohanam_swaras:
+                phrases.append(MelodicPhrase(
+                    swaras=arohanam_swaras,
+                    octave_shifts=arohanam_octaves,
+                    duration_ratios=[0.5] * (len(arohanam_swaras) - 1) + [1.0],
+                    ornamentations=[None] * len(arohanam_swaras),
+                    emphasis_points=[0, len(arohanam_swaras) - 1],
+                    phrase_type="arohanam",
+                    difficulty_weight=level_config.get('difficulty', 0.5)
+                ))
+
+            # Avarohanam phrase
+            if avarohanam_swaras:
+                phrases.append(MelodicPhrase(
+                    swaras=avarohanam_swaras,
+                    octave_shifts=avarohanam_octaves,
+                    duration_ratios=[0.5] * (len(avarohanam_swaras) - 1) + [1.0],
+                    ornamentations=[None] * len(avarohanam_swaras),
+                    emphasis_points=[0, len(avarohanam_swaras) - 1],
+                    phrase_type="avarohanam",
+                    difficulty_weight=level_config.get('difficulty', 0.5)
+                ))
+
+            # Determine complexity level based on level number
+            if exercise.level <= 2:
+                complexity = ComplexityLevel.BEGINNER
+                pattern_type = AlanakaramType.SIMPLE
+            elif exercise.level <= 3:
+                complexity = ComplexityLevel.ELEMENTARY
+                pattern_type = AlanakaramType.SIMPLE
+            elif exercise.level <= 4:
+                complexity = ComplexityLevel.INTERMEDIATE
+                pattern_type = AlanakaramType.COMPLEX
+            else:
+                complexity = ComplexityLevel.ADVANCED
+                pattern_type = AlanakaramType.ADVANCED
+
+            # Get tempo range from config or use defaults
+            tempo_range = tuple(level_config.get('tempo_range', [60, 120]))
+
+            # Get raga name from config or use the instance raga
+            raga_name = config.raga if config else self.raga
+            raga_display = raga_name.replace('_', ' ').title()
+
+            # Get learning objectives from config or generate defaults
+            learning_objectives = level_config.get('learning_objectives', [
+                f'Master Alankaram pattern {exercise.level}',
+                'Develop melodic phrase control',
+                'Practice ascending and descending movements'
+            ])
+
+            # Get practice tips from config
+            practice_tips = level_config.get('practice_tips', [
+                'Start slowly with drone reference',
+                'Focus on clean phrase transitions'
+            ])
+
+            return AlanakaramPattern(
+                id=exercise.level,
+                name=level_config.get('name', f"Alankaram {exercise.level}"),
+                type=pattern_type,
+                complexity_level=complexity,
+                description=f"Traditional Alankaram pattern {exercise.level} in {raga_display}",
+                phrases=phrases,
+                raga_compatibility=[raga_display],
+                tala_compatibility=[config.talam if config else "Adi"],
+                tempo_recommendations=tempo_range,
+                learning_objectives=learning_objectives,
+                prerequisites=list(range(1, exercise.level)) if exercise.level > 1 else [],
+                mastery_indicators={
+                    "pitch_accuracy": 0.85,
+                    "phrase_connection": 0.8,
+                    "tempo_consistency": 0.85
+                },
+                cultural_context=f"Traditional {raga_display} alankaram practice",
+                traditional_usage=practice_tips
+            )
+
+        except Exception as e:
+            logger.error(f"Error converting exercise to AlanakaramPattern: {e}")
+            return None
 
     def _generate_simple_patterns(self) -> List[AlanakaramPattern]:
         """Generate simple Alankaram patterns (1-7)"""

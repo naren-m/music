@@ -29,6 +29,34 @@ class Shruti:
             return float('inf')
         return 1200 * np.log2(detected_freq / target_freq)
 
+    def get_western_note_name(self, base_sa: float) -> str:
+        """
+        Calculate the actual Western note name (e.g., 'C4', 'C#4') 
+        based on the calculated frequency for this shruti.
+        """
+        frequency = self.calculate_frequency(base_sa)
+        return self._freq_to_note_name(frequency)
+
+    @staticmethod
+    def _freq_to_note_name(frequency: float) -> str:
+        """Convert frequency to scientific pitch notation."""
+        if frequency <= 0:
+            return ""
+            
+        # A4 = 440Hz, MIDI note 69
+        # MIDI note = 69 + 12 * log2(freq / 440)
+        try:
+            midi_note = 69 + 12 * np.log2(frequency / 440)
+            midi_note_round = int(round(midi_note))
+            
+            note_names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+            octave = (midi_note_round // 12) - 1
+            note_idx = midi_note_round % 12
+            
+            return f"{note_names[note_idx]}{octave}"
+        except Exception:
+            return ""
+
 
 class ShrutiSystem:
     """Complete 22-shruti system with traditional Carnatic music theory"""

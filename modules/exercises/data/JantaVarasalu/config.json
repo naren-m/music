@@ -1,0 +1,95 @@
+{
+  "exercise_type": "janta",
+  "name": "Janta Varasalu",
+  "description": "Traditional Janta Varisai double-note exercises for smooth transitions",
+  "raga": "mayamalavagowla",
+  "talam": "adi",
+  "angah": "1 laghu (4 kala) + 1 dhrtam (2 kala) + 1 dhrtam (2 kala)",
+  "default_tempo_range": [50, 100],
+  "swara_mapping": {
+    "Sa": "Shadja",
+    "Ri": "Ri1",
+    "Ga": "Ga3",
+    "Ma": "Ma1",
+    "Pa": "Panchama",
+    "Da": "Da1",
+    "Ni": "Ni3"
+  },
+  "levels": [
+    {
+      "name": "Janta Varisai 1",
+      "difficulty": 0.15,
+      "tempo_range": [50, 90],
+      "learning_objectives": [
+        "Master basic double note articulation",
+        "Develop consistent note repetition",
+        "Build foundation for smooth transitions"
+      ],
+      "practice_tips": [
+        "Focus on identical pitch for both notes",
+        "Use metronome for timing consistency",
+        "Practice with sustained breath support"
+      ]
+    },
+    {
+      "name": "Janta Varisai 2",
+      "difficulty": 0.2,
+      "tempo_range": [50, 95],
+      "learning_objectives": [
+        "Connect double note patterns smoothly",
+        "Maintain pitch accuracy across transitions",
+        "Develop longer phrase control"
+      ],
+      "practice_tips": [
+        "Practice transitions separately",
+        "Use drone for pitch reference",
+        "Focus on seamless connections"
+      ]
+    },
+    {
+      "name": "Janta Varisai 3",
+      "difficulty": 0.25,
+      "tempo_range": [55, 100],
+      "learning_objectives": [
+        "Master skip patterns with double notes",
+        "Develop interval accuracy in doubles",
+        "Strengthen breath control"
+      ],
+      "practice_tips": [
+        "Practice each skip pattern separately",
+        "Maintain consistent gap between doubles",
+        "Build stamina gradually"
+      ]
+    },
+    {
+      "name": "Janta Varisai 4",
+      "difficulty": 0.3,
+      "tempo_range": [55, 100],
+      "learning_objectives": [
+        "Practice complex return patterns",
+        "Develop advanced phrase control",
+        "Master rhythmic groupings"
+      ],
+      "practice_tips": [
+        "Count repetitions clearly",
+        "Use finger counting initially",
+        "Emphasize rhythmic precision"
+      ]
+    },
+    {
+      "name": "Janta Varisai 5",
+      "difficulty": 0.35,
+      "tempo_range": [60, 110],
+      "learning_objectives": [
+        "Complete full octave in double notes",
+        "Achieve professional-level smoothness",
+        "Master all seven swaras in pairs"
+      ],
+      "practice_tips": [
+        "Practice upper and lower separately",
+        "Use reference drone throughout",
+        "Focus on consistent quality"
+      ]
+    }
+  ]
+}

@@ -28,14 +28,18 @@ MAX_HISTORY_SIZE = 1000  # Limit history to prevent memory leaks
 
 # Swara name to shruti index mapping for validation
 # Includes both short names (Sa, Ri, Ga) and full shruti names (Shadja, Rishaba, etc.)
+# Default simple names (Ri, Ga, Da, Ni) map to Mayamalavagowla raga variants
+# which is the standard raga for teaching Sarali Varisai
 SWARA_TO_SHRUTI_INDEX = {
     # Shadja (Sa) - index 0
     'S': 0, 'Sa': 0, 'Shadja': 0,
     # Rishaba variants - indices 1-3
-    'R1': 1, 'Ri1': 1, 'SuddhaRishaba': 1, 'Suddha Rishaba': 1,
-    'R2': 2, 'Ri2': 2, 'Ri': 2, 'ChatussrutiRishaba': 2, 'Chatussruti Rishaba': 2,
+    # NOTE: Simple 'Ri' now maps to R₁ (Suddha Rishaba ≈ C#) for Mayamalavagowla
+    'R1': 1, 'Ri1': 1, 'Ri': 1, 'SuddhaRishaba': 1, 'Suddha Rishaba': 1,
+    'R2': 2, 'Ri2': 2, 'ChatussrutiRishaba': 2, 'Chatussruti Rishaba': 2,
     'R3': 3, 'Ri3': 3, 'ShatsrutiRishaba': 3, 'Shatsruti Rishaba': 3,
     # Gandhara variants - indices 4-6
+    # NOTE: Simple 'Ga' maps to G₃ (Antara Gandhara ≈ E) for Mayamalavagowla
     'G1': 4, 'Ga1': 4, 'SuddhaGandhara': 4, 'Suddha Gandhara': 4,
     'G2': 5, 'Ga2': 5, 'SadharanaGandhara': 5, 'Sadharana Gandhara': 5,
     'G3': 6, 'Ga3': 6, 'Ga': 6, 'AntaraGandhara': 6, 'Antara Gandhara': 6,
@@ -45,16 +49,201 @@ SWARA_TO_SHRUTI_INDEX = {
     # Panchama - index 9
     'P': 9, 'Pa': 9, 'Panchama': 9,
     # Dhaivata variants - indices 10-12
-    'D1': 10, 'Da1': 10, 'SuddhaDhaivata': 10, 'Suddha Dhaivata': 10,
-    'D2': 11, 'Da2': 11, 'Da': 11, 'ChatussrutiDhaivata': 11, 'Chatussruti Dhaivata': 11,
+    # NOTE: Simple 'Da' now maps to D₁ (Suddha Dhaivata) for Mayamalavagowla
+    'D1': 10, 'Da1': 10, 'Da': 10, 'SuddhaDhaivata': 10, 'Suddha Dhaivata': 10,
+    'D2': 11, 'Da2': 11, 'ChatussrutiDhaivata': 11, 'Chatussruti Dhaivata': 11,
     'D3': 12, 'Da3': 12, 'ShatsrutiDhaivata': 12, 'Shatsruti Dhaivata': 12,
     # Nishada variants - indices 13-15
+    # NOTE: Simple 'Ni' maps to N₃ (Kakali Nishada) for Mayamalavagowla
     'N1': 13, 'Ni1': 13, 'SuddhaNishada': 13, 'Suddha Nishada': 13,
     'N2': 14, 'Ni2': 14, 'KaisikaNishada': 14, 'Kaisika Nishada': 14,
     'N3': 15, 'Ni3': 15, 'Ni': 15, 'KakaliNishada': 15, 'Kakali Nishada': 15,
     # Upper Sa
     'Ṡ': 16, 'S\'': 16, 'Sa\'': 16,
 }
+
+
+@dataclass
+class ExerciseResult:
+    """Result of completing a single exercise."""
+    exercise_index: int
+    exercise_name: str
+    total_notes: int
+    correct_notes: int
+    incorrect_notes: int
+    accuracy_percentage: float
+    grade: str
+
+
+class PracticeSession:
+    """
+    Manages a session of multiple exercises for continuous practice.
+    Tracks progress across all exercises and cumulative accuracy.
+    """
+    def __init__(self, exercises: List[Dict[str, Any]]):
+        """
+        Initialize a practice session with multiple exercises.
+
+        Args:
+            exercises: List of exercise dicts with 'name', 'arohanam', 'avarohanam' keys
+        """
+        self.exercises = exercises
+        self.current_exercise_index = 0
+        self.exercise_results: List[ExerciseResult] = []
+        self.current_sequence: Optional['ExerciseSequence'] = None
+        self.session_start_time = datetime.utcnow()
+        self.is_active = True
+
+        # Cumulative stats
+        self.total_notes_played = 0
+        self.total_correct_notes = 0
+        self.total_incorrect_notes = 0
+
+        # Start first exercise
+        if exercises:
+            self._load_current_exercise()
+
+    def _load_current_exercise(self) -> None:
+        """Load the current exercise into the sequence."""
+        if self.current_exercise_index >= len(self.exercises):
+            return
+
+        exercise = self.exercises[self.current_exercise_index]
+        arohanam = exercise.get('arohanam', [])
+        avarohanam = exercise.get('avarohanam', [])
+
+        # Build full sequence (arohanam + avarohanam)
+        full_sequence = list(arohanam) + list(avarohanam)
+        self.current_sequence = ExerciseSequence(full_sequence)
+
+    def get_current_exercise(self) -> Optional[Dict[str, Any]]:
+        """Get the current exercise details."""
+        if self.current_exercise_index >= len(self.exercises):
+            return None
+        return self.exercises[self.current_exercise_index]
+
+    def get_current_exercise_name(self) -> str:
+        """Get the name of the current exercise."""
+        exercise = self.get_current_exercise()
+        return exercise.get('name', f'Exercise {self.current_exercise_index + 1}') if exercise else ''
+
+    def is_current_exercise_completed(self) -> bool:
+        """Check if the current exercise is completed."""
+        return self.current_sequence is not None and self.current_sequence.completed
+
+    def record_exercise_result(self) -> Optional[ExerciseResult]:
+        """Record the result of the current exercise."""
+        if not self.current_sequence:
+            return None
+
+        result = ExerciseResult(
+            exercise_index=self.current_exercise_index,
+            exercise_name=self.get_current_exercise_name(),
+            total_notes=len(self.current_sequence.pattern_sequence),
+            correct_notes=self.current_sequence.correct_notes,
+            incorrect_notes=self.current_sequence.incorrect_notes,
+            accuracy_percentage=self._calc_accuracy(
+                self.current_sequence.correct_notes,
+                self.current_sequence.incorrect_notes
+            ),
+            grade=self._calc_grade(
+                self.current_sequence.correct_notes,
+                self.current_sequence.incorrect_notes
+            )
+        )
+
+        # Update cumulative stats
+        self.total_notes_played += len(self.current_sequence.pattern_sequence)
+        self.total_correct_notes += self.current_sequence.correct_notes
+        self.total_incorrect_notes += self.current_sequence.incorrect_notes
+
+        self.exercise_results.append(result)
+        return result
+
+    def retry_current_exercise(self) -> bool:
+        """Reset and retry the current exercise."""
+        if self.current_sequence:
+            self.current_sequence.reset()
+            return True
+        return False
+
+    def advance_to_next_exercise(self) -> bool:
+        """
+        Move to the next exercise in the session.
+        Returns True if there's a next exercise, False if session is complete.
+        """
+        # Record current result if not already recorded
+        if self.current_sequence and self.current_sequence.completed:
+            # Check if result was already recorded
+            if len(self.exercise_results) <= self.current_exercise_index:
+                self.record_exercise_result()
+
+        self.current_exercise_index += 1
+
+        if self.current_exercise_index >= len(self.exercises):
+            self.is_active = False
+            return False
+
+        self._load_current_exercise()
+        return True
+
+    def get_session_progress(self) -> Dict[str, Any]:
+        """Get current session progress."""
+        return {
+            'current_exercise_index': self.current_exercise_index,
+            'total_exercises': len(self.exercises),
+            'exercises_completed': len(self.exercise_results),
+            'current_exercise_name': self.get_current_exercise_name(),
+            'is_current_completed': self.is_current_exercise_completed(),
+            'session_active': self.is_active
+        }
+
+    def get_session_summary(self) -> Dict[str, Any]:
+        """Get complete session summary."""
+        session_duration = (datetime.utcnow() - self.session_start_time).total_seconds()
+
+        return {
+            'total_exercises': len(self.exercises),
+            'exercises_completed': len(self.exercise_results),
+            'total_notes_played': self.total_notes_played,
+            'total_correct_notes': self.total_correct_notes,
+            'total_incorrect_notes': self.total_incorrect_notes,
+            'session_accuracy': self._calc_accuracy(
+                self.total_correct_notes,
+                self.total_incorrect_notes
+            ),
+            'session_grade': self._calc_grade(
+                self.total_correct_notes,
+                self.total_incorrect_notes
+            ),
+            'session_duration_seconds': round(session_duration, 1),
+            'exercise_results': [
+                {
+                    'index': r.exercise_index,
+                    'name': r.exercise_name,
+                    'total_notes': r.total_notes,
+                    'correct': r.correct_notes,
+                    'incorrect': r.incorrect_notes,
+                    'accuracy': r.accuracy_percentage,
+                    'grade': r.grade
+                }
+                for r in self.exercise_results
+            ]
+        }
+
+    def _calc_accuracy(self, correct: int, incorrect: int) -> float:
+        """Calculate accuracy percentage."""
+        total = correct + incorrect
+        return round((correct / total * 100), 1) if total > 0 else 0.0
+
+    def _calc_grade(self, correct: int, incorrect: int) -> str:
+        """Calculate grade based on accuracy."""
+        accuracy = self._calc_accuracy(correct, incorrect)
+        if accuracy >= 90: return 'A'
+        if accuracy >= 80: return 'B'
+        if accuracy >= 70: return 'C'
+        if accuracy >= 60: return 'D'
+        return 'F'
 
 
 class ExerciseSequence:
@@ -109,13 +298,13 @@ class ExerciseSequence:
         expected_normalized = expected_note.replace(' ', '')
 
         # Check if detected note matches expected
-        # We consider a match if either:
-        # 1. Names match directly
-        # 2. Both map to same shruti index
+        # We consider a match if both map to same shruti index
         detected_index = SWARA_TO_SHRUTI_INDEX.get(detected_normalized)
         expected_index = SWARA_TO_SHRUTI_INDEX.get(expected_normalized, 0)
 
-        is_correct = (detected_index == expected_index) and accuracy_score >= 0.70
+        # Separate note matching from accuracy check
+        note_matches = (detected_index is not None and detected_index == expected_index)
+        is_correct = note_matches and accuracy_score >= 0.70
 
         result = {
             'expected_note': expected_note,
@@ -123,6 +312,7 @@ class ExerciseSequence:
             'position': self.current_position,
             'total_notes': len(self.pattern_sequence),
             'is_correct': is_correct,
+            'note_matches': note_matches,
             'accuracy_score': accuracy_score
         }
 
@@ -148,7 +338,14 @@ class ExerciseSequence:
                 result['final_score'] = self._calculate_final_score()
         else:
             self.incorrect_notes += 1
-            result['message'] = f'Expected {expected_note}, heard {detected_shruti_name}'
+            if note_matches:
+                # Right note but pitch accuracy too low
+                result['message'] = f'Good note ({expected_note}), but improve pitch accuracy'
+                result['feedback_type'] = 'pitch_accuracy'
+            else:
+                # Wrong note entirely
+                result['message'] = f'Expected {expected_note}, heard {detected_shruti_name}'
+                result['feedback_type'] = 'wrong_note'
             result['completed'] = False
 
         result['progress'] = {
@@ -400,6 +597,7 @@ def register_audio_events(socketio):
                 emit('target_shruti_set', {
                     'shruti_index': shruti_index,
                     'shruti_name': target_shruti.name,
+                    'western_note': target_shruti.get_western_note_name(tracker.base_sa),
                     'western_equiv': target_shruti.western_equiv,
                     'target_frequency': round(target_freq, 2),
                     'cent_value': target_shruti.cent_value,
@@ -475,7 +673,7 @@ def register_audio_events(socketio):
         exercise = ExerciseSequence(full_sequence)
         session.current_context['exercise_sequence'] = exercise
 
-        logger.info(f"Practice session started: {pattern_name} with {len(full_sequence)} notes")
+        logger.info(f"Practice session started: {pattern_name} with {len(full_sequence)} notes (session_id={session_id})")
 
         emit('practice_session_started', {
             'pattern_name': pattern_name,
@@ -484,6 +682,228 @@ def register_audio_events(socketio):
             'first_note': exercise.get_expected_note(),
             'base_sa': tracker.base_sa if tracker else 261.63,
             'message': f'Play the first note: {exercise.get_expected_note()}'
+        })
+
+    # =========================================================================
+    # SESSION MODE: Practice multiple exercises in sequence
+    # =========================================================================
+
+    @socketio.on('start_session_mode')
+    def handle_start_session_mode(data):
+        """
+        Start a multi-exercise practice session.
+        The student will practice all exercises in sequence with the option to
+        retry or advance after each exercise completion.
+
+        Args:
+            exercises: List of exercise dicts, each with:
+                - name: Exercise name (e.g., 'Sarali Varisai 1')
+                - arohanam: Ascending note sequence
+                - avarohanam: Descending note sequence
+        """
+        session_id = request.sid
+        exercises = data.get('exercises', [])
+
+        if not exercises:
+            emit('error', {
+                'type': 'invalid_session',
+                'message': 'Session must have at least one exercise'
+            })
+            return
+
+        session = session_manager.get_session(session_id)
+        if not session:
+            emit('error', {'type': 'no_session', 'message': 'Session expired or not found'})
+            return
+
+        # Create and store the practice session
+        practice_session = PracticeSession(exercises)
+        session.current_context['practice_session'] = practice_session
+
+        # Also set up the exercise sequence for validation
+        if practice_session.current_sequence:
+            session.current_context['exercise_sequence'] = practice_session.current_sequence
+
+        tracker = session.current_context.get('tracker')
+        if tracker:
+            tracker.reset()
+            tracker.exercise_type = f"Session: {practice_session.get_current_exercise_name()}"
+
+        current_exercise = practice_session.get_current_exercise()
+        first_note = practice_session.current_sequence.get_expected_note() if practice_session.current_sequence else None
+
+        logger.info(f"Session mode started with {len(exercises)} exercises")
+
+        emit('session_mode_started', {
+            'total_exercises': len(exercises),
+            'current_exercise_index': 0,
+            'current_exercise_name': practice_session.get_current_exercise_name(),
+            'current_exercise': current_exercise,
+            'first_note': first_note,
+            'base_sa': tracker.base_sa if tracker else 261.63,
+            'message': f'Session started! Play the first note: {first_note}'
+        })
+
+    @socketio.on('session_retry_exercise')
+    def handle_session_retry():
+        """
+        Retry the current exercise in session mode.
+        Resets the exercise progress but keeps the session stats intact.
+        """
+        session_id = request.sid
+        session = session_manager.get_session(session_id)
+
+        if not session:
+            emit('error', {'type': 'no_session', 'message': 'Session expired or not found'})
+            return
+
+        practice_session = session.current_context.get('practice_session')
+        if not practice_session:
+            emit('error', {'type': 'no_session', 'message': 'No active practice session'})
+            return
+
+        # Retry the exercise
+        practice_session.retry_current_exercise()
+
+        # Update the exercise sequence reference
+        session.current_context['exercise_sequence'] = practice_session.current_sequence
+
+        first_note = practice_session.current_sequence.get_expected_note() if practice_session.current_sequence else None
+
+        logger.info(f"Retrying exercise: {practice_session.get_current_exercise_name()}")
+
+        emit('session_exercise_retried', {
+            'current_exercise_index': practice_session.current_exercise_index,
+            'current_exercise_name': practice_session.get_current_exercise_name(),
+            'first_note': first_note,
+            'session_progress': practice_session.get_session_progress(),
+            'message': f'Retrying {practice_session.get_current_exercise_name()}. Play: {first_note}'
+        })
+
+    @socketio.on('session_next_exercise')
+    def handle_session_next():
+        """
+        Advance to the next exercise in session mode.
+        Records the current exercise result and moves to the next one.
+        If all exercises are done, ends the session and returns summary.
+        """
+        session_id = request.sid
+        session = session_manager.get_session(session_id)
+
+        if not session:
+            emit('error', {'type': 'no_session', 'message': 'Session expired or not found'})
+            return
+
+        practice_session = session.current_context.get('practice_session')
+        if not practice_session:
+            emit('error', {'type': 'no_session', 'message': 'No active practice session'})
+            return
+
+        # Record the current exercise result if completed
+        exercise_result = None
+        if practice_session.is_current_exercise_completed():
+            exercise_result = practice_session.record_exercise_result()
+
+        # Try to advance to next exercise
+        has_next = practice_session.advance_to_next_exercise()
+
+        if has_next:
+            # Update the exercise sequence reference
+            session.current_context['exercise_sequence'] = practice_session.current_sequence
+
+            # Reset tracker for new exercise
+            tracker = session.current_context.get('tracker')
+            if tracker:
+                tracker.reset()
+                tracker.exercise_type = f"Session: {practice_session.get_current_exercise_name()}"
+
+            current_exercise = practice_session.get_current_exercise()
+            first_note = practice_session.current_sequence.get_expected_note() if practice_session.current_sequence else None
+
+            logger.info(f"Advanced to exercise: {practice_session.get_current_exercise_name()}")
+
+            emit('session_exercise_advanced', {
+                'current_exercise_index': practice_session.current_exercise_index,
+                'current_exercise_name': practice_session.get_current_exercise_name(),
+                'current_exercise': current_exercise,
+                'first_note': first_note,
+                'session_progress': practice_session.get_session_progress(),
+                'previous_result': {
+                    'name': exercise_result.exercise_name,
+                    'accuracy': exercise_result.accuracy_percentage,
+                    'grade': exercise_result.grade
+                } if exercise_result else None,
+                'message': f'Starting {practice_session.get_current_exercise_name()}. Play: {first_note}'
+            })
+        else:
+            # Session complete!
+            summary = practice_session.get_session_summary()
+            logger.info(f"Session completed! Accuracy: {summary['session_accuracy']}%")
+
+            # Clear the session data
+            session.current_context.pop('practice_session', None)
+            session.current_context.pop('exercise_sequence', None)
+
+            emit('session_completed', {
+                'summary': summary,
+                'message': f"🎉 Session completed! Overall accuracy: {summary['session_accuracy']}%"
+            })
+
+    @socketio.on('session_end')
+    def handle_session_end():
+        """
+        End the current practice session early.
+        Returns the session summary with all completed exercises.
+        """
+        session_id = request.sid
+        session = session_manager.get_session(session_id)
+
+        if not session:
+            emit('error', {'type': 'no_session', 'message': 'Session expired or not found'})
+            return
+
+        practice_session = session.current_context.get('practice_session')
+        if not practice_session:
+            emit('error', {'type': 'no_session', 'message': 'No active practice session'})
+            return
+
+        # Record current exercise if it was completed
+        if practice_session.is_current_exercise_completed():
+            practice_session.record_exercise_result()
+
+        # Get summary
+        summary = practice_session.get_session_summary()
+        logger.info(f"Session ended early. Completed {summary['exercises_completed']} exercises.")
+
+        # Clear the session data
+        session.current_context.pop('practice_session', None)
+        session.current_context.pop('exercise_sequence', None)
+
+        emit('session_ended', {
+            'summary': summary,
+            'message': f"Session ended. Completed {summary['exercises_completed']} of {summary['total_exercises']} exercises."
+        })
+
+    @socketio.on('session_get_progress')
+    def handle_session_get_progress():
+        """Get current session progress."""
+        session_id = request.sid
+        session = session_manager.get_session(session_id)
+
+        if not session:
+            emit('error', {'type': 'no_session', 'message': 'Session expired or not found'})
+            return
+
+        practice_session = session.current_context.get('practice_session')
+        if not practice_session:
+            emit('session_progress', {'active': False})
+            return
+
+        emit('session_progress', {
+            'active': True,
+            'progress': practice_session.get_session_progress(),
+            'current_exercise_progress': practice_session.current_sequence.current_position if practice_session.current_sequence else 0,
+            'current_exercise_total': len(practice_session.current_sequence.pattern_sequence) if practice_session.current_sequence else 0
         })
 
     @socketio.on('detection_result')
@@ -540,6 +960,7 @@ def register_audio_events(socketio):
             # Target analysis
             'target_shruti_index': target_shruti_index,
             'target_shruti_name': target_shruti.name,
+            'western_note': target_shruti.get_western_note_name(base_sa),
             'target_frequency': round(analysis['target_frequency'], 2),
             'deviation_cents': round(analysis['deviation_cents'], 2),
             'accuracy_score': round(analysis['accuracy_score'], 4),
@@ -609,14 +1030,26 @@ def register_audio_events(socketio):
 
                 # Check if there's an active exercise sequence to validate against
                 exercise = session.current_context.get('exercise_sequence')
+                logger.info(f"Exercise check (sid={session_id}): exercise={exercise is not None}, "
+                           f"completed={exercise.completed if exercise else 'N/A'}, "
+                           f"context_keys={list(session.current_context.keys())}")
+
                 if exercise and not exercise.completed:
                     # Validate the detected note against expected sequence
                     # Convert confidence to accuracy score (0-1)
                     accuracy_score = min(1.0, confidence) if abs(cent_deviation) < 50 else 0.5
 
+                    expected_note = exercise.get_expected_note()
+                    logger.info(f"Validating: detected={detected_shruti}, expected={expected_note}, "
+                               f"accuracy={accuracy_score:.2f}, deviation={cent_deviation:.1f}¢")
+
                     validation = exercise.validate_note(detected_shruti, accuracy_score)
                     response['validation'] = validation
                     response['expected_note'] = exercise.get_expected_note()
+
+                    logger.info(f"Validation result: is_correct={validation.get('is_correct')}, "
+                               f"note_matches={validation.get('note_matches')}, "
+                               f"position={validation.get('position')}/{validation.get('total_notes')}")
 
                     # If note was correct, tell frontend what's next
                     if validation.get('is_correct'):
@@ -630,6 +1063,19 @@ def register_audio_events(socketio):
 
                     # Emit exercise-specific feedback
                     emit('practice_feedback', response)
+
+                    # Check if exercise just completed during session mode
+                    if validation.get('completed'):
+                        practice_session = session.current_context.get('practice_session')
+                        if practice_session:
+                            # Mark that the current exercise in session is completed
+                            practice_session.current_sequence = exercise  # Sync the sequence
+                            exercise_name = practice_session.get_current_exercise_name()
+                            logger.info(f"Exercise completed in session: {exercise_name}")
+                            emit('exercise_completed_in_session', {
+                                'exercise_name': exercise_name,
+                                'final_score': validation.get('final_score', {}),
+                            })
                 else:
                     # Free practice mode - just emit detection
                     emit('shruti_detected', response)
@@ -709,6 +1155,7 @@ def register_audio_events(socketio):
             shruti_list.append({
                 'index': idx,
                 'name': shruti.name,
+                'western_note': shruti.get_western_note_name(base_sa),
                 'western_equiv': shruti.western_equiv,
                 'cent_value': shruti.cent_value,
                 'frequency': round(shruti.calculate_frequency(base_sa), 2),

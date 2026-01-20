@@ -1,0 +1,95 @@
+{
+  "exercise_type": "sarali",
+  "name": "Sarali Swaras",
+  "description": "Traditional Sarali Varisai exercises for foundational swara practice",
+  "raga": "mayamalavagowla",
+  "talam": "adi",
+  "angah": "1 laghu (4 kala) + 1 dhrtam (2 kala) + 1 dhrtam (2 kala)",
+  "default_tempo_range": [60, 120],
+  "swara_mapping": {
+    "Sa": "Shadja",
+    "Ri": "Ri1",
+    "Ga": "Ga3",
+    "Ma": "Ma1",
+    "Pa": "Panchama",
+    "Da": "Da1",
+    "Ni": "Ni3"
+  },
+  "levels": [
+    {
+      "name": "Sarali Varisai 1",
+      "difficulty": 0.1,
+      "tempo_range": [60, 100],
+      "learning_objectives": [
+        "Establish basic swara relationships",
+        "Develop pitch accuracy for full octave",
+        "Learn fundamental ascending/descending movement"
+      ],
+      "practice_tips": [
+        "Start very slowly with tanpura drone",
+        "Focus on clean pitch transitions",
+        "Sustain each swara clearly"
+      ]
+    },
+    {
+      "name": "Sarali Varisai 2",
+      "difficulty": 0.15,
+      "tempo_range": [60, 100],
+      "learning_objectives": [
+        "Practice return patterns",
+        "Develop phrase control",
+        "Strengthen breath management"
+      ],
+      "practice_tips": [
+        "Mark the turning point clearly",
+        "Maintain consistent volume",
+        "Practice with hand gestures"
+      ]
+    },
+    {
+      "name": "Sarali Varisai 3",
+      "difficulty": 0.2,
+      "tempo_range": [65, 110],
+      "learning_objectives": [
+        "Master skip patterns",
+        "Develop interval accuracy",
+        "Build melodic memory"
+      ],
+      "practice_tips": [
+        "Practice each skip separately",
+        "Use drone for pitch reference",
+        "Focus on smooth transitions"
+      ]
+    },
+    {
+      "name": "Sarali Varisai 4",
+      "difficulty": 0.25,
+      "tempo_range": [65, 110],
+      "learning_objectives": [
+        "Practice complex return patterns",
+        "Develop longer phrase control",
+        "Improve breath planning"
+      ],
+      "practice_tips": [
+        "Break into smaller segments first",
+        "Practice breathing at natural phrase points",
+        "Gradually increase tempo"
+      ]
+    },
+    {
+      "name": "Sarali Varisai 5",
+      "difficulty": 0.3,
+      "tempo_range": [70, 120],
+      "learning_objectives": [
+        "Master extended patterns",
+        "Develop stamina for longer phrases",
+        "Achieve consistent quality throughout"
+      ],
+      "practice_tips": [
+        "Build stamina gradually",
+        "Focus on evenness across all swaras",
+        "Practice with metronome"
+      ]
+    }
+  ]
+}

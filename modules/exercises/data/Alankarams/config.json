@@ -1,0 +1,106 @@
+{
+  "exercise_type": "alankaram",
+  "name": "Alankarams",
+  "description": "Traditional Alankaram exercises for melodic ornamentation and pattern mastery",
+  "raga": "mayamalavagowla",
+  "talam": "adi",
+  "angah": "1 laghu (4 kala) + 1 dhrtam (2 kala) + 1 dhrtam (2 kala)",
+  "default_tempo_range": [55, 110],
+  "swara_mapping": {
+    "Sa": "Shadja",
+    "Ri": "Ri1",
+    "Ga": "Ga3",
+    "Ma": "Ma1",
+    "Pa": "Panchama",
+    "Da": "Da1",
+    "Ni": "Ni3"
+  },
+  "gamaka_notation": {
+    "~": "kampana",
+    "^": "spurita",
+    "_": "andolana",
+    "comment": "Reserved for future use - currently patterns use simple swaras only"
+  },
+  "levels": [
+    {
+      "name": "Alankaram 1",
+      "difficulty": 0.2,
+      "tempo_range": [55, 100],
+      "pattern_type": "simple",
+      "learning_objectives": [
+        "Master basic melodic patterns",
+        "Develop pattern recognition",
+        "Build foundational phrase control"
+      ],
+      "practice_tips": [
+        "Practice each phrase slowly",
+        "Focus on clean transitions",
+        "Use drone for pitch reference"
+      ]
+    },
+    {
+      "name": "Alankaram 2",
+      "difficulty": 0.25,
+      "tempo_range": [55, 105],
+      "pattern_type": "simple",
+      "learning_objectives": [
+        "Practice ascending skip patterns",
+        "Develop interval accuracy",
+        "Strengthen melodic memory"
+      ],
+      "practice_tips": [
+        "Practice each skip interval separately",
+        "Maintain steady tempo",
+        "Focus on pitch precision"
+      ]
+    },
+    {
+      "name": "Alankaram 3",
+      "difficulty": 0.3,
+      "tempo_range": [60, 110],
+      "pattern_type": "simple",
+      "learning_objectives": [
+        "Master three-note groupings",
+        "Develop phrase connectivity",
+        "Improve rhythmic accuracy"
+      ],
+      "practice_tips": [
+        "Practice groupings in isolation",
+        "Focus on smooth connections",
+        "Gradually increase tempo"
+      ]
+    },
+    {
+      "name": "Alankaram 4",
+      "difficulty": 0.35,
+      "tempo_range": [60, 110],
+      "pattern_type": "complex",
+      "learning_objectives": [
+        "Practice four-note groupings",
+        "Develop advanced phrase control",
+        "Master return patterns"
+      ],
+      "practice_tips": [
+        "Break into smaller segments",
+        "Practice return movements separately",
+        "Build stamina gradually"
+      ]
+    },
+    {
+      "name": "Alankaram 5",
+      "difficulty": 0.4,
+      "tempo_range": [65, 115],
+      "pattern_type": "complex",
+      "learning_objectives": [
+        "Master complex melodic sequences",
+        "Develop artistic expression",
+        "Achieve professional-level control"
+      ],
+      "practice_tips": [
+        "Focus on musical expression",
+        "Practice with emotional intent",
+        "Develop personal interpretation"
+      ]
+    }
+  ]
+}

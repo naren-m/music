@@ -7,6 +7,7 @@ The 22-shruti system forms the microtonal foundation of Carnatic music, as docum
 ## Historical Context
 
 From Sangita Ratnakara, Chapter 1 (Svaragatadhyaya):
+
 - **22 Shrutis**: Smallest detectable pitch intervals
 - **19 Svaras Total**: 12 vikrit (altered) + 7 shuddha (pure)
 - **Mathematical Precision**: Each shruti has specific cent values from Sa (tonic)
@@ -15,39 +16,43 @@ From Sangita Ratnakara, Chapter 1 (Svaragatadhyaya):
 
 ### Complete 22-Shruti System
 
-| Shruti Name | English | Western | Cents from Sa | Frequency Ratio |
-|-------------|---------|---------|---------------|-----------------|
-| Shadja | Shadja | Sa (C) | 0 | 1.000 |
-| Suddha Ri | Suddha Ri | R₁ | 90 | 1.053 |
-| Chatussruti Ri | Chatussruti Ri | R₂ | 204 | 1.122 |
-| Shatsruti Ri | Shatsruti Ri | R₃ | 294 | 1.189 |
-| Suddha Ga | Suddha Ga | G₁ | 316 | 1.200 |
-| Sadharana Ga | Sadharana Ga | G₂ | 386 | 1.260 |
-| Antara Ga | Antara Ga | G₃ | 408 | 1.280 |
-| Suddha Ma | Suddha Ma | M₁ | 498 | 1.335 |
-| Prati Ma | Prati Ma | M₂ | 612 | 1.414 |
-| Panchama | Panchama | Pa (G) | 702 | 1.498 |
-| Suddha Dha | Suddha Dha | D₁ | 792 | 1.587 |
-| Chatussruti Dha | Chatussruti Dha | D₂ | 906 | 1.681 |
-| Shatsruti Dha | Shatsruti Dha | D₃ | 996 | 1.782 |
-| Suddha Ni | Suddha Ni | N₁ | 1018 | 1.800 |
-| Kaisika Ni | Kaisika Ni | N₂ | 1088 | 1.888 |
-| Kakali Ni | Kakali Ni | N₃ | 1110 | 1.920 |
+| Shruti Name     | English         | Western | Cents from Sa | Frequency Ratio |
+| --------------- | --------------- | ------- | ------------- | --------------- |
+| Shadja          | Shadja          | Sa (C)  | 0             | 1.000           |
+| Suddha Ri       | Suddha Ri       | R₁      | 90            | 1.053           |
+| Chatussruti Ri  | Chatussruti Ri  | R₂      | 204           | 1.122           |
+| Shatsruti Ri    | Shatsruti Ri    | R₃      | 294           | 1.189           |
+| Suddha Ga       | Suddha Ga       | G₁      | 316           | 1.200           |
+| Sadharana Ga    | Sadharana Ga    | G₂      | 386           | 1.260           |
+| Antara Ga       | Antara Ga       | G₃      | 408           | 1.280           |
+| Suddha Ma       | Suddha Ma       | M₁      | 498           | 1.335           |
+| Prati Ma        | Prati Ma        | M₂      | 612           | 1.414           |
+| Panchama        | Panchama        | Pa (G)  | 702           | 1.498           |
+| Suddha Dha      | Suddha Dha      | D₁      | 792           | 1.587           |
+| Chatussruti Dha | Chatussruti Dha | D₂      | 906           | 1.681           |
+| Shatsruti Dha   | Shatsruti Dha   | D₃      | 996           | 1.782           |
+| Suddha Ni       | Suddha Ni       | N₁      | 1018          | 1.800           |
+| Kaisika Ni      | Kaisika Ni      | N₂      | 1088          | 1.888           |
+| Kakali Ni       | Kakali Ni       | N₃      | 1110          | 1.920           |
 
 ## Implementation Notes
 
 ### Frequency Calculation
+
 ```javascript
 frequency = baseFrequency * Math.pow(2, cents / 1200)
 ```
 
 ### Detection Tolerance
+
 - **Optimal Range**: ±30 cents for precise detection
 - **Forgiving Range**: ±60 cents for learning/practice mode
 - **Confidence Calculation**: `1 - (deviation / tolerance)`
 
 ### Raga Context
+
 Different ragas use specific subsets of the 22 shrutis:
+
 - **Sankarabharanam**: Uses 7 primary shrutis (major scale equivalent)
 - **Kharaharapriya**: Natural minor scale shrutis
 - **Mayamalavagowla**: Mixed shruti patterns
@@ -55,6 +60,7 @@ Different ragas use specific subsets of the 22 shrutis:
 ## Technical Implementation
 
 ### JavaScript Detection Logic
+
 ```javascript
 const shrutiCents = [
     {name: 'Shadja', cents: 0, western: 'Sa'},

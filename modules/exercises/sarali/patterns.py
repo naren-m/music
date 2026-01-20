@@ -3,6 +3,8 @@ Sarali Varisai Exercise Patterns
 
 Comprehensive implementation of traditional Carnatic music exercises
 with progressive difficulty levels and adaptive learning paths.
+
+Supports loading patterns from text files for easy content updates.
 """
 
 from typing import List, Dict, Tuple, Optional, Any
@@ -11,6 +13,18 @@ from enum import Enum
 import numpy as np
 import json
 from datetime import datetime
+import logging
+
+# Import the exercise loader
+from modules.exercises.loader import (
+    load_exercises_from_folder,
+    get_level_config,
+    extract_octave_shift,
+    ParsedExercise,
+    ExerciseConfig
+)
+
+logger = logging.getLogger(__name__)
 
 class SwaraType(Enum):
     SHUDDHA = "shuddha"  # Natural
@@ -53,9 +67,20 @@ class SaraliPatternGenerator:
     """
     Generates traditional Sarali Varisai patterns with proper
     Carnatic music theory implementation.
+
+    Supports loading patterns from text files (preferred) or
+    falling back to hardcoded patterns for backward compatibility.
     """
 
-    def __init__(self):
+    def __init__(self, raga: str = "mayamalavagowla"):
+        """
+        Initialize the Sarali pattern generator.
+
+        Args:
+            raga: The raga to load patterns for (default: mayamalavagowla)
+        """
+        self.raga = raga
+
         # Core swaras in proper order
         self.base_swaras = ['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni']
 
@@ -68,11 +93,151 @@ class SaraliPatternGenerator:
             'Ni': ['Ni1', 'Ni2', 'Ni3']   # Shuddha, Kaisika, Kaakali
         }
 
-        # Initialize standard patterns
+        # Store config if loaded from files
+        self.config: Optional[ExerciseConfig] = None
+
+        # Initialize patterns - try file-based first, fallback to hardcoded
         self.sarali_patterns = self._generate_all_patterns()
 
     def _generate_all_patterns(self) -> List[SaraliVarisai]:
-        """Generate all 12 levels of Sarali Varisai"""
+        """
+        Generate all Sarali Varisai patterns.
+
+        First attempts to load from text files. If files don't exist or
+        loading fails, falls back to hardcoded patterns.
+        """
+        # Try loading from files first
+        file_patterns = self._load_from_files()
+        if file_patterns:
+            logger.info(f"Loaded {len(file_patterns)} Sarali patterns from text files")
+            return file_patterns
+
+        # Fall back to hardcoded patterns
+        logger.info("Loading hardcoded Sarali patterns (text files not found)")
+        return self._generate_hardcoded_patterns()
+
+    def _load_from_files(self) -> List[SaraliVarisai]:
+        """
+        Load Sarali patterns from text files.
+
+        Returns:
+            List of SaraliVarisai patterns, or empty list if loading fails
+        """
+        try:
+            exercises, config = load_exercises_from_folder(
+                "SaraliSwaras",
+                f"{self.raga}.txt"
+            )
+
+            if not exercises:
+                return []
+
+            self.config = config
+            patterns = []
+
+            for exercise in exercises:
+                pattern = self._convert_to_sarali_varisai(exercise, config)
+                if pattern:
+                    patterns.append(pattern)
+
+            return patterns
+
+        except Exception as e:
+            logger.warning(f"Failed to load Sarali patterns from files: {e}")
+            return []
+
+    def _convert_to_sarali_varisai(
+        self,
+        exercise: ParsedExercise,
+        config: Optional[ExerciseConfig]
+    ) -> Optional[SaraliVarisai]:
+        """
+        Convert a ParsedExercise to a SaraliVarisai dataclass.
+
+        Args:
+            exercise: Parsed exercise from text file
+            config: Configuration from config.json
+
+        Returns:
+            SaraliVarisai object or None if conversion fails
+        """
+        try:
+            # Get level-specific config
+            level_config = get_level_config(config, exercise.level) if config else {}
+
+            # Process arohanam swaras
+            arohanam_swaras = []
+            arohanam_octaves = []
+            for swara in exercise.arohanam:
+                base_swara, octave = extract_octave_shift(swara)
+                arohanam_swaras.append(base_swara)
+                arohanam_octaves.append(octave)
+
+            # Process avarohanam swaras
+            avarohanam_swaras = []
+            avarohanam_octaves = []
+            for swara in exercise.avarohanam:
+                base_swara, octave = extract_octave_shift(swara)
+                avarohanam_swaras.append(base_swara)
+                avarohanam_octaves.append(octave)
+
+            # Create SwaraPattern objects
+            arohanam = SwaraPattern(
+                name=f"Arohanam Level {exercise.level}",
+                swara_sequence=arohanam_swaras,
+                octave_shifts=arohanam_octaves,
+                duration_ratios=[1.0] * len(arohanam_swaras),
+                emphasis_points=[0, len(arohanam_swaras) - 1],
+                description=f"Ascending pattern for {level_config.get('name', f'Level {exercise.level}')}"
+            )
+
+            avarohanam = SwaraPattern(
+                name=f"Avarohanam Level {exercise.level}",
+                swara_sequence=avarohanam_swaras,
+                octave_shifts=avarohanam_octaves,
+                duration_ratios=[1.0] * len(avarohanam_swaras),
+                emphasis_points=[0, len(avarohanam_swaras) - 1],
+                description=f"Descending pattern for {level_config.get('name', f'Level {exercise.level}')}"
+            )
+
+            # Get tempo range
+            tempo_range = level_config.get('tempo_range', [60, 120])
+            if isinstance(tempo_range, list):
+                tempo_range = tuple(tempo_range)
+
+            return SaraliVarisai(
+                level=exercise.level,
+                name=level_config.get('name', f"Sarali Varisai {exercise.level}"),
+                pattern_type="file_loaded",
+                arohanam=arohanam,
+                avarohanam=avarohanam,
+                tempo_range=tempo_range,
+                tala=TalaType.ADI,
+                difficulty_score=level_config.get('difficulty', 0.1 + (exercise.level - 1) * 0.08),
+                prerequisite_levels=list(range(1, exercise.level)),
+                learning_objectives=level_config.get('learning_objectives', [
+                    f"Master Sarali Varisai level {exercise.level}",
+                    "Develop pitch accuracy",
+                    "Build swara relationships"
+                ]),
+                common_mistakes=[
+                    "Rushing through the pattern",
+                    "Incorrect pitch intervals",
+                    "Poor breath management"
+                ],
+                practice_tips=level_config.get('practice_tips', [
+                    "Start slowly with tanpura",
+                    "Focus on clean transitions",
+                    "Use metronome for timing"
+                ])
+            )
+
+        except Exception as e:
+            logger.warning(f"Failed to convert exercise level {exercise.level}: {e}")
+            return None
+
+    def _generate_hardcoded_patterns(self) -> List[SaraliVarisai]:
+        """Generate hardcoded patterns as fallback."""
         patterns = []
 
         # Level 1: Basic ascending and descending

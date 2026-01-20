@@ -3,6 +3,8 @@ Janta Varisai Exercise Patterns
 
 Implementation of traditional Carnatic double-note exercise patterns
 with advanced transition analysis and smooth movement training.
+
+Supports loading patterns from text files for easy content updates.
 """
 
 from typing import List, Dict, Tuple, Optional, Any
@@ -11,6 +13,18 @@ from enum import Enum
 import numpy as np
 import json
 from datetime import datetime
+import logging
+
+# Import the exercise loader
+from modules.exercises.loader import (
+    load_exercises_from_folder,
+    get_level_config,
+    extract_octave_shift,
+    ParsedExercise,
+    ExerciseConfig
+)
+
+logger = logging.getLogger(__name__)
 
 class TransitionType(Enum):
     SMOOTH = "smooth"
@@ -63,9 +77,19 @@ class JantaPatternGenerator:
     """
     Generates and manages Janta Varisai (double-note) exercise patterns
     with advanced transition analysis and movement quality assessment.
+
+    Supports loading patterns from text files (preferred) or
+    falling back to hardcoded patterns for backward compatibility.
     """
 
-    def __init__(self):
+    def __init__(self, raga: str = "mayamalavagowla"):
+        """
+        Initialize the Janta pattern generator.
+
+        Args:
+            raga: The raga to load patterns for (default: mayamalavagowla)
+        """
+        self.raga = raga
         self.base_swaras = ['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni']
         self.swara_frequencies = {
             'Sa': 261.63,   # C4
@@ -77,10 +101,179 @@ class JantaPatternGenerator:
             'Ni': 493.88    # B4
         }
 
+        # Store config if loaded from files
+        self.config: Optional[ExerciseConfig] = None
+
         self.janta_exercises = self._generate_all_exercises()
 
     def _generate_all_exercises(self) -> List[JantaExercise]:
-        """Generate all Janta Varisai exercise levels"""
+        """
+        Generate all Janta Varisai exercises.
+
+        First attempts to load from text files. If files don't exist or
+        loading fails, falls back to hardcoded patterns.
+        """
+        # Try loading from files first
+        file_exercises = self._load_from_files()
+        if file_exercises:
+            logger.info(f"Loaded {len(file_exercises)} Janta exercises from text files")
+            return file_exercises
+
+        # Fall back to hardcoded patterns
+        logger.info("Loading hardcoded Janta exercises (text files not found)")
+        return self._generate_hardcoded_exercises()
+
+    def _load_from_files(self) -> List[JantaExercise]:
+        """
+        Load Janta exercises from text files.
+
+        Returns:
+            List of JantaExercise objects, or empty list if loading fails
+        """
+        try:
+            exercises, config = load_exercises_from_folder(
+                "JantaVarasalu",
+                f"{self.raga}.txt"
+            )
+
+            if not exercises:
+                return []
+
+            self.config = config
+            janta_exercises = []
+
+            for exercise in exercises:
+                janta_ex = self._convert_to_janta_exercise(exercise, config)
+                if janta_ex:
+                    janta_exercises.append(janta_ex)
+
+            return janta_exercises
+
+        except Exception as e:
+            logger.warning(f"Failed to load Janta exercises from files: {e}")
+            return []
+
+    def _convert_to_janta_exercise(
+        self,
+        exercise: ParsedExercise,
+        config: Optional[ExerciseConfig]
+    ) -> Optional[JantaExercise]:
+        """
+        Convert a ParsedExercise to a JantaExercise dataclass.
+
+        For Janta, the swara sequence contains repeated notes (Sa Sa Ri Ri).
+        We detect doubles and create DoubleNotePattern objects.
+
+        Args:
+            exercise: Parsed exercise from text file
+            config: Configuration from config.json
+
+        Returns:
+            JantaExercise object or None if conversion fails
+        """
+        try:
+            level_config = get_level_config(config, exercise.level) if config else {}
+
+            # Combine arohanam and avarohanam for double pattern detection
+            all_swaras = exercise.arohanam
+
+            # Detect double note patterns from sequence
+            double_patterns = self._detect_double_patterns(all_swaras)
+
+            # Get tempo range
+            tempo_range = level_config.get('tempo_range', [50, 100])
+            if isinstance(tempo_range, list):
+                tempo_range = tuple(tempo_range)
+
+            return JantaExercise(
+                level=exercise.level,
+                name=level_config.get('name', f"Janta Varisai {exercise.level}"),
+                pattern_type="file_loaded",
+                description=f"Janta exercise level {exercise.level}",
+                double_patterns=double_patterns,
+                tempo_range=tempo_range,
+                difficulty_score=level_config.get('difficulty', 0.15 + (exercise.level - 1) * 0.1),
+                breath_points=[len(double_patterns) // 2, len(double_patterns)],
+                learning_objectives=level_config.get('learning_objectives', [
+                    f"Master Janta Varisai level {exercise.level}",
+                    "Develop smooth double-note articulation",
+                    "Build transition control"
+                ]),
+                common_mistakes=[
+                    "Uneven repetitions",
+                    "Poor transition between doubles",
+                    "Inconsistent timing"
+                ],
+                practice_techniques=level_config.get('practice_tips', [
+                    "Focus on identical pitch for repeated notes",
+                    "Use metronome for consistency",
+                    "Practice transitions separately"
+                ]),
+                mastery_criteria={
+                    "pitch_consistency": 0.9,
+                    "timing_accuracy": 0.85,
+                    "smoothness_score": 0.8
+                }
+            )
+
+        except Exception as e:
+            logger.warning(f"Failed to convert Janta exercise level {exercise.level}: {e}")
+            return None
+
+    def _detect_double_patterns(self, swaras: List[str]) -> List[DoubleNotePattern]:
+        """
+        Detect double note patterns from a sequence of swaras.
+
+        E.g., [Sa, Sa, Ri, Ri, Ga, Ga] -> [DoubleNotePattern(Sa, 2), DoubleNotePattern(Ri, 2), ...]
+
+        Args:
+            swaras: List of swara names
+
+        Returns:
+            List of DoubleNotePattern objects
+        """
+        patterns = []
+        i = 0
+
+        while i < len(swaras):
+            current_swara, octave = extract_octave_shift(swaras[i])
+
+            # Count consecutive repetitions
+            count = 1
+            while i + count < len(swaras):
+                next_swara, next_octave = extract_octave_shift(swaras[i + count])
+                if next_swara == current_swara and next_octave == octave:
+                    count += 1
+                else:
+                    break
+
+            # Create pattern if we have repetitions (2 or more)
+            if count >= 2:
+                patterns.append(DoubleNotePattern(
+                    swara=current_swara if octave == 0 else f"{current_swara}2",
+                    repetitions=count,
+                    transition_type=TransitionType.SMOOTH,
+                    duration_ratio=1.0,
+                    gap_allowance=0.1,
+                    smoothness_threshold=0.8
+                ))
+            else:
+                # Single note, treat as single repetition
+                patterns.append(DoubleNotePattern(
+                    swara=current_swara if octave == 0 else f"{current_swara}2",
+                    repetitions=1,
+                    transition_type=TransitionType.SMOOTH,
+                    duration_ratio=1.0,
+                    gap_allowance=0.1,
+                    smoothness_threshold=0.8
+                ))
+
+            i += count
+
+        return patterns
+
+    def _generate_hardcoded_exercises(self) -> List[JantaExercise]:
+        """Generate hardcoded exercises as fallback."""
         exercises = []
 
         # Level 1: Basic double notes in ascending order

@@ -72,7 +72,7 @@ def load_config(app: Flask, config_name: str) -> None:
         'SECRET_KEY': os.environ.get('SECRET_KEY'),
         'DATABASE_URL': os.environ.get('DATABASE_URL', 'postgresql://localhost/carnatic_music'),
         'MAX_CONTENT_LENGTH': 2 * 1024 * 1024,
-        'ALLOWED_ORIGINS': os.environ.get('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:3002,http://localhost:5001,http://localhost:5002').split(','),
+        'ALLOWED_ORIGINS': os.environ.get('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:3005,http://localhost:3006,http://localhost:3007,http://localhost:3008,http://localhost:5001,http://localhost:5002').split(','),
     })
     if config_name == 'development':
         app.config['DEBUG'] = True

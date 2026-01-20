@@ -246,6 +246,7 @@ const SwaraWheel: React.FC<SwaraWheelProps> = ({
       {/* Confidence indicator */}
       {currentSwara && confidence > 0 && (
         <motion.div
+          key="confidence-indicator"
           className="absolute top-0 right-0 bg-white rounded-full p-2 shadow-lg border"
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
@@ -266,6 +267,7 @@ const SwaraWheel: React.FC<SwaraWheelProps> = ({
       {/* Cent deviation indicator */}
       {currentSwara && Math.abs(centDeviation) > 0 && (
         <motion.div
+          key="cent-deviation-indicator"
           className="absolute bottom-0 left-0 bg-white rounded-full p-2 shadow-lg border"
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
@@ -286,6 +288,7 @@ const SwaraWheel: React.FC<SwaraWheelProps> = ({
       {/* Practice mode indicator */}
       {targetSwara && targetSwara !== currentSwara && (
         <motion.div
+          key="target-swara-indicator"
           className="absolute top-0 left-0 bg-green-100 border border-green-300 rounded-full p-2 shadow-lg"
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}

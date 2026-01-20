@@ -1,0 +1,16 @@
+{
+  "short_name": "Carnatic Music",
+  "name": "Carnatic Music Learning Platform",
+  "description": "Traditional Carnatic music exercises with real-time pitch detection and feedback",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#FF6B35",
+  "background_color": "#FFF7ED"
+}

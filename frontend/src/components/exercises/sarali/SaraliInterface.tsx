@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/Button'
 import SwaraWheel from '@/components/carnatic/SwaraWheel'
 import { cn } from '@/utils/cn'
-import { Play, Pause, RotateCcw, Volume2, VolumeX, Settings, Mic } from 'lucide-react'
-import { useAudio, PracticeFeedback } from '../../../contexts/AudioContext'
+import { Play, Pause, RotateCcw, Volume2, VolumeX, Settings, Mic, AlertCircle, ListOrdered, ChevronRight, Trophy, RefreshCw, X } from 'lucide-react'
+import { useAudio, PracticeFeedback, SessionEventType, SessionExercise } from '../../../contexts/AudioContext'
 
 interface SaraliPattern {
   id: number
@@ -24,6 +24,47 @@ interface SaraliPattern {
   }
 }
 
+// Session Mode Types
+interface SessionProgress {
+  current_exercise_index: number
+  total_exercises: number
+  exercises_completed: number
+  current_exercise_name: string
+  is_current_completed: boolean
+  session_active: boolean
+}
+
+interface ExerciseResult {
+  index: number
+  name: string
+  total_notes: number
+  correct: number
+  incorrect: number
+  accuracy: number
+  grade: string
+}
+
+interface SessionSummary {
+  total_exercises: number
+  exercises_completed: number
+  total_notes_played: number
+  total_correct_notes: number
+  total_incorrect_notes: number
+  session_accuracy: number
+  session_grade: string
+  session_duration_seconds: number
+  exercise_results: ExerciseResult[]
+}
+
+interface SessionState {
+  isSessionMode: boolean
+  sessionProgress: SessionProgress | null
+  showCompletionModal: boolean
+  showSessionSummary: boolean
+  sessionSummary: SessionSummary | null
+  currentExerciseResult: ExerciseResult | null
+}
+
 interface SaraliInterfaceProps {
   currentPattern?: SaraliPattern
   onPatternSelect: (pattern: SaraliPattern) => void
@@ -34,9 +75,7 @@ interface SaraliInterfaceProps {
 interface PracticeState {
   isPlaying: boolean
   currentTempo: number
-  currentSequence: 'arohanam' | 'avarohanam' | 'both'
   swaraIndex: number
-  practiceMode: 'listen' | 'practice' | 'assessment'
   accuracy: number
   completedCycles: number
 }
@@ -53,18 +92,23 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
     startRecording,
     stopRecording,
     isConnected,
+    isRecording,
     startPracticeSession,
     stopPracticeSession,
     onPracticeFeedback,
     practiceProgress,
+    // Session Mode
+    startSessionMode,
+    sessionRetryExercise,
+    sessionNextExercise,
+    sessionEnd,
+    onSessionEvent,
   } = useAudio()
 
   const [practiceState, setPracticeState] = useState<PracticeState>({
     isPlaying: false,
     currentTempo: 60,
-    currentSequence: 'arohanam',
     swaraIndex: 0,
-    practiceMode: 'listen',
     accuracy: 0,
     completedCycles: 0
   })
@@ -77,33 +121,42 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
   const [isMuted, setIsMuted] = useState(false)
   const [feedbackMessage, setFeedbackMessage] = useState<string>('')
   const [serverFeedback, setServerFeedback] = useState<PracticeFeedback | null>(null)
+  const [microphoneError, setMicrophoneError] = useState<string | null>(null)
   const [sessionStats, setSessionStats] = useState({
     startTime: Date.now(),
     totalTime: 0,
     accuracyHistory: [] as number[],
     mistakesCount: 0
   })
-  const [listeningModeActive, setListeningModeActive] = useState(false)
 
-  const intervalRef = useRef<NodeJS.Timeout>()
+  // Session Mode State
+  const [sessionState, setSessionState] = useState<SessionState>({
+    isSessionMode: false,
+    sessionProgress: null,
+    showCompletionModal: false,
+    showSessionSummary: false,
+    sessionSummary: null,
+    currentExerciseResult: null
+  })
+
   const audioContextRef = useRef<AudioContext>()
+  const socketRef = useRef<any>(null)
 
   // Base frequencies for validation
   const swaraFrequencies: Record<string, number> = {
-    'Sa': 261.63,   // C4
-    'Ri': 293.66,   // D4
-    'Ga': 329.63,   // E4
-    'Ma': 349.23,   // F4
-    'Pa': 392.00,   // G4
-    'Da': 440.00,   // A4
-    'Ni': 493.88    // B4
+    'Sa': 261.63,
+    'Ri': 293.66,
+    'Ga': 329.63,
+    'Ma': 349.23,
+    'Pa': 392.00,
+    'Da': 440.00,
+    'Ni': 493.88
   }
 
   useEffect(() => {
     loadSaraliPatterns()
     initializeAudio()
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
       if (audioContextRef.current) audioContextRef.current.close()
       stopPitchDetection()
     }
@@ -127,7 +180,6 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
             ...prev,
             accuracyHistory: [...prev.accuracyHistory, 100]
           }))
-          // Update target to next note when current note is correct
           if (feedback.validation.next_note) {
             setTargetSwara(feedback.validation.next_note)
           }
@@ -138,13 +190,11 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
             accuracyHistory: [...prev.accuracyHistory, 0],
             mistakesCount: prev.mistakesCount + 1
           }))
-          // Keep target as the expected note when incorrect
           if (feedback.validation.expected_note) {
             setTargetSwara(feedback.validation.expected_note)
           }
         }
 
-        // Update progress from server
         if (feedback.validation.progress) {
           setPracticeState(prev => ({
             ...prev,
@@ -153,7 +203,6 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
           }))
         }
 
-        // Check if exercise completed
         if (feedback.validation.completed) {
           setFeedbackMessage('🎉 Exercise Completed!')
           setPracticeState(prev => ({
@@ -161,7 +210,6 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
             isPlaying: false,
             completedCycles: prev.completedCycles + 1
           }))
-          setListeningModeActive(false)
         }
       }
     })
@@ -169,71 +217,137 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
     return unsubscribe
   }, [onPracticeFeedback])
 
-  // Handle detection activation based on mode
-  // In practice/assessment mode, we use server-side detection via audio streaming
+  // Subscribe to session mode events
   useEffect(() => {
-    if (practiceState.practiceMode !== 'listen' && practiceState.isPlaying && listeningModeActive) {
-      // Start recording for server-side detection
-      startRecording().catch(console.error)
-    } else if (!practiceState.isPlaying || practiceState.practiceMode === 'listen') {
-      stopRecording()
-    }
-  }, [practiceState.practiceMode, practiceState.isPlaying, listeningModeActive])
+    const unsubscribe = onSessionEvent((event: SessionEventType) => {
+      console.log('Session event received:', event)
 
-  // Real-time Validation Logic
+      switch (event.type) {
+        case 'session_mode_started':
+          setSessionState(prev => ({
+            ...prev,
+            isSessionMode: true,
+            sessionProgress: {
+              current_exercise_index: 0,
+              total_exercises: event.data.total_exercises,
+              exercises_completed: 0,
+              current_exercise_name: event.data.current_exercise_name,
+              is_current_completed: false,
+              session_active: true,
+            },
+            showCompletionModal: false,
+            showSessionSummary: false,
+          }))
+          // Sync currentPattern with the session's current exercise
+          const startExercise = patterns.find(p => p.name === event.data.current_exercise_name)
+          if (startExercise) {
+            onPatternSelect(startExercise)
+          }
+          setTargetSwara(event.data.first_note)
+          setPracticeState(prev => ({ ...prev, swaraIndex: 0 }))
+          setFeedbackMessage(`🎤 Session started! Play ${event.data.first_note}`)
+          break
+
+        case 'exercise_completed':
+          // Single exercise completed - show completion modal
+          setSessionState(prev => ({
+            ...prev,
+            showCompletionModal: true,
+          }))
+          break
+
+        case 'session_exercise_advanced':
+          // Moved to next exercise
+          setSessionState(prev => ({
+            ...prev,
+            sessionProgress: prev.sessionProgress ? {
+              ...prev.sessionProgress,
+              current_exercise_index: event.data.current_exercise_index,
+              current_exercise_name: event.data.current_exercise_name,
+              exercises_completed: event.data.current_exercise_index,
+              is_current_completed: false,
+            } : null,
+            showCompletionModal: false,
+            currentExerciseResult: event.data.previous_result || null,
+          }))
+          // Sync currentPattern with the new exercise
+          const advancedExercise = patterns.find(p => p.name === event.data.current_exercise_name)
+          if (advancedExercise) {
+            onPatternSelect(advancedExercise)
+          }
+          setTargetSwara(event.data.first_note)
+          setFeedbackMessage(`🎤 Next: ${event.data.current_exercise_name}. Play ${event.data.first_note}`)
+          // Reset practice progress display
+          setPracticeState(prev => ({
+            ...prev,
+            swaraIndex: 0,
+            accuracy: 0,
+          }))
+          break
+
+        case 'session_exercise_retried':
+          // Exercise was retried
+          setSessionState(prev => ({
+            ...prev,
+            showCompletionModal: false,
+          }))
+          // Ensure currentPattern is synced on retry
+          const retriedExercise = patterns.find(p => p.name === event.data.current_exercise_name)
+          if (retriedExercise) {
+            onPatternSelect(retriedExercise)
+          }
+          setTargetSwara(event.data.first_note)
+          setFeedbackMessage(`🔄 Retry! Play ${event.data.first_note}`)
+          setPracticeState(prev => ({
+            ...prev,
+            swaraIndex: 0,
+            accuracy: 0,
+          }))
+          break
+
+        case 'session_completed':
+        case 'session_ended':
+          // Session is over - show summary
+          setSessionState(prev => ({
+            ...prev,
+            isSessionMode: false,
+            showCompletionModal: false,
+            showSessionSummary: true,
+            sessionSummary: event.data.summary,
+            sessionProgress: null,
+          }))
+          setPracticeState(prev => ({
+            ...prev,
+            isPlaying: false,
+          }))
+          setFeedbackMessage('🎉 Session Complete!')
+          break
+      }
+    })
+
+    return unsubscribe
+  }, [onSessionEvent, patterns, onPatternSelect])
+
+  // Real-time pitch feedback from client-side detection (backup)
   useEffect(() => {
-    if (!currentPitch || !targetSwara || practiceState.practiceMode === 'listen') {
-      setFeedbackMessage('')
+    if (!currentPitch || !targetSwara || !practiceState.isPlaying) {
       return
     }
 
     const targetFreq = swaraFrequencies[targetSwara]
     if (!targetFreq) return
 
-    // Calculate accuracy (simplified cent deviation check)
-    // 1200 * log2(f1/f2)
     const deviation = 1200 * Math.log2(currentPitch.detectedFrequency / targetFreq)
     const absDeviation = Math.abs(deviation)
 
     if (absDeviation < 20) {
       setFeedbackMessage('Perfect! 🌟')
-      // Update session stats (simplified)
-      setSessionStats(prev => ({
-        ...prev,
-        accuracyHistory: [...prev.accuracyHistory, 100]
-      }))
     } else if (absDeviation < 50) {
       setFeedbackMessage('Good')
-      setSessionStats(prev => ({
-        ...prev,
-        accuracyHistory: [...prev.accuracyHistory, 80]
-      }))
     } else {
       setFeedbackMessage(deviation > 0 ? 'Too High ▼' : 'Too Low ▲')
-      setSessionStats(prev => ({
-        ...prev,
-        accuracyHistory: [...prev.accuracyHistory, 40]
-      }))
     }
-
-    // Update running average accuracy
-    const history = sessionStats.accuracyHistory
-    if (history.length > 0) {
-      const avg = history.reduce((a, b) => a + b, 0) / history.length
-      setPracticeState(prev => ({ ...prev, accuracy: avg }))
-    }
-
-  }, [currentPitch, targetSwara])
-
-
-  useEffect(() => {
-    if (practiceState.isPlaying && currentPattern) {
-      startPracticeSequence()
-    } else {
-      stopPracticeSequence()
-    }
-    return () => stopPracticeSequence()
-  }, [practiceState.isPlaying, practiceState.currentTempo, currentPattern])
+  }, [currentPitch, targetSwara, practiceState.isPlaying])
 
   const loadSaraliPatterns = async () => {
     try {
@@ -241,13 +355,11 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
       const data = await response.json()
       setPatterns(data)
 
-      // If no pattern selected, select the first one
       if (!currentPattern && data.length > 0) {
         onPatternSelect(data[0])
       }
     } catch (error) {
       console.error('Failed to load Sarali patterns:', error)
-      // Load demo patterns
       setPatterns(generateDemoPatterns())
     }
   }
@@ -258,14 +370,14 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
         id: 1,
         name: "Sarali Varisai 1",
         level: 1,
-        arohanam: ['Sa', 'Ri', 'Ga', 'Ma'],
-        avarohanam: ['Ma', 'Ga', 'Ri', 'Sa'],
+        arohanam: ['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni'],
+        avarohanam: ['Ni', 'Da', 'Pa', 'Ma', 'Ga', 'Ri', 'Sa'],
         tempo_range: [40, 80],
         difficulty: 'beginner',
-        description: "Basic four-note ascending and descending pattern",
+        description: "Basic seven-note ascending and descending pattern",
         learning_objectives: [
           "Establish basic swara relationships",
-          "Develop pitch accuracy for Sa-Ri-Ga-Ma",
+          "Develop pitch accuracy for all seven swaras",
           "Learn fundamental ascending/descending movement"
         ],
         practice_tips: [
@@ -283,13 +395,13 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
         id: 2,
         name: "Sarali Varisai 2",
         level: 2,
-        arohanam: ['Sa', 'Ri', 'Ga', 'Ma', 'Ma', 'Ga', 'Ri', 'Sa'],
-        avarohanam: ['Sa', 'Ri', 'Ga', 'Ma', 'Ma', 'Ga', 'Ri', 'Sa'],
+        arohanam: ['Sa', 'Ri', 'Ga', 'Ma', 'Pa'],
+        avarohanam: ['Pa', 'Ma', 'Ga', 'Ri', 'Sa'],
         tempo_range: [45, 90],
         difficulty: 'beginner',
-        description: "Ascending and immediate return pattern",
+        description: "Five-note pattern for beginners",
         learning_objectives: [
-          "Master return movements",
+          "Master five-note movements",
           "Develop longer phrase control",
           "Improve breath management"
         ],
@@ -308,20 +420,20 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
         id: 3,
         name: "Sarali Varisai 3",
         level: 3,
-        arohanam: ['Sa', 'Ri', 'Ga', 'Ma', 'Pa'],
-        avarohanam: ['Pa', 'Ma', 'Ga', 'Ri', 'Sa'],
+        arohanam: ['Sa', 'Ri', 'Ga', 'Ma'],
+        avarohanam: ['Ma', 'Ga', 'Ri', 'Sa'],
         tempo_range: [50, 100],
-        difficulty: 'intermediate',
-        description: "Five-note pattern including Pa",
+        difficulty: 'beginner',
+        description: "Four-note basic pattern",
         learning_objectives: [
-          "Introduce Pa (fifth degree)",
-          "Extend vocal range",
+          "Focus on lower tetrachord",
+          "Build foundation",
           "Develop stronger breath support"
         ],
         practice_tips: [
-          "Practice Pa separately first",
+          "Practice Sa separately first",
           "Use hand gestures for pitch guidance",
-          "Focus on smooth Ma-Pa transition"
+          "Focus on smooth transitions"
         ],
         completion_requirements: {
           min_accuracy: 0.8,
@@ -340,65 +452,11 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
     }
   }
 
-  const startPracticeSequence = () => {
-    if (!currentPattern) return
-
-    // In practice/assessment mode, the server handles sequence tracking
-    // We only run the interval for listen mode to play sounds
-    if (practiceState.practiceMode !== 'listen') {
-      // Server-side practice session is already started in handlePlayPause
-      // Don't run client-side interval
-      return
-    }
-
-    const sequence = practiceState.currentSequence === 'arohanam'
-      ? currentPattern.arohanam
-      : practiceState.currentSequence === 'avarohanam'
-      ? currentPattern.avarohanam
-      : [...currentPattern.arohanam, ...currentPattern.avarohanam.slice(1).reverse()]
-
-    let index = 0
-    const beatDuration = (60 / practiceState.currentTempo) * 1000
-
-    intervalRef.current = setInterval(() => {
-      const swara = sequence[index]
-      setCurrentSwara(swara)
-      setTargetSwara(swara)
-
-      // Play audio tone for the swara (ONLY in listen mode)
-      if (!isMuted) {
-        playSwara(swara)
-      }
-
-      // Update practice state
-      setPracticeState(prev => ({
-        ...prev,
-        swaraIndex: index
-      }))
-
-      index = (index + 1) % sequence.length
-
-      if (index === 0) {
-        setPracticeState(prev => ({
-          ...prev,
-          completedCycles: prev.completedCycles + 1
-        }))
-      }
-    }, beatDuration)
-  }
-
-  const stopPracticeSequence = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = undefined
-    }
-  }
-
   const playSwara = (swara: string) => {
-    if (!audioContextRef.current) return
+    if (!audioContextRef.current || isMuted) return
 
     const frequency = swaraFrequencies[swara] || 261.63
-    const duration = (60 / practiceState.currentTempo) * 0.8 // 80% of beat duration
+    const duration = (60 / practiceState.currentTempo) * 0.8
 
     const oscillator = audioContextRef.current.createOscillator()
     const gainNode = audioContextRef.current.createGain()
@@ -417,51 +475,69 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
     oscillator.stop(audioContextRef.current.currentTime + duration)
   }
 
+  const handleStart = async () => {
+    if (!currentPattern) return
+
+    // Check WebSocket connection
+    if (!isConnected) {
+      setFeedbackMessage('Not connected to server. Please wait...')
+      return
+    }
+
+    // Clear any previous errors
+    setMicrophoneError(null)
+
+    try {
+      // Start recording first - this requests microphone permission
+      await startRecording()
+
+      // Build the full sequence (always use both arohanam and avarohanam)
+      const fullSequence = [...currentPattern.arohanam, ...currentPattern.avarohanam]
+
+      // Start the practice session on server
+      startPracticeSession({
+        pattern_name: currentPattern.name,
+        arohanam: currentPattern.arohanam,
+        avarohanam: currentPattern.avarohanam,
+        include_avarohanam: true,
+      })
+
+      // Set target to first note
+      if (fullSequence.length > 0) {
+        setTargetSwara(fullSequence[0])
+      }
+
+      setFeedbackMessage(`🎤 Listening... Play ${fullSequence[0]}`)
+
+      setPracticeState(prev => ({
+        ...prev,
+        isPlaying: true,
+        swaraIndex: 0
+      }))
+
+    } catch (error) {
+      console.error('Failed to start practice:', error)
+      setMicrophoneError('Microphone access denied. Please allow microphone access and refresh the page.')
+      setFeedbackMessage('Microphone access required')
+    }
+  }
+
+  const handleStop = () => {
+    stopPracticeSession()
+    stopRecording()
+
+    setPracticeState(prev => ({
+      ...prev,
+      isPlaying: false
+    }))
+    setFeedbackMessage('')
+  }
+
   const handlePlayPause = () => {
-    if (!practiceState.isPlaying) {
-      // Starting practice
-      if (practiceState.practiceMode !== 'listen' && currentPattern) {
-        // For practice/assessment mode, start server-side practice session
-        if (!isConnected) {
-          setFeedbackMessage('Not connected to server. Please wait...')
-          return
-        }
-
-        // Build the sequence based on selected mode
-        const arohanam = currentPattern.arohanam
-        const avarohanam = practiceState.currentSequence === 'arohanam'
-          ? []
-          : currentPattern.avarohanam
-
-        startPracticeSession({
-          pattern_name: currentPattern.name,
-          arohanam: practiceState.currentSequence === 'avarohanam' ? [] : arohanam,
-          avarohanam: practiceState.currentSequence === 'arohanam' ? [] : avarohanam,
-          include_avarohanam: practiceState.currentSequence !== 'arohanam',
-        })
-
-        // Set target to first note
-        if (arohanam.length > 0) {
-          setTargetSwara(arohanam[0])
-        }
-        setListeningModeActive(true)
-        setFeedbackMessage(`🎤 Listening... Play ${arohanam[0] || avarohanam[0]}`)
-      }
-
-      setPracticeState(prev => ({
-        ...prev,
-        isPlaying: true
-      }))
+    if (practiceState.isPlaying) {
+      handleStop()
     } else {
-      // Stopping practice
-      if (practiceState.practiceMode !== 'listen') {
-        stopPracticeSession()
-        setListeningModeActive(false)
-      }
-      setPracticeState(prev => ({
-        ...prev,
-        isPlaying: false
-      }))
+      handleStart()
     }
   }
 
@@ -472,34 +548,10 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
     }))
   }
 
-  const handleModeChange = (mode: 'listen' | 'practice' | 'assessment') => {
-    // Stop any active practice session when changing modes
-    if (practiceState.practiceMode !== 'listen' && practiceState.isPlaying) {
-      stopPracticeSession()
-      setListeningModeActive(false)
-    }
-    setPracticeState(prev => ({
-      ...prev,
-      practiceMode: mode,
-      isPlaying: false
-    }))
-    setFeedbackMessage('')
-    setServerFeedback(null)
-  }
-
-  const handleSequenceChange = (sequence: 'arohanam' | 'avarohanam' | 'both') => {
-    setPracticeState(prev => ({
-      ...prev,
-      currentSequence: sequence,
-      swaraIndex: 0,
-      isPlaying: false
-    }))
-  }
-
   const handleReset = () => {
+    handleStop()
     setPracticeState(prev => ({
       ...prev,
-      isPlaying: false,
       swaraIndex: 0,
       completedCycles: 0,
       accuracy: 0
@@ -507,12 +559,112 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
     setCurrentSwara('')
     setTargetSwara('')
     setFeedbackMessage('')
+    setMicrophoneError(null)
     setSessionStats({
       startTime: Date.now(),
       totalTime: 0,
       accuracyHistory: [],
       mistakesCount: 0
     })
+  }
+
+  // Session Mode Handlers
+  const handleStartSession = async () => {
+    if (!isConnected || patterns.length === 0) {
+      setFeedbackMessage('Not ready to start session')
+      return
+    }
+
+    setMicrophoneError(null)
+
+    try {
+      // Start recording first
+      await startRecording()
+
+      // Convert patterns to SessionExercise format
+      const exercises: SessionExercise[] = patterns.map(p => ({
+        name: p.name,
+        arohanam: p.arohanam,
+        avarohanam: p.avarohanam,
+      }))
+
+      // Set up initial pattern and target swara immediately (like single exercise mode)
+      // This ensures UI is ready before audio streaming starts
+      const firstPattern = patterns[0]
+      if (firstPattern) {
+        onPatternSelect(firstPattern)
+        const firstNote = firstPattern.arohanam[0]
+        setTargetSwara(firstNote)
+        setFeedbackMessage(`🎤 Listening... Play ${firstNote}`)
+      }
+
+      // Start session mode
+      startSessionMode(exercises)
+
+      setPracticeState(prev => ({
+        ...prev,
+        isPlaying: true,
+        swaraIndex: 0,
+      }))
+    } catch (error) {
+      console.error('Failed to start session:', error)
+      setMicrophoneError('Microphone access denied. Please allow microphone access.')
+    }
+  }
+
+  const handleSessionRetry = () => {
+    sessionRetryExercise()
+    setSessionState(prev => ({
+      ...prev,
+      showCompletionModal: false,
+    }))
+  }
+
+  const handleSessionNext = () => {
+    sessionNextExercise()
+    setSessionState(prev => ({
+      ...prev,
+      showCompletionModal: false,
+    }))
+  }
+
+  const handleEndSession = () => {
+    sessionEnd()
+    stopRecording()
+    setSessionState(prev => ({
+      ...prev,
+      isSessionMode: false,
+      showCompletionModal: false,
+      sessionProgress: null,
+    }))
+    setPracticeState(prev => ({
+      ...prev,
+      isPlaying: false,
+    }))
+  }
+
+  const handleCloseSessionSummary = () => {
+    setSessionState(prev => ({
+      ...prev,
+      showSessionSummary: false,
+      sessionSummary: null,
+    }))
+  }
+
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  const getGradeColor = (grade: string): string => {
+    switch (grade) {
+      case 'A+': case 'A': return 'text-green-600 bg-green-100'
+      case 'B+': case 'B': return 'text-blue-600 bg-blue-100'
+      case 'C+': case 'C': return 'text-yellow-600 bg-yellow-100'
+      case 'D': return 'text-orange-600 bg-orange-100'
+      default: return 'text-red-600 bg-red-100'
+    }
   }
 
   const getDifficultyColor = (difficulty: string) => {
@@ -544,6 +696,69 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
         <p className="text-gray-600">Traditional Carnatic Music Exercise Patterns</p>
       </div>
 
+      {/* Session Mode Progress Bar */}
+      {sessionState.isSessionMode && sessionState.sessionProgress && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200 p-4"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-2">
+              <ListOrdered className="h-5 w-5 text-purple-600" />
+              <span className="font-semibold text-purple-800">Session Mode</span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleEndSession}
+              className="text-red-600 border-red-200 hover:bg-red-50"
+            >
+              <X className="h-4 w-4 mr-1" />
+              End Session
+            </Button>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-purple-700 font-medium">
+                {sessionState.sessionProgress.current_exercise_name}
+              </span>
+              <span className="text-purple-600">
+                Exercise {sessionState.sessionProgress.current_exercise_index + 1} of {sessionState.sessionProgress.total_exercises}
+              </span>
+            </div>
+            <div className="w-full bg-purple-100 rounded-full h-2.5">
+              <div
+                className="bg-gradient-to-r from-purple-500 to-indigo-500 h-2.5 rounded-full transition-all duration-500"
+                style={{
+                  width: `${((sessionState.sessionProgress.current_exercise_index) / sessionState.sessionProgress.total_exercises) * 100}%`
+                }}
+              />
+            </div>
+            <div className="flex justify-between text-xs text-purple-600">
+              <span>{sessionState.sessionProgress.exercises_completed} completed</span>
+              <span>{sessionState.sessionProgress.total_exercises - sessionState.sessionProgress.exercises_completed} remaining</span>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Microphone Error Alert */}
+      {microphoneError && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start space-x-3"
+        >
+          <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-red-800 font-medium">Microphone Access Required</p>
+            <p className="text-red-600 text-sm mt-1">{microphoneError}</p>
+          </div>
+        </motion.div>
+      )}
+
       {/* Pattern Info */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -571,49 +786,23 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
 
         <p className="text-gray-700 mb-4">{currentPattern.description}</p>
 
-        {/* Pattern Display */}
-        <div className="grid md:grid-cols-2 gap-4 mb-4">
+        {/* Pattern Display - Simplified to show full sequence */}
+        <div className="space-y-4">
           <div className="space-y-2">
-            <h4 className="font-semibold text-gray-800">आरोहणम् (Arohanam)</h4>
+            <h4 className="font-semibold text-gray-800">Practice Sequence</h4>
             <div className="flex flex-wrap gap-2">
-              {currentPattern.arohanam.map((swara, index) => (
+              {[...currentPattern.arohanam, ...currentPattern.avarohanam].map((swara, index) => (
                 <motion.span
-                  key={`arohanam-${index}`}
+                  key={`swara-${index}`}
                   className={cn(
                     "px-3 py-1 rounded-full border text-sm font-medium transition-all",
-                    practiceState.currentSequence !== 'avarohanam' &&
                     practiceState.swaraIndex === index && practiceState.isPlaying
                       ? "bg-orange-100 border-orange-400 text-orange-800 scale-110"
+                      : targetSwara === swara
+                      ? "bg-green-50 border-green-300 text-green-700"
                       : "bg-gray-50 border-gray-200 text-gray-700"
                   )}
                   animate={
-                    practiceState.currentSequence !== 'avarohanam' &&
-                    practiceState.swaraIndex === index && practiceState.isPlaying
-                      ? { scale: [1, 1.1, 1], transition: { duration: 0.3 } }
-                      : {}
-                  }
-                >
-                  {swara}
-                </motion.span>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <h4 className="font-semibold text-gray-800">अवरोहणम् (Avarohanam)</h4>
-            <div className="flex flex-wrap gap-2">
-              {currentPattern.avarohanam.map((swara, index) => (
-                <motion.span
-                  key={`avarohanam-${index}`}
-                  className={cn(
-                    "px-3 py-1 rounded-full border text-sm font-medium transition-all",
-                    practiceState.currentSequence === 'avarohanam' &&
-                    practiceState.swaraIndex === index && practiceState.isPlaying
-                      ? "bg-blue-100 border-blue-400 text-blue-800 scale-110"
-                      : "bg-gray-50 border-gray-200 text-gray-700"
-                  )}
-                  animate={
-                    practiceState.currentSequence === 'avarohanam' &&
                     practiceState.swaraIndex === index && practiceState.isPlaying
                       ? { scale: [1, 1.1, 1], transition: { duration: 0.3 } }
                       : {}
@@ -636,7 +825,19 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
           centDeviation={currentPitch?.centDeviation || 0}
           className="w-80 h-80"
         />
-        
+
+        {/* Connection Status */}
+        {!isConnected && (
+          <motion.div
+            key="connection-warning"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="px-4 py-2 rounded-full bg-red-100 text-red-700 font-medium"
+          >
+            Not connected to server. Please wait...
+          </motion.div>
+        )}
+
         {/* Feedback Message */}
         <AnimatePresence>
           {feedbackMessage && (
@@ -647,9 +848,15 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
               exit={{ opacity: 0 }}
               className={cn(
                 "px-4 py-2 rounded-full font-bold text-lg",
-                feedbackMessage.includes('Perfect') ? "bg-green-100 text-green-700" :
-                feedbackMessage.includes('Good') ? "bg-blue-100 text-blue-700" :
-                "bg-red-100 text-red-700"
+                feedbackMessage.includes('Perfect') || feedbackMessage.includes('Correct') || feedbackMessage.includes('✓')
+                  ? "bg-green-100 text-green-700"
+                  : feedbackMessage.includes('Good')
+                  ? "bg-blue-100 text-blue-700"
+                  : feedbackMessage.includes('Completed')
+                  ? "bg-purple-100 text-purple-700"
+                  : feedbackMessage.includes('Listening')
+                  ? "bg-orange-100 text-orange-700"
+                  : "bg-red-100 text-red-700"
               )}
             >
               {feedbackMessage}
@@ -658,29 +865,31 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
         </AnimatePresence>
       </div>
 
-      {/* Controls */}
+      {/* Simplified Controls */}
       <div className="bg-white rounded-lg border shadow-sm p-6 space-y-4">
-        {/* Connection & Listening Status */}
+        {/* Connection & Recording Status */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className={cn(
-              "w-3 h-3 rounded-full",
-              isConnected ? "bg-green-500" : "bg-red-500"
-            )} />
-            <span className="text-sm text-gray-600">
-              {isConnected ? 'Connected' : 'Disconnected'}
-            </span>
-          </div>
-          {listeningModeActive && (
-            <div className="flex items-center space-x-2 text-orange-600">
-              <Mic className="h-4 w-4 animate-pulse" />
-              <span className="text-sm font-medium">Listening...</span>
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <div className={cn(
+                "w-3 h-3 rounded-full",
+                isConnected ? "bg-green-500" : "bg-red-500"
+              )} />
+              <span className="text-sm text-gray-600">
+                {isConnected ? 'Connected' : 'Disconnected'}
+              </span>
             </div>
-          )}
+            {isRecording && (
+              <div className="flex items-center space-x-2 text-orange-600">
+                <Mic className="h-4 w-4 animate-pulse" />
+                <span className="text-sm font-medium">Recording</span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Server Progress Display */}
-        {practiceProgress && listeningModeActive && (
+        {/* Progress Display */}
+        {practiceProgress && practiceState.isPlaying && (
           <div className="bg-orange-50 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-700">Exercise Progress</span>
@@ -704,43 +913,6 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
             )}
           </div>
         )}
-
-        {/* Mode Selection */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700">Practice Mode</label>
-          <div className="flex space-x-2">
-            {(['listen', 'practice', 'assessment'] as const).map((mode) => (
-              <Button
-                key={mode}
-                variant={practiceState.practiceMode === mode ? "carnatic" : "outline"}
-                size="sm"
-                onClick={() => handleModeChange(mode)}
-                className="capitalize"
-              >
-                {mode === 'listen' ? <Volume2 className="h-4 w-4 mr-1" /> : <Mic className="h-4 w-4 mr-1" />}
-                {mode}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {/* Sequence Selection */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700">Sequence</label>
-          <div className="flex space-x-2">
-            {(['arohanam', 'avarohanam', 'both'] as const).map((seq) => (
-              <Button
-                key={seq}
-                variant={practiceState.currentSequence === seq ? "carnatic" : "outline"}
-                size="sm"
-                onClick={() => handleSequenceChange(seq)}
-                className="capitalize"
-              >
-                {seq === 'arohanam' ? 'आरोहणम्' : seq === 'avarohanam' ? 'अवरोहणम्' : 'Both'}
-              </Button>
-            ))}
-          </div>
-        </div>
 
         {/* Tempo Control */}
         <div className="space-y-2">
@@ -775,22 +947,63 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
           </div>
         </div>
 
-        {/* Playback Controls */}
+        {/* Main Control Buttons */}
         <div className="flex items-center justify-center space-x-4">
-          <Button
-            variant={practiceState.isPlaying ? "destructive" : "carnatic"}
-            size="lg"
-            onClick={handlePlayPause}
-            className="flex items-center space-x-2"
-          >
-            {practiceState.isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-            <span>{practiceState.isPlaying ? 'Pause' : 'Start'}</span>
-          </Button>
+          {/* Single Exercise Mode */}
+          {!sessionState.isSessionMode && (
+            <>
+              <Button
+                variant={practiceState.isPlaying ? "destructive" : "carnatic"}
+                size="lg"
+                onClick={handlePlayPause}
+                disabled={!isConnected}
+                className="flex items-center space-x-2 min-w-32"
+              >
+                {practiceState.isPlaying ? (
+                  <>
+                    <Pause className="h-5 w-5" />
+                    <span>Stop</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-5 w-5" />
+                    <span>Start</span>
+                  </>
+                )}
+              </Button>
+
+              {/* Start Session Button */}
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={handleStartSession}
+                disabled={!isConnected || practiceState.isPlaying || patterns.length === 0}
+                className="flex items-center space-x-2 border-purple-300 text-purple-700 hover:bg-purple-50"
+              >
+                <ListOrdered className="h-5 w-5" />
+                <span>Session</span>
+              </Button>
+            </>
+          )}
+
+          {/* Session Mode Controls */}
+          {sessionState.isSessionMode && (
+            <Button
+              variant="destructive"
+              size="lg"
+              onClick={handleEndSession}
+              className="flex items-center space-x-2"
+            >
+              <X className="h-5 w-5" />
+              <span>End Session</span>
+            </Button>
+          )}
 
           <Button
             variant="outline"
             size="lg"
             onClick={handleReset}
+            disabled={sessionState.isSessionMode}
           >
             <RotateCcw className="h-5 w-5" />
           </Button>
@@ -926,6 +1139,226 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
 
               <div className="flex justify-end mt-6">
                 <Button onClick={() => setShowSettings(false)}>Close</Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Exercise Completion Modal */}
+      <AnimatePresence>
+        {sessionState.showCompletionModal && sessionState.isSessionMode && (
+          <motion.div
+            key="completion-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          >
+            <motion.div
+              key="completion-modal"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-xl p-6 m-4 max-w-md w-full shadow-2xl"
+            >
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                  <Trophy className="h-8 w-8 text-green-600" />
+                </div>
+
+                <h3 className="text-xl font-bold text-gray-900">
+                  Exercise Complete! 🎉
+                </h3>
+
+                {sessionState.sessionProgress && (
+                  <p className="text-gray-600">
+                    You finished {sessionState.sessionProgress.current_exercise_name}
+                  </p>
+                )}
+
+                {serverFeedback?.validation?.final_score && (
+                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Accuracy</span>
+                      <span className={cn(
+                        "font-bold",
+                        serverFeedback.validation.final_score.accuracy_percentage >= 80 ? "text-green-600" :
+                        serverFeedback.validation.final_score.accuracy_percentage >= 60 ? "text-yellow-600" : "text-red-600"
+                      )}>
+                        {serverFeedback.validation.final_score.accuracy_percentage.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Grade</span>
+                      <span className={cn(
+                        "px-2 py-0.5 rounded font-bold",
+                        getGradeColor(serverFeedback.validation.final_score.grade)
+                      )}>
+                        {serverFeedback.validation.final_score.grade}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">
+                        {serverFeedback.validation.final_score.correct} correct
+                      </span>
+                      <span className="text-gray-500">
+                        {serverFeedback.validation.final_score.incorrect} incorrect
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-sm text-gray-500">
+                  What would you like to do next?
+                </p>
+
+                <div className="flex space-x-3">
+                  <Button
+                    variant="outline"
+                    onClick={handleSessionRetry}
+                    className="flex-1 flex items-center justify-center space-x-2"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    <span>Retry</span>
+                  </Button>
+                  <Button
+                    variant="carnatic"
+                    onClick={handleSessionNext}
+                    className="flex-1 flex items-center justify-center space-x-2"
+                  >
+                    <span>Next Exercise</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <button
+                  onClick={handleEndSession}
+                  className="text-sm text-gray-500 hover:text-gray-700 underline"
+                >
+                  End Session Early
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Session Summary Modal */}
+      <AnimatePresence>
+        {sessionState.showSessionSummary && sessionState.sessionSummary && (
+          <motion.div
+            key="summary-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto"
+          >
+            <motion.div
+              key="summary-modal"
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-white rounded-xl p-6 m-4 max-w-lg w-full shadow-2xl my-8"
+            >
+              <div className="space-y-6">
+                {/* Header */}
+                <div className="text-center">
+                  <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Trophy className="h-10 w-10 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900">Session Complete!</h2>
+                  <p className="text-gray-600 mt-1">
+                    Great practice session! Here's your summary.
+                  </p>
+                </div>
+
+                {/* Overall Stats */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-purple-50 rounded-lg p-4 text-center">
+                    <div className="text-3xl font-bold text-purple-600">
+                      {sessionState.sessionSummary.exercises_completed}
+                    </div>
+                    <div className="text-sm text-purple-700">Exercises</div>
+                  </div>
+                  <div className="bg-green-50 rounded-lg p-4 text-center">
+                    <div className="text-3xl font-bold text-green-600">
+                      {sessionState.sessionSummary.session_accuracy.toFixed(1)}%
+                    </div>
+                    <div className="text-sm text-green-700">Accuracy</div>
+                  </div>
+                  <div className="bg-blue-50 rounded-lg p-4 text-center">
+                    <div className="text-3xl font-bold text-blue-600">
+                      {sessionState.sessionSummary.total_notes_played}
+                    </div>
+                    <div className="text-sm text-blue-700">Notes Played</div>
+                  </div>
+                  <div className="bg-orange-50 rounded-lg p-4 text-center">
+                    <div className="text-3xl font-bold text-orange-600">
+                      {formatDuration(sessionState.sessionSummary.session_duration_seconds)}
+                    </div>
+                    <div className="text-sm text-orange-700">Duration</div>
+                  </div>
+                </div>
+
+                {/* Grade Badge */}
+                <div className="flex justify-center">
+                  <div className={cn(
+                    "px-6 py-3 rounded-full text-2xl font-bold",
+                    getGradeColor(sessionState.sessionSummary.session_grade)
+                  )}>
+                    Grade: {sessionState.sessionSummary.session_grade}
+                  </div>
+                </div>
+
+                {/* Exercise Breakdown */}
+                {sessionState.sessionSummary.exercise_results.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-gray-800 mb-3">Exercise Breakdown</h4>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {sessionState.sessionSummary.exercise_results.map((result, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-2"
+                        >
+                          <span className="text-gray-700 text-sm">{result.name}</span>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm text-gray-600">
+                              {result.accuracy.toFixed(0)}%
+                            </span>
+                            <span className={cn(
+                              "px-2 py-0.5 rounded text-xs font-bold",
+                              getGradeColor(result.grade)
+                            )}>
+                              {result.grade}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex space-x-3">
+                  <Button
+                    variant="outline"
+                    onClick={handleCloseSessionSummary}
+                    className="flex-1"
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    variant="carnatic"
+                    onClick={() => {
+                      handleCloseSessionSummary()
+                      handleStartSession()
+                    }}
+                    className="flex-1"
+                  >
+                    Start New Session
+                  </Button>
+                </div>
               </div>
             </motion.div>
           </motion.div>
