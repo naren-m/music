@@ -104,6 +104,7 @@ class GamificationEngine:
         self.achievement_definitions = self._load_achievement_definitions()
         self.badge_definitions = self._load_badge_definitions()
         self.level_thresholds = self._calculate_level_thresholds()
+        self._previous_ranks: Dict[str, Dict[int, int]] = {}  # {period: {user_id: rank}}
         self.active_challenges = []
 
     def _load_achievement_definitions(self) -> List[Badge]:
@@ -681,13 +682,22 @@ class GamificationEngine:
                         func.sum(UserAchievement.points_awarded).desc()
                     ).limit(limit).all()
 
+                # Get previous ranks for this period
+                previous_ranks = self._previous_ranks.get(period, {})
+
                 # Format leaderboard entries
                 entries = []
+                current_ranks = {}
                 for rank, (user_id, username, avatar, score) in enumerate(leaderboard_data, 1):
                     # Calculate user level
                     total_points = score if period == "all_time" else 0  # For period boards, show period points
                     level = self._calculate_level(total_points) if period == "all_time" else 1
 
+                    # Calculate rank change (positive = moved up, negative = moved down)
+                    prev_rank = previous_ranks.get(user_id)
+                    change = (prev_rank - rank) if prev_rank is not None else 0
+
+                    current_ranks[user_id] = rank
                     entries.append(LeaderboardEntry(
                         user_id=user_id,
                         username=username or f"User{user_id}",
@@ -695,8 +705,11 @@ class GamificationEngine:
                         score=float(score),
                         rank=rank,
                         level=level,
-                        change_from_previous=0  # TODO: Track rank changes
+                        change_from_previous=change
                     ))
+
+                # Store current ranks for next comparison
+                self._previous_ranks[period] = current_ranks
 
                 return entries
 

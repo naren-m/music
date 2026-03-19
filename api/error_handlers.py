@@ -3,7 +3,9 @@ Centralized Error Handling System
 Secure error handling with consistent responses and logging
 """
 
+import json
 import logging
+import os
 import traceback
 from datetime import datetime, timezone
 from flask import Flask, request, jsonify, current_app
@@ -13,6 +15,35 @@ from api.validation import ValidationError
 from api.auth.middleware import AuthenticationError, RateLimitError
 
 logger = logging.getLogger(__name__)
+
+# Dedicated security logger writes structured JSON for SIEM ingestion
+security_logger = logging.getLogger('security')
+
+
+def _init_security_logger():
+    """Initialize security logger with a file handler if not already configured."""
+    if not security_logger.handlers:
+        os.makedirs('logs', exist_ok=True)
+        handler = logging.FileHandler('logs/security_events.log')
+        handler.setFormatter(logging.Formatter('%(message)s'))
+        security_logger.addHandler(handler)
+        security_logger.setLevel(logging.WARNING)
+
+
+def _emit_security_event(event_type: str, details: dict):
+    """Emit a structured security event to the security log."""
+    _init_security_logger()
+    event = {
+        'timestamp': datetime.now(timezone.utc).isoformat(),
+        'event_type': event_type,
+        'ip': request.remote_addr,
+        'user_agent': request.headers.get('User-Agent', 'Unknown'),
+        'endpoint': request.endpoint,
+        'method': request.method,
+        'path': request.path,
+        **details
+    }
+    security_logger.warning(json.dumps(event))
 
 # Security-focused error messages (prevent information disclosure)
 GENERIC_ERROR_MESSAGES = {
@@ -109,10 +140,12 @@ def register_error_handlers(app: Flask):
             f"Session: {request.cookies.get('session', 'None')}"
         )
 
-        # In production, trigger security alerts here
-        if current_app.config.get('FLASK_ENV') == 'production':
-            # TODO: Integrate with security monitoring system
-            pass
+        # Emit structured security event for SIEM ingestion
+        _emit_security_event('security_violation', {
+            'error_code': error.error_code,
+            'message': error.message,
+            'session': request.cookies.get('session', 'None')
+        })
 
         return jsonify({
             'error': 'Security policy violation',
@@ -282,10 +315,8 @@ def log_security_event(event_type: str, details: dict):
         f"Timestamp: {datetime.now(timezone.utc).isoformat()}"
     )
 
-    # In production, this would integrate with SIEM/monitoring
-    if current_app.config.get('FLASK_ENV') == 'production':
-        # TODO: Send to security monitoring system
-        pass
+    # Emit structured security event for SIEM ingestion
+    _emit_security_event(event_type, details)
 
 
 def validate_request_security():
