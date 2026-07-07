@@ -284,7 +284,7 @@ def set_sa_frequency():
 
 def create_practice_session_from_result(result, user_id: str):
     """Convert ExerciseResult to PracticeSession"""
-    from ...core.models.user import PracticeSession
+    from core.models.user import PracticeSession
 
     return PracticeSession(
         session_id=str(uuid.uuid4()),

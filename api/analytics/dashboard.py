@@ -7,7 +7,7 @@ progress, performance trends, and personalized recommendations.
 
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 import numpy as np
 import pandas as pd
@@ -96,9 +96,16 @@ class AdvancedAnalytics:
     async def generate_user_dashboard(self, user_id: int, period: AnalyticsPeriod = AnalyticsPeriod.MONTHLY) -> Dict[str, Any]:
         """Generate comprehensive analytics dashboard for user"""
         try:
-            # Check cache first
+            # Check cache first (skip in testing mode to avoid cross-test pollution)
+            from flask import current_app
+            skip_cache = False
+            try:
+                skip_cache = current_app.config.get('TESTING', False)
+            except RuntimeError:
+                pass
+
             cache_key = f"dashboard_{user_id}_{period.value}"
-            if self._is_cache_valid(cache_key):
+            if not skip_cache and self._is_cache_valid(cache_key):
                 return self.analysis_cache[cache_key]['data']
 
             # Generate all analytics components
@@ -260,7 +267,7 @@ class AdvancedAnalytics:
 
                 # Analyze practice frequency
                 practice_days = len(set(p.created_at.date() for p in progress_data))
-                period_days = (current_end - current_start).days
+                period_days = max(1, (current_end - current_start).days)
                 practice_frequency = practice_days / period_days
 
                 if practice_frequency < 0.5:
@@ -419,7 +426,7 @@ class AdvancedAnalytics:
                     if len(records) < 2:
                         continue
 
-                    accuracies = [r['average_accuracy'] for r in records]
+                    accuracies = [r['accuracy'] for r in records]
                     avg_accuracy = np.mean(accuracies)
                     accuracy_trend = self._calculate_trend_line([r['accuracy'] for r in sorted(records, key=lambda x: x['date'])])
 
@@ -478,7 +485,7 @@ class AdvancedAnalytics:
                 # Get historical data for modeling
                 progress_data = db.query(Progress).filter(
                     Progress.user_id == user_id,
-                    Progress.created_at >= datetime.now() - timedelta(days=90)
+                    Progress.created_at >= datetime.utcnow() - timedelta(days=90)
                 ).all()
 
                 if len(progress_data) < 10:
@@ -505,8 +512,8 @@ class AdvancedAnalytics:
 
         swara_progress = {}
         for record in progress_data:
-            if record.exercise_data and 'target_swara' in record.exercise_data:
-                swara = record.exercise_data['target_swara']
+            if record.exercise and record.exercise.content_data and 'target_swara' in record.exercise.content_data:
+                swara = record.exercise.content_data['target_swara']
                 if swara not in swara_progress:
                     swara_progress[swara] = []
                 swara_progress[swara].append({
@@ -577,7 +584,7 @@ class AdvancedAnalytics:
     # Helper methods
     def _get_period_dates(self, period: AnalyticsPeriod) -> Tuple[datetime, datetime]:
         """Get start and end dates for the specified period"""
-        now = datetime.now()
+        now = datetime.utcnow()
 
         if period == AnalyticsPeriod.DAILY:
             start = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -773,7 +780,7 @@ class AdvancedAnalytics:
                     }
 
                 # Calculate current streak
-                today = datetime.now().date()
+                today = datetime.utcnow().date()
                 current_streak = 0
                 check_date = today
 
@@ -1074,8 +1081,16 @@ class AdvancedAnalytics:
                 level_accuracies = {level: [] for level in difficulty_levels.keys()}
 
                 for record in progress_data:
-                    if record.exercise_data:
-                        level = record.exercise_data.get("difficulty", "beginner")
+                    if record.exercise:
+                        level = None
+                        if record.exercise.content_data:
+                            level = record.exercise.content_data.get("difficulty")
+                        if not level:
+                            lv = record.exercise.difficulty_level or 1
+                            if lv <= 3: level = "beginner"
+                            elif lv <= 6: level = "intermediate"
+                            elif lv <= 8: level = "advanced"
+                            else: level = "expert"
                         if level in level_sessions:
                             level_sessions[level].append(record)
                             if record.average_accuracy is not None:
@@ -1096,26 +1111,29 @@ class AdvancedAnalytics:
                     first_quarter = sorted_data[:len(sorted_data)//4] if len(sorted_data) >= 4 else sorted_data[:1]
                     last_quarter = sorted_data[-len(sorted_data)//4:] if len(sorted_data) >= 4 else sorted_data[-1:]
 
-                    first_avg_level = np.mean([
-                        difficulty_levels.get(r.exercise_data.get("difficulty", "beginner"), 1)
-                        for r in first_quarter if r.exercise_data
-                    ]) if first_quarter else 1
+                    first_levels = []
+                    for r in first_quarter:
+                        if r.exercise:
+                            lv = r.exercise.difficulty_level or 1
+                            first_levels.append(lv)
+                    first_avg_level = float(np.mean(first_levels)) if first_levels else 1.0
 
-                    last_avg_level = np.mean([
-                        difficulty_levels.get(r.exercise_data.get("difficulty", "beginner"), 1)
-                        for r in last_quarter if r.exercise_data
-                    ]) if last_quarter else 1
-
-                    progression_rate = last_avg_level - first_avg_level
+                    last_levels = []
+                    for r in last_quarter:
+                        if r.exercise:
+                            lv = r.exercise.difficulty_level or 1
+                            last_levels.append(lv)
+                    last_avg_level = float(np.mean(last_levels)) if last_levels else 1.0
+                    progression_rate = float(last_avg_level - first_avg_level)
                 else:
-                    progression_rate = 0
+                    progression_rate = 0.0
 
                 # Check readiness for advancement
                 current_accuracies = level_accuracies.get(current_level, [])
-                avg_accuracy = np.mean(current_accuracies) if current_accuracies else 0
-                session_count = len(level_sessions.get(current_level, []))
+                avg_accuracy = float(np.mean(current_accuracies)) if current_accuracies else 0.0
+                session_count = int(len(level_sessions.get(current_level, [])))
 
-                ready_for_advancement = (
+                ready_for_advancement = bool(
                     avg_accuracy >= 0.80 and
                     session_count >= 5 and
                     current_level != "expert"
@@ -1126,8 +1144,8 @@ class AdvancedAnalytics:
                     "current_accuracy": round(avg_accuracy, 4),
                     "sessions_required": 5,
                     "current_sessions": session_count,
-                    "accuracy_met": avg_accuracy >= 0.80,
-                    "sessions_met": session_count >= 5
+                    "accuracy_met": bool(avg_accuracy >= 0.80),
+                    "sessions_met": bool(session_count >= 5)
                 }
 
                 # Level history
@@ -1136,19 +1154,19 @@ class AdvancedAnalytics:
                     if sessions:
                         level_history.append({
                             "level": level,
-                            "level_number": difficulty_levels[level],
-                            "sessions_completed": len(sessions),
-                            "average_accuracy": round(np.mean(level_accuracies[level]), 4) if level_accuracies[level] else 0,
+                            "level_number": int(difficulty_levels[level]),
+                            "sessions_completed": int(len(sessions)),
+                            "average_accuracy": round(float(np.mean(level_accuracies[level])), 4) if level_accuracies[level] else 0.0,
                             "first_attempt": min(s.created_at for s in sessions).isoformat(),
                             "last_attempt": max(s.created_at for s in sessions).isoformat()
                         })
 
                 return {
                     "current_level": current_level,
-                    "current_level_number": current_level_num,
+                    "current_level_number": int(current_level_num),
                     "progression_rate": round(progression_rate, 2),
                     "level_history": sorted(level_history, key=lambda x: x["level_number"]),
-                    "exercises_by_level": {level: len(sessions) for level, sessions in level_sessions.items()},
+                    "exercises_by_level": {level: int(len(sessions)) for level, sessions in level_sessions.items()},
                     "ready_for_advancement": ready_for_advancement,
                     "advancement_criteria": advancement_criteria
                 }
@@ -1261,7 +1279,7 @@ class AdvancedAnalytics:
         try:
             with get_db_session() as db:
                 # Get recent progress data (last 30 days)
-                cutoff = datetime.now() - timedelta(days=30)
+                cutoff = datetime.utcnow() - timedelta(days=30)
                 recent_progress = db.query(Progress).filter(
                     Progress.user_id == user_id,
                     Progress.created_at >= cutoff

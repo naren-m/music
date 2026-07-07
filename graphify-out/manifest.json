@@ -1,0 +1,772 @@
+{
+  "api/__init__.py": {
+    "mtime": 1766948914.8300898,
+    "ast_hash": "0b5d6ca0cf9c2672f3cfedf44c6e3d28",
+    "semantic_hash": ""
+  },
+  "api/admin/__init__.py": {
+    "mtime": 1766040404.1182246,
+    "ast_hash": "d7d5e8e79dd4541cf6e879320547d96f",
+    "semantic_hash": ""
+  },
+  "api/analytics/__init__.py": {
+    "mtime": 1766040404.5824645,
+    "ast_hash": "82ba61c5ba9ff85292e4b3bf71767367",
+    "semantic_hash": ""
+  },
+  "api/analytics/dashboard.py": {
+    "mtime": 1766129140.0953379,
+    "ast_hash": "699b933a1399ff0063331b2b40d1c79c",
+    "semantic_hash": ""
+  },
+  "api/analytics/routes.py": {
+    "mtime": 1766043106.8779166,
+    "ast_hash": "1d31889e90418cd2f86c636c3b47490c",
+    "semantic_hash": ""
+  },
+  "api/audio/__init__.py": {
+    "mtime": 1766040403.192718,
+    "ast_hash": "4d389c1779915d5714896de51531d70f",
+    "semantic_hash": ""
+  },
+  "api/audio/routes.py": {
+    "mtime": 1766831520.0878305,
+    "ast_hash": "34c4fa8cc758f120dd1d1dccf86ff157",
+    "semantic_hash": ""
+  },
+  "api/audio/websocket.py": {
+    "mtime": 1767062188.6806018,
+    "ast_hash": "39cb5ab5a564240a3486cd99c6671c99",
+    "semantic_hash": ""
+  },
+  "api/auth/__init__.py": {
+    "mtime": 1766040402.2903507,
+    "ast_hash": "ac7ce8baffcedf185550343639e2dcb0",
+    "semantic_hash": ""
+  },
+  "api/auth/middleware.py": {
+    "mtime": 1758805833.4994524,
+    "ast_hash": "211a7a3d84ab1819a825e3e43415c691",
+    "semantic_hash": ""
+  },
+  "api/auth/routes.py": {
+    "mtime": 1766831557.2500055,
+    "ast_hash": "c09a71e3eb3c7adcb95a2f2ae02dfc16",
+    "semantic_hash": ""
+  },
+  "api/error_handlers.py": {
+    "mtime": 1765954335.19164,
+    "ast_hash": "0885da95562e84fdbc20659bedc742b2",
+    "semantic_hash": ""
+  },
+  "api/gamification/__init__.py": {
+    "mtime": 1766040405.543943,
+    "ast_hash": "753b3ffb7163f9246a8d182aad0f01e3",
+    "semantic_hash": ""
+  },
+  "api/gamification/achievements.py": {
+    "mtime": 1758729307.0230527,
+    "ast_hash": "7c4860b203c91f7f636fce0f6df9b41f",
+    "semantic_hash": ""
+  },
+  "api/learning/__init__.py": {
+    "mtime": 1766040403.6414938,
+    "ast_hash": "59f0f56f39b58979bfe2886a9c087af2",
+    "semantic_hash": ""
+  },
+  "api/learning/routes.py": {
+    "mtime": 1766807748.4653423,
+    "ast_hash": "4212e5066b80d7c1b295bf3d7625702f",
+    "semantic_hash": ""
+  },
+  "api/learning/websocket.py": {
+    "mtime": 1758481145.2181995,
+    "ast_hash": "e7aa053fdb219df328f52421837ca7df",
+    "semantic_hash": ""
+  },
+  "api/raga/__init__.py": {
+    "mtime": 1766040402.728388,
+    "ast_hash": "b50bf0080dfd8b529c2c832d476b3dab",
+    "semantic_hash": ""
+  },
+  "api/raga/database.py": {
+    "mtime": 1766040499.643534,
+    "ast_hash": "cadeb66cb75178bdbfb01ddbf6dca437",
+    "semantic_hash": ""
+  },
+  "api/rate_limiting.py": {
+    "mtime": 1765954425.132378,
+    "ast_hash": "74c8860a8d375b170166e4feee86cd1b",
+    "semantic_hash": ""
+  },
+  "api/social/__init__.py": {
+    "mtime": 1766126325.302654,
+    "ast_hash": "494a5f093573b6c18b609d3527a5c229",
+    "semantic_hash": ""
+  },
+  "api/social/routes.py": {
+    "mtime": 1766126314.598732,
+    "ast_hash": "0acd22b21849621660ee9852304ae693",
+    "semantic_hash": ""
+  },
+  "api/tala/__init__.py": {
+    "mtime": 1766040407.4934373,
+    "ast_hash": "f78068cbb482261ce6c675c6206eaa42",
+    "semantic_hash": ""
+  },
+  "api/tala/rhythm_training.py": {
+    "mtime": 1758754910.067844,
+    "ast_hash": "1f116d3222cb5f013f308f3b94927bdc",
+    "semantic_hash": ""
+  },
+  "api/validation.py": {
+    "mtime": 1765954453.537538,
+    "ast_hash": "6e96d6b754759f004508427573653911",
+    "semantic_hash": ""
+  },
+  "app.py": {
+    "mtime": 1766809536.8178825,
+    "ast_hash": "73e9524e48d97762035019a53b33912a",
+    "semantic_hash": ""
+  },
+  "config/__init__.py": {
+    "mtime": 1766040378.2779863,
+    "ast_hash": "c07c86284ec2125de5eb4a7fc1ee9d22",
+    "semantic_hash": ""
+  },
+  "config/database.py": {
+    "mtime": 1766129347.7653577,
+    "ast_hash": "5ead09eeaac6613143043c4cc8c74952",
+    "semantic_hash": ""
+  },
+  "config/settings.py": {
+    "mtime": 1766037868.4204195,
+    "ast_hash": "723befed505effe266ff5e9a342c6e63",
+    "semantic_hash": ""
+  },
+  "config/validators.py": {
+    "mtime": 1758805574.1372976,
+    "ast_hash": "f638b019320cc765ca4435d40c5843ee",
+    "semantic_hash": ""
+  },
+  "core/__init__.py": {
+    "mtime": 1766040377.3230548,
+    "ast_hash": "7e0615486ca50fece9438b3c73f567b3",
+    "semantic_hash": ""
+  },
+  "core/managers/session_manager.py": {
+    "mtime": 1766271054.8391392,
+    "ast_hash": "58eec435fc91e04fa6c714e27bc4dbe7",
+    "semantic_hash": ""
+  },
+  "core/ml/__init__.py": {
+    "mtime": 1766040377.7937305,
+    "ast_hash": "949ffa966d92ae4fafcb231a37018278",
+    "semantic_hash": ""
+  },
+  "core/ml/adaptive_engine.py": {
+    "mtime": 1758755082.8696294,
+    "ast_hash": "6e9d5e9403442fcdede1c46a812fe198",
+    "semantic_hash": ""
+  },
+  "core/models/__init__.py": {
+    "mtime": 1766040544.39239,
+    "ast_hash": "ad6afc5b8a224144cc62e4c8070c1bbd",
+    "semantic_hash": ""
+  },
+  "core/models/shruti.py": {
+    "mtime": 1766985859.9056885,
+    "ast_hash": "7389713ba7538bdeb9c1037c0def9e99",
+    "semantic_hash": ""
+  },
+  "core/models/user.py": {
+    "mtime": 1758480858.0173776,
+    "ast_hash": "ae1323738e3e502581733be21f0fe7af",
+    "semantic_hash": ""
+  },
+  "core/services/__init__.py": {
+    "mtime": 1766040377.944002,
+    "ast_hash": "370843cad624a8dd23f643911f2c7aeb",
+    "semantic_hash": ""
+  },
+  "core/services/audio_engine.py": {
+    "mtime": 1767108318.915989,
+    "ast_hash": "9618a7e882a15edf92b33e1f7a23dd82",
+    "semantic_hash": ""
+  },
+  "core/utils/__init__.py": {
+    "mtime": 1766040378.1330426,
+    "ast_hash": "0a7c7b594182f341b23cac04dd239414",
+    "semantic_hash": ""
+  },
+  "frontend/package.json": {
+    "mtime": 1758861201.0079818,
+    "ast_hash": "f4eb77b0a813aede000a0f72c95df6ee",
+    "semantic_hash": ""
+  },
+  "frontend/postcss.config.js": {
+    "mtime": 1758861222.8432665,
+    "ast_hash": "470cfd3ee10fbff840b377e769485f3e",
+    "semantic_hash": ""
+  },
+  "frontend/public/manifest.json": {
+    "mtime": 1766948942.6099932,
+    "ast_hash": "cd015a5375bf2b118e6248d7b481064d",
+    "semantic_hash": ""
+  },
+  "frontend/src/App.tsx": {
+    "mtime": 1758861351.8249693,
+    "ast_hash": "14f911e8ff0e31ee917f691c62f98fd0",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/audio/AudioVisualizer.tsx": {
+    "mtime": 1758816610.9743457,
+    "ast_hash": "d12dea595f8f399d2ef536f682bcf464",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/audio/RecordingInterface.tsx": {
+    "mtime": 1758861800.450204,
+    "ast_hash": "e54851f0d81e5035975d41a1a8d68d34",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/audio/VoiceCalibration.tsx": {
+    "mtime": 1758861742.840874,
+    "ast_hash": "a2d6e4df56d5217263a56a88ba5a2f2f",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/auth/LoginForm.tsx": {
+    "mtime": 1758861721.8177783,
+    "ast_hash": "039def7140f39863b1a282a01dd9db13",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/auth/ProtectedRoute.tsx": {
+    "mtime": 1758861365.7207866,
+    "ast_hash": "031a847a6f7d9842b78853f2b6721aba",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/auth/SignupForm.tsx": {
+    "mtime": 1758861726.6991708,
+    "ast_hash": "49b9a80b12b279f66c915f96276478a0",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/carnatic/RagaSelector.tsx": {
+    "mtime": 1758728845.373331,
+    "ast_hash": "e95ee59460c5670ebca5ed84f3909a3b",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/carnatic/SwaraWheel.tsx": {
+    "mtime": 1766948924.7228682,
+    "ast_hash": "bb5a0f52751076c5660065daff107a3a",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/carnatic/TalaVisualizer.tsx": {
+    "mtime": 1758728881.1057038,
+    "ast_hash": "654f19993da651c21d48673f81e7eca4",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/exercises/ProgressiveExercise.tsx": {
+    "mtime": 1758728944.2243726,
+    "ast_hash": "1908007f71f1415cab5178d564e91003",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/exercises/alankaram/AlankaramInterface.tsx": {
+    "mtime": 1758861847.317438,
+    "ast_hash": "988084b405985507f3804b3d641ca308",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/exercises/janta/JantaInterface.tsx": {
+    "mtime": 1758861834.9134746,
+    "ast_hash": "b9d3a65c1ea74b16df5104909f543f50",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/exercises/sarali/SaraliInterface.tsx": {
+    "mtime": 1767143934.2371106,
+    "ast_hash": "817f5b31cc59a28999d7a19d55832f5b",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/layout/AppShell.tsx": {
+    "mtime": 1758861649.7830155,
+    "ast_hash": "14fe9bbaa83a9c87b285ec863db7261a",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/layout/Footer.tsx": {
+    "mtime": 1758816384.47237,
+    "ast_hash": "81660d404178a0f565fd3f3f3fcd9a2b",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/layout/Header.tsx": {
+    "mtime": 1758816284.4749582,
+    "ast_hash": "6761f8d7398dfab432c96273617523e9",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/layout/Sidebar.tsx": {
+    "mtime": 1758816324.6119788,
+    "ast_hash": "a2da3a9538726af3c65f888e8038cbc2",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/layout/UserMenu.tsx": {
+    "mtime": 1766655793.912648,
+    "ast_hash": "78a35ea6ca57791620f77200d929710a",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/ui/Button.tsx": {
+    "mtime": 1766810049.8732476,
+    "ast_hash": "f167f876f11be473158f056483811129",
+    "semantic_hash": ""
+  },
+  "frontend/src/contexts/AudioContext.tsx": {
+    "mtime": 1767144830.6838424,
+    "ast_hash": "f27db1ac07f9a7eb2d3be08bb0ef2b0e",
+    "semantic_hash": ""
+  },
+  "frontend/src/contexts/AuthContext.tsx": {
+    "mtime": 1759521336.3522847,
+    "ast_hash": "c698e6b090a3d0262326e6b45109d578",
+    "semantic_hash": ""
+  },
+  "frontend/src/contexts/PracticeSessionContext.tsx": {
+    "mtime": 1758849479.1427186,
+    "ast_hash": "a104dc2ec4da74065e5c4b221c0527ee",
+    "semantic_hash": ""
+  },
+  "frontend/src/index.tsx": {
+    "mtime": 1758774371.7071867,
+    "ast_hash": "540d3c7b8850e7a7b5519fd6fc82be3a",
+    "semantic_hash": ""
+  },
+  "frontend/src/pages/DashboardPage.tsx": {
+    "mtime": 1758861405.570527,
+    "ast_hash": "714c164df21b6f723be382c7736b64f1",
+    "semantic_hash": ""
+  },
+  "frontend/src/pages/ExercisesPage.tsx": {
+    "mtime": 1758861433.1044652,
+    "ast_hash": "095704bd98fb0b730895e11b37ba2e4d",
+    "semantic_hash": ""
+  },
+  "frontend/src/pages/LoginPage.tsx": {
+    "mtime": 1759521380.6561344,
+    "ast_hash": "00a4723d9c2d368f1df4d5aa38972076",
+    "semantic_hash": ""
+  },
+  "frontend/src/pages/RecordingPage.tsx": {
+    "mtime": 1758861502.129711,
+    "ast_hash": "cced415571e931310447d96a74e79ef4",
+    "semantic_hash": ""
+  },
+  "frontend/src/pages/SettingsPage.tsx": {
+    "mtime": 1758861531.2175202,
+    "ast_hash": "96807c0d4a917c54661e621828461cc5",
+    "semantic_hash": ""
+  },
+  "frontend/src/pages/SignupPage.tsx": {
+    "mtime": 1758861377.5695667,
+    "ast_hash": "ced73ae4b51f7a1f2ca934428648dee1",
+    "semantic_hash": ""
+  },
+  "frontend/src/pages/exercises/AlankaramExercisePage.tsx": {
+    "mtime": 1758861483.9474816,
+    "ast_hash": "0e4e2a1d7bdef97c3c4b7e275ffbaf97",
+    "semantic_hash": ""
+  },
+  "frontend/src/pages/exercises/JantaExercisePage.tsx": {
+    "mtime": 1758861461.4057958,
+    "ast_hash": "34100b969ae36a8e7b0a0985ba187a15",
+    "semantic_hash": ""
+  },
+  "frontend/src/pages/exercises/SaraliExercisePage.tsx": {
+    "mtime": 1766807918.471768,
+    "ast_hash": "d3bb092a0c1bbba24d83b8454eb7dafe",
+    "semantic_hash": ""
+  },
+  "frontend/src/services/audioService.ts": {
+    "mtime": 1758849537.1759896,
+    "ast_hash": "c29af77cd8d766181b04336e5f3ea098",
+    "semantic_hash": ""
+  },
+  "frontend/src/services/practiceService.ts": {
+    "mtime": 1758849630.8114097,
+    "ast_hash": "cee21972158da7ce3ddb84d9e837312f",
+    "semantic_hash": ""
+  },
+  "frontend/src/types/audio.types.ts": {
+    "mtime": 1758861765.5283597,
+    "ast_hash": "b8f9248d11109e0e3014e0a710f63d0d",
+    "semantic_hash": ""
+  },
+  "frontend/src/types/exercise.types.ts": {
+    "mtime": 1758849791.4039865,
+    "ast_hash": "8f600f256763760e5d3ab8b2bc71afbd",
+    "semantic_hash": ""
+  },
+  "frontend/src/types/index.ts": {
+    "mtime": 1758861780.8783872,
+    "ast_hash": "f930f4148a42c9e5cf49b4a50bb230de",
+    "semantic_hash": ""
+  },
+  "frontend/src/utils/cn.ts": {
+    "mtime": 1758861550.557424,
+    "ast_hash": "f86972f8d0cc79d9efe81a4c1b06ad5d",
+    "semantic_hash": ""
+  },
+  "frontend/src/vite-env.d.ts": {
+    "mtime": 1766809164.9083538,
+    "ast_hash": "f9a411c48bf170bc1a89e2765c064397",
+    "semantic_hash": ""
+  },
+  "frontend/tailwind.config.js": {
+    "mtime": 1758861217.9240174,
+    "ast_hash": "f2a28412df576da7740aedafa46a37a7",
+    "semantic_hash": ""
+  },
+  "frontend/tsconfig.json": {
+    "mtime": 1758861229.7963014,
+    "ast_hash": "7e42556df72e0221f15095ce272a8707",
+    "semantic_hash": ""
+  },
+  "frontend/tsconfig.node.json": {
+    "mtime": 1758861234.3802385,
+    "ast_hash": "f7bee4a1c3ccdae4060f26cd43a0e369",
+    "semantic_hash": ""
+  },
+  "frontend/vite.config.ts": {
+    "mtime": 1766809001.3676698,
+    "ast_hash": "f1f5103a0e9e27631dc7c07e4f5a2d57",
+    "semantic_hash": ""
+  },
+  "jenkins/create-jenkins-job.sh": {
+    "mtime": 1765300962.0598392,
+    "ast_hash": "8d0d376b81bfe1a4be2dd4eb8eea60a1",
+    "semantic_hash": ""
+  },
+  "migrations/init_db.py": {
+    "mtime": 1758805591.795968,
+    "ast_hash": "868a82721d4679f156d6101d4ed90592",
+    "semantic_hash": ""
+  },
+  "modules/adaptive/performance_prediction.py": {
+    "mtime": 1758755372.8736382,
+    "ast_hash": "f014fe85d44e0cbd99256905695f907c",
+    "semantic_hash": ""
+  },
+  "modules/exercises/alankaram/patterns.py": {
+    "mtime": 1766989265.644789,
+    "ast_hash": "8c6537529ab581ff78a89b4732c8ab4c",
+    "semantic_hash": ""
+  },
+  "modules/exercises/data/Alankarams/config.json": {
+    "mtime": 1766988852.0976212,
+    "ast_hash": "5982b5dad7f2f93d770df84a4364c648",
+    "semantic_hash": ""
+  },
+  "modules/exercises/data/JantaVarasalu/config.json": {
+    "mtime": 1766988817.338052,
+    "ast_hash": "81e12395f5a8450568499d4a1ce08aab",
+    "semantic_hash": ""
+  },
+  "modules/exercises/data/SaraliSwaras/config.json": {
+    "mtime": 1766988782.7625155,
+    "ast_hash": "2f35d2f18718aa566271d0bbd77faf9f",
+    "semantic_hash": ""
+  },
+  "modules/exercises/janta/patterns.py": {
+    "mtime": 1766989094.7921863,
+    "ast_hash": "0ef8c6545021349aaa28a8116132f8dd",
+    "semantic_hash": ""
+  },
+  "modules/exercises/loader.py": {
+    "mtime": 1766988934.1537862,
+    "ast_hash": "c06afca0f830e788aaeaa50bc9fd0af8",
+    "semantic_hash": ""
+  },
+  "modules/exercises/sarali/patterns.py": {
+    "mtime": 1766989023.7789912,
+    "ast_hash": "4f930aa16e6dd73587a2b43737593339",
+    "semantic_hash": ""
+  },
+  "modules/swara/recognition.py": {
+    "mtime": 1765961274.945762,
+    "ast_hash": "26c311ee1e86e981197b421aa2a9361d",
+    "semantic_hash": ""
+  },
+  "modules/swara/trainer.py": {
+    "mtime": 1765961474.2947795,
+    "ast_hash": "38399cb167e6902bbf0461473dc60104",
+    "semantic_hash": ""
+  },
+  "monitoring/__init__.py": {
+    "mtime": 1766040378.4268315,
+    "ast_hash": "ca78b984ef0492343ac2910d2387beed",
+    "semantic_hash": ""
+  },
+  "monitoring/performance_monitor.py": {
+    "mtime": 1766040449.5540853,
+    "ast_hash": "47dd4f6c44fe391643a788f031d01496",
+    "semantic_hash": ""
+  },
+  "run_tests.py": {
+    "mtime": 1758690875.9760137,
+    "ast_hash": "7b751a07ba1293af6ae73f012c9a09e3",
+    "semantic_hash": ""
+  },
+  "scripts/deploy.sh": {
+    "mtime": 1758693241.278338,
+    "ast_hash": "898050e2dd0acc79de28d38032197714",
+    "semantic_hash": ""
+  },
+  "tests/__init__.py": {
+    "mtime": 1758692163.4360788,
+    "ast_hash": "02f3c536685e2e673500eba30e0e3788",
+    "semantic_hash": ""
+  },
+  "tests/conftest.py": {
+    "mtime": 1766774042.9160068,
+    "ast_hash": "73cadaebe1a80bd1780864f4135b24fa",
+    "semantic_hash": ""
+  },
+  "tests/e2e/test_performance_validation.py": {
+    "mtime": 1758690944.5695138,
+    "ast_hash": "a0b115c5c2472109319092b24a0a0698",
+    "semantic_hash": ""
+  },
+  "tests/performance/load-test.js": {
+    "mtime": 1758693125.6555169,
+    "ast_hash": "5e9fd0d550aab9d40f268f72237cc992",
+    "semantic_hash": ""
+  },
+  "tests/test_analytics_api.py": {
+    "mtime": 1766152792.3378508,
+    "ast_hash": "191614b7068bc515973b0693ebd3326a",
+    "semantic_hash": ""
+  },
+  "tests/test_api_integration.py": {
+    "mtime": 1758481452.6715155,
+    "ast_hash": "37d5ae862ca455e1d2aa516cc2e26318",
+    "semantic_hash": ""
+  },
+  "tests/test_carnatic_simple.py": {
+    "mtime": 1758692453.5022647,
+    "ast_hash": "8bf87271bd173e4a1ec8c49b40b7bf0e",
+    "semantic_hash": ""
+  },
+  "tests/test_carnatic_ui.py": {
+    "mtime": 1758692154.5802634,
+    "ast_hash": "bf0426d746c00d07037457988c477930",
+    "semantic_hash": ""
+  },
+  "tests/test_e2e_playwright.py": {
+    "mtime": 1758481391.654453,
+    "ast_hash": "3398c31400207cda8b9c3bcd952c8997",
+    "semantic_hash": ""
+  },
+  "tests/test_models.py": {
+    "mtime": 1766040600.9936297,
+    "ast_hash": "5dbcac8935cd520739e272923c130c26",
+    "semantic_hash": ""
+  },
+  "tests/test_sarali_varisai_e2e.py": {
+    "mtime": 1766775500.518121,
+    "ast_hash": "7be56b2783db6453a2edb094ca7c3b88",
+    "semantic_hash": ""
+  },
+  "validation_test.py": {
+    "mtime": 1758481703.6690948,
+    "ast_hash": "1450bcc5356fdac10a5eda748abda5a8",
+    "semantic_hash": ""
+  },
+  "verify_shruti_note.py": {
+    "mtime": 1766985886.6562645,
+    "ast_hash": "8c08a6b46a8cfd3c4032d44cf09225e3",
+    "semantic_hash": ""
+  },
+  ".github/workflows/ci-cd.yml": {
+    "mtime": 1758693071.460069,
+    "ast_hash": "d09ab56ce888041b9adf66ef7b597c4d",
+    "semantic_hash": ""
+  },
+  ".serena/project.yml": {
+    "mtime": 1778863437.1660156,
+    "ast_hash": "1fc9be96680099d6614b187679debb99",
+    "semantic_hash": ""
+  },
+  "ARCHITECTURE.md": {
+    "mtime": 1757485625.6317475,
+    "ast_hash": "51be39bb87fa6e932b58264134cf2aca",
+    "semantic_hash": ""
+  },
+  "CARNATIC_LEARNING_DESIGN.md": {
+    "mtime": 1758480641.869652,
+    "ast_hash": "31f785945e6499b30ee7eb253e5b830d",
+    "semantic_hash": ""
+  },
+  "CLAUDE.md": {
+    "mtime": 1766655882.7719874,
+    "ast_hash": "7346c42b7593e78f95f62a75e079be0e",
+    "semantic_hash": ""
+  },
+  "DOCKER_DEPLOYMENT_GUIDE.md": {
+    "mtime": 1758691605.3388562,
+    "ast_hash": "2699deee25915e2191493043d916d846",
+    "semantic_hash": ""
+  },
+  "MICROPHONE_SETUP.md": {
+    "mtime": 1757485479.3815565,
+    "ast_hash": "129811346b26b5f075e50b27bd469737",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1767064169.489714,
+    "ast_hash": "69c15ab0e7a4eccb7cadce3b013b0f2e",
+    "semantic_hash": ""
+  },
+  "UI_DEVELOPMENT_SPECIFICATION.md": {
+    "mtime": 1759521474.3067427,
+    "ast_hash": "7f8a1c4074795a4a951f1aad36a5a16f",
+    "semantic_hash": ""
+  },
+  "docker-compose.prod.yml": {
+    "mtime": 1758806647.9596684,
+    "ast_hash": "31ccae4f1e33e029a011817cbdc4733f",
+    "semantic_hash": ""
+  },
+  "docker-compose.yml": {
+    "mtime": 1758691516.9317493,
+    "ast_hash": "8dc501ba43069d1eeb7067a8387a641c",
+    "semantic_hash": ""
+  },
+  "docs/IMPLEMENTATION_PLAN.md": {
+    "mtime": 1758806774.4280832,
+    "ast_hash": "5276858a629ef496d2e2ae4aa6d4b5e5",
+    "semantic_hash": ""
+  },
+  "docs/PERFORMANCE_IMPROVEMENTS.md": {
+    "mtime": 1766949459.4384208,
+    "ast_hash": "393dbe6f3347c616fa42989b5c596880",
+    "semantic_hash": ""
+  },
+  "docs/README.md": {
+    "mtime": 1758489613.286002,
+    "ast_hash": "f06ea85167e49bf935edd9611eb0ce26",
+    "semantic_hash": ""
+  },
+  "docs/SECURITY_AND_ARCHITECTURE_FIXES.md": {
+    "mtime": 1758774497.2718322,
+    "ast_hash": "88c46322dc5979991a70e98baadccf90",
+    "semantic_hash": ""
+  },
+  "docs/TEST_RESULTS.md": {
+    "mtime": 1766775678.144313,
+    "ast_hash": "7a9e5b2c57eacc6c5cae859963726f56",
+    "semantic_hash": ""
+  },
+  "docs/api/shruti_detection_api.md": {
+    "mtime": 1766985873.3506126,
+    "ast_hash": "89aa6b926b5333e4d524784ba9b32c91",
+    "semantic_hash": ""
+  },
+  "docs/guides/implementation_guide.md": {
+    "mtime": 1758489775.3060324,
+    "ast_hash": "17eea18385b37b93bd54675add9518bd",
+    "semantic_hash": ""
+  },
+  "docs/plans/2026-02-17-code-simplification-design.md": {
+    "mtime": 1771396846.6568942,
+    "ast_hash": "169ef9d9ec100d68cc72df72d1cca858",
+    "semantic_hash": ""
+  },
+  "docs/plans/2026-02-17-code-simplification.md": {
+    "mtime": 1771396937.1222441,
+    "ast_hash": "6ddf1f3070cd67a1ec986dd82e5270ba",
+    "semantic_hash": ""
+  },
+  "docs/references/sources.md": {
+    "mtime": 1758491143.977862,
+    "ast_hash": "66f09ddda65f91024b0ed0fa22d8c106",
+    "semantic_hash": ""
+  },
+  "docs/theory/shruti_system.md": {
+    "mtime": 1766949483.4303422,
+    "ast_hash": "ceceed7ffe0dd4951473535336b6901b",
+    "semantic_hash": ""
+  },
+  "frontend/index.html": {
+    "mtime": 1758861275.025903,
+    "ast_hash": "47f68d0451e18eac7f75d885749862f5",
+    "semantic_hash": ""
+  },
+  "frontend/public/index.html": {
+    "mtime": 1766948947.0842066,
+    "ast_hash": "226a5ebe6ef00f02ee88803fb1196b9b",
+    "semantic_hash": ""
+  },
+  "k8s/configmap.yaml": {
+    "mtime": 1757397485.1885073,
+    "ast_hash": "3cf36a5e5c5ecf070f5b1e055f6e8af8",
+    "semantic_hash": ""
+  },
+  "k8s/deployment.yaml": {
+    "mtime": 1757397493.031466,
+    "ast_hash": "1d5849247fefd83a62fda61b1faaf2ee",
+    "semantic_hash": ""
+  },
+  "k8s/ingress.yaml": {
+    "mtime": 1757397503.5460384,
+    "ast_hash": "e84c260e746c206b847bd163c3ced033",
+    "semantic_hash": ""
+  },
+  "k8s/job.yaml": {
+    "mtime": 1757397510.0652845,
+    "ast_hash": "d78ba12e9c722f60928b4c81f92d9238",
+    "semantic_hash": ""
+  },
+  "k8s/kustomization.yaml": {
+    "mtime": 1757397515.8351529,
+    "ast_hash": "61e50c8ce88b69eb8501c3c589a5987e",
+    "semantic_hash": ""
+  },
+  "k8s/namespace.yaml": {
+    "mtime": 1757397480.4726253,
+    "ast_hash": "a77076eb573927edb1373ad527b02cae",
+    "semantic_hash": ""
+  },
+  "k8s/service.yaml": {
+    "mtime": 1757397497.7618465,
+    "ast_hash": "51505f1f88b6d2426a45ca623f823909",
+    "semantic_hash": ""
+  },
+  "modules/exercises/data/Alankarams/mayamalavagowla.txt": {
+    "mtime": 1766988867.095091,
+    "ast_hash": "e89e706869d07e73c5c254871412383f",
+    "semantic_hash": ""
+  },
+  "modules/exercises/data/JantaVarasalu/mayamalavagowla.txt": {
+    "mtime": 1766988831.3074486,
+    "ast_hash": "8566aedc971f460245f6192a4ecbca46",
+    "semantic_hash": ""
+  },
+  "modules/exercises/data/SaraliSwaras/mayamalavagowla.txt": {
+    "mtime": 1767121114.0911486,
+    "ast_hash": "c5816cd6075125bbed58081c12da4897",
+    "semantic_hash": ""
+  },
+  "requirements.txt": {
+    "mtime": 1766043260.919025,
+    "ast_hash": "729496d8a1116232754a42074396b522",
+    "semantic_hash": ""
+  },
+  "docs/references/Sangita_Ratnakara_Adyar_Vol1.pdf": {
+    "mtime": 1758489588.234113,
+    "ast_hash": "a10e5b81d5d0b12f156bcd7cbd3ca8ae",
+    "semantic_hash": ""
+  },
+  "docs/references/Sangita_Ratnakara_Complete.pdf": {
+    "mtime": 1758489573.8136537,
+    "ast_hash": "8eec510e57f5f732fd2cce73df7b73ef",
+    "semantic_hash": ""
+  },
+  "docs/references/Sangita_Ratnakara_Vol1.pdf": {
+    "mtime": 1758489581.8477962,
+    "ast_hash": "8759806d260e477699caf622b6df23e9",
+    "semantic_hash": ""
+  }
+}

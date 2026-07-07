@@ -531,12 +531,19 @@ def init_db_with_flask(app) -> SQLAlchemy:
     else:
         app.config['SQLALCHEMY_DATABASE_URI'] = db_manager.config.postgresql_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-        'pool_size': db_manager.config.pool_size,
-        'max_overflow': db_manager.config.max_overflow,
-        'pool_timeout': db_manager.config.pool_timeout,
-        'pool_recycle': db_manager.config.pool_recycle,
-    }
+    
+    uri = app.config['SQLALCHEMY_DATABASE_URI']
+    if uri and uri.startswith('sqlite:'):
+        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+            'pool_recycle': db_manager.config.pool_recycle,
+        }
+    else:
+        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+            'pool_size': db_manager.config.pool_size,
+            'max_overflow': db_manager.config.max_overflow,
+            'pool_timeout': db_manager.config.pool_timeout,
+            'pool_recycle': db_manager.config.pool_recycle,
+        }
 
     db = SQLAlchemy(app)
     return db

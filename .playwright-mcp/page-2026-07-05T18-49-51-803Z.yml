@@ -1,0 +1,48 @@
+- generic [ref=e5]:
+  - generic [ref=e6]:
+    - heading "संगीत शाला" [level=1] [ref=e7]
+    - paragraph [ref=e8]: Welcome back to your musical journey
+  - generic [ref=e9]:
+    - generic [ref=e10]:
+      - img [ref=e12]
+      - heading "Welcome Back" [level=1] [ref=e16]
+      - heading "स्वागत है" [level=2] [ref=e17]
+      - paragraph [ref=e18]: Continue your Carnatic music learning journey
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - generic [ref=e21]: Email Addressईमेल
+        - generic [ref=e22]:
+          - img [ref=e23]
+          - textbox "Enter your email address" [ref=e26]
+      - generic [ref=e27]:
+        - generic [ref=e28]: Passwordपासवर्ड
+        - generic [ref=e29]:
+          - img [ref=e30]
+          - textbox "Enter your password" [ref=e33]
+          - button [ref=e34] [cursor=pointer]:
+            - img [ref=e35]
+      - generic [ref=e38]:
+        - generic [ref=e39]:
+          - checkbox "Remember me" [ref=e40]
+          - generic [ref=e41]: Remember me
+        - link "Forgot password?" [ref=e42] [cursor=pointer]:
+          - /url: /forgot-password
+      - button "Sign In" [ref=e43] [cursor=pointer]
+      - generic [ref=e48]: Or continue with
+      - button "Continue as Guest" [ref=e49] [cursor=pointer]:
+        - generic [ref=e50]:
+          - img [ref=e51]
+          - generic [ref=e55]: Continue as Guest
+      - generic [ref=e56]:
+        - button "Google" [ref=e57] [cursor=pointer]:
+          - img [ref=e58]
+          - text: Google
+        - button "Facebook" [ref=e63] [cursor=pointer]:
+          - img [ref=e64]
+          - text: Facebook
+    - generic [ref=e66]:
+      - paragraph [ref=e67]:
+        - text: Don't have an account?
+        - link "Sign up now" [ref=e68] [cursor=pointer]:
+          - /url: /signup
+      - paragraph [ref=e69]: नया खाता बनाएं

@@ -16,6 +16,9 @@ project_root = Path(__file__).parent.parent
 import sys
 sys.path.insert(0, str(project_root))
 
+# Set default environment variables for testing
+os.environ.setdefault('SECRET_KEY', 'test-secret-key-for-conftest')
+
 from api import create_app
 from core.models.user import UserProfile, SubscriptionTier
 from core.models.shruti import SHRUTI_SYSTEM
@@ -32,7 +35,9 @@ def event_loop():
 @pytest.fixture(scope="session")
 def flask_app():
     """Create Flask application for testing."""
-    app = create_app('testing')
+    # create_app returns (app, socketio); the SocketIO instance also registers
+    # itself in app.extensions['socketio'], so tests can retrieve it from there.
+    app, _socketio = create_app('testing')
     app.config.update({
         'TESTING': True,
         'WTF_CSRF_ENABLED': False,

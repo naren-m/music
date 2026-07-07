@@ -83,7 +83,7 @@ npm run dev
 #### Shruti System (`core/models/shruti.py`)
 - Defines all 22 shrutis with just intonation frequency ratios
 - `find_closest_shruti()` - Maps any frequency to nearest shruti
-- Base frequency: Sa = 240Hz (configurable)
+- Base frequency: Sa = 261.63Hz / C4 (configurable)
 
 #### Exercise Patterns (`modules/exercises/`)
 - **Sarali Varisai** (`sarali/patterns.py`): 12 levels of ascending/descending patterns
