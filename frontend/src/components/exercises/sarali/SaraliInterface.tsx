@@ -1044,12 +1044,12 @@ const SaraliInterface: React.FC<SaraliInterfaceProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {patterns.map((pattern) => (
             <motion.div
-              key={pattern.id}
+              key={pattern.level}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               className={cn(
                 "p-4 rounded-lg border cursor-pointer transition-all",
-                currentPattern.id === pattern.id
+                currentPattern.level === pattern.level
                   ? "border-orange-400 bg-orange-50"
                   : "border-gray-200 hover:border-orange-200 hover:bg-orange-25"
               )}

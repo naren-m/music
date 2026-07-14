@@ -58,8 +58,9 @@ SWARA_TO_SHRUTI_INDEX = {
     'N1': 13, 'Ni1': 13, 'SuddhaNishada': 13, 'Suddha Nishada': 13,
     'N2': 14, 'Ni2': 14, 'KaisikaNishada': 14, 'Kaisika Nishada': 14,
     'N3': 15, 'Ni3': 15, 'Ni': 15, 'KakaliNishada': 15, 'Kakali Nishada': 15,
-    # Upper Sa
-    'Ṡ': 16, 'S\'': 16, 'Sa\'': 16,
+    # Upper Sa — octave-equivalent to Sa (index 0): pitch detection octave-folds
+    # to the base octave, so index 16 (Komal Rishaba) would never match.
+    'Ṡ': 0, 'S\'': 0, 'Sa\'': 0,
 }
 
 

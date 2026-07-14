@@ -5,6 +5,7 @@ import { Menu, Search, Bell, Settings, User, LogOut, Music } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/utils/cn'
 import UserMenu from './UserMenu'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface HeaderProps {
   onMenuToggle: () => void
@@ -12,24 +13,20 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
   const navigate = useNavigate()
-  const [user, setUser] = React.useState<any>(null) // Will be replaced with auth context
+  const { user: authUser, logout } = useAuth()
   const [showUserMenu, setShowUserMenu] = React.useState(false)
 
-  // Mock user for now - will be replaced with actual auth
-  React.useEffect(() => {
-    // Mock authentication check
-    const mockUser = {
-      name: "राज Kumar",
-      email: "raj@example.com",
-      avatar: null,
-      subscription: "premium",
-      progress: {
-        level: 5,
-        streak: 12
-      }
+  // Adapt the AuthContext user shape to what UserMenu/this header render
+  const user = authUser && {
+    name: authUser.name,
+    email: authUser.email,
+    avatar: authUser.avatar ?? undefined,
+    subscription: authUser.subscription?.type === 'professional' ? 'master' : (authUser.subscription?.type ?? 'free'),
+    progress: {
+      level: authUser.progress.currentLevel,
+      streak: authUser.progress.currentStreak
     }
-    setUser(mockUser)
-  }, [])
+  } as const
 
   const handleSearch = (query: string) => {
     // Implement search functionality
@@ -44,9 +41,8 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
     navigate('/settings')
   }
 
-  const handleLogout = () => {
-    // Implement logout
-    setUser(null)
+  const handleLogout = async () => {
+    await logout()
     navigate('/login')
   }
 

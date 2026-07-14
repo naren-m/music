@@ -89,6 +89,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return
       }
 
+      // Guest sessions are client-only mock data - restore them directly instead
+      // of hitting /api/auth/verify, which will 401 on a non-server-issued token.
+      const guestSession = localStorage.getItem('guest_session')
+      if (guestSession) {
+        const guestUser: User = JSON.parse(guestSession)
+        setState(prev => ({
+          ...prev,
+          user: guestUser,
+          isAuthenticated: true,
+          isLoading: false
+        }))
+        return
+      }
+
       const response = await fetch('/api/auth/verify', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -246,6 +260,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Logout API call failed:', error)
     } finally {
       localStorage.removeItem('auth_token')
+      localStorage.removeItem('guest_session')
       setState({
         user: null,
         isAuthenticated: false,
@@ -306,6 +321,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         const token = 'guest-session-' + Date.now()
         localStorage.setItem('auth_token', token)
+        localStorage.setItem('guest_session', JSON.stringify(mockGuestUser))
 
         setState(prev => ({
           ...prev,
@@ -330,6 +346,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       const { user, token } = await response.json()
       localStorage.setItem('auth_token', token)
+      localStorage.setItem('guest_session', JSON.stringify(user))
 
       setState(prev => ({
         ...prev,

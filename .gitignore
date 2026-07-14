@@ -211,3 +211,4 @@ logs/
 .env.production.local
 secrets.json
 config/secrets/
+.playwright-mcp/

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { Button } from '@/components/ui/Button'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface SidebarProps {
   isOpen: boolean
@@ -116,7 +117,9 @@ const bottomNavItems: NavItem[] = [
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isMobile }) => {
   const location = useLocation()
+  const { user } = useAuth()
   const [expandedItems, setExpandedItems] = React.useState<string[]>([])
+  const hasProgress = !!user && (user.progress.currentStreak > 0 || user.progress.completedExercises > 0)
 
   const toggleExpanded = (href: string) => {
     setExpandedItems(prev =>
@@ -257,17 +260,28 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isMobile }) => {
       {/* User Progress Summary */}
       <div className="p-4 border-t border-orange-100">
         <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-lg p-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">Today's Progress</span>
-            <span className="text-xs text-orange-600">Level 5</span>
-          </div>
-          <div className="w-full bg-orange-200 rounded-full h-2">
-            <div className="bg-gradient-to-r from-orange-500 to-red-500 h-2 rounded-full" style={{width: '75%'}} />
-          </div>
-          <div className="flex justify-between mt-2 text-xs text-gray-600">
-            <span>3 of 4 exercises</span>
-            <span>12 day streak 🔥</span>
-          </div>
+          {hasProgress && user ? (
+            <>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">Today's Progress</span>
+                <span className="text-xs text-orange-600">Level {user.progress.currentLevel}</span>
+              </div>
+              <div className="w-full bg-orange-200 rounded-full h-2">
+                <div
+                  className="bg-gradient-to-r from-orange-500 to-red-500 h-2 rounded-full"
+                  style={{ width: `${Math.min(100, (user.progress.currentLevel / 10) * 100)}%` }}
+                />
+              </div>
+              <div className="flex justify-between mt-2 text-xs text-gray-600">
+                <span>{user.progress.completedExercises} exercises completed</span>
+                <span>{user.progress.currentStreak} day streak 🔥</span>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-gray-600 text-center py-1">
+              Start practicing to build your streak
+            </p>
+          )}
         </div>
       </div>
     </div>
