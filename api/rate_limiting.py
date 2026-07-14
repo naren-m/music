@@ -5,6 +5,7 @@ Prevents DoS attacks and API abuse with intelligent rate limiting
 
 import hashlib
 import logging
+import os
 import time
 from dataclasses import dataclass
 from functools import wraps
@@ -343,6 +344,19 @@ def websocket_rate_limit(f):
 
 
 # Advanced rate limiting for specific use cases
+def _get_load_factor() -> float:
+    """Get current server load factor (0.0 = idle, 1.0+ = overloaded).
+
+    Uses 1-minute load average normalized by CPU count.
+    """
+    try:
+        load_avg = os.getloadavg()[0]
+        cpu_count = os.cpu_count() or 1
+        return load_avg / cpu_count
+    except OSError:
+        return 0.0
+
+
 def adaptive_rate_limit(base_limit: int = 60, burst_multiplier: float = 2.0):
     """
     Adaptive rate limiting based on server load
@@ -354,9 +368,19 @@ def adaptive_rate_limit(base_limit: int = 60, burst_multiplier: float = 2.0):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # TODO: Implement server load detection
-            # For now, use standard rate limiting
-            return rate_limit(RateLimit(requests=base_limit, window=60))(f)(*args, **kwargs)
+            load_factor = _get_load_factor()
+
+            if load_factor < 0.5:
+                # Low load: allow burst capacity
+                effective_limit = int(base_limit * burst_multiplier)
+            elif load_factor < 0.8:
+                # Moderate load: use base limit
+                effective_limit = base_limit
+            else:
+                # High load: reduce limit to protect the server
+                effective_limit = max(1, int(base_limit * 0.5))
+
+            return rate_limit(RateLimit(requests=effective_limit, window=60))(f)(*args, **kwargs)
         return decorated_function
     return decorator
 
