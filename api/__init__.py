@@ -116,6 +116,10 @@ def register_main_routes(app: Flask) -> None:
     """Register main application routes."""
     @app.route('/')
     def index():
+        dist = os.environ.get('SPA_DIST_DIR')
+        if dist and os.path.isfile(os.path.join(dist, 'index.html')):
+            from flask import send_from_directory
+            return send_from_directory(dist, 'index.html')
         return app.send_static_file('index.html')
 
     @app.route('/carnatic')
@@ -225,6 +229,22 @@ def register_main_routes(app: Flask) -> None:
         """Alias for /api/v1/audio/config"""
         from .audio.routes import get_audio_config
         return get_audio_config()
+
+    # Built React SPA — served only when SPA_DIST_DIR is set (production
+    # container bundles frontend/dist). Real files (assets, favicon) return
+    # directly; unknown non-API paths fall back to index.html for client-side
+    # routing. Dev leaves SPA_DIST_DIR unset, so this stays a no-op there.
+    @app.route('/<path:path>')
+    def spa_catch_all(path):
+        from flask import send_from_directory, abort
+        dist = os.environ.get('SPA_DIST_DIR')
+        if dist:
+            candidate = os.path.join(dist, path)
+            if os.path.isfile(candidate):
+                return send_from_directory(dist, path)
+            if not (path.startswith('api/') or path.startswith('socket.io')):
+                return send_from_directory(dist, 'index.html')
+        abort(404)
 
 
 def register_socketio_events(socketio_instance: SocketIO) -> None:

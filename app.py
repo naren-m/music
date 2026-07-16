@@ -16,9 +16,12 @@ if __name__ == '__main__':
     print("🎵 Starting Carnatic Learning Application")
     print(f"🔗 Access the app at: http://localhost:{port}")
 
-    # Debug, the auto-reloader, and Werkzeug's unsafe dev server are gated to
-    # development only. In any other environment run this under a real WSGI/ASGI
-    # server (e.g. gunicorn with an eventlet/gevent worker) rather than __main__.
+    # Debug and the auto-reloader stay gated to development. The Socket.IO
+    # server uses async_mode='threading' (Werkzeug), so a production container
+    # must opt in to the threaded server explicitly via ALLOW_UNSAFE_WERKZEUG=1
+    # (set in the Docker image); this keeps dev semantics unchanged.
+    allow_werkzeug = is_dev or os.environ.get(
+        'ALLOW_UNSAFE_WERKZEUG', '').lower() in ('1', 'true', 'yes')
     socketio.run(
         app,
         debug=is_dev,
@@ -26,5 +29,5 @@ if __name__ == '__main__':
         port=port,
         use_reloader=is_dev,
         log_output=True,
-        allow_unsafe_werkzeug=is_dev
+        allow_unsafe_werkzeug=allow_werkzeug
     )
