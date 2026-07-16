@@ -48,9 +48,12 @@ COPY static/ ./static/
 # Copy the built SPA from the frontend stage and point Flask at it
 COPY --from=frontend /fe/dist ./frontend_dist
 
-# Create a non-root user for security
-RUN groupadd -r carnatic && useradd -r -g carnatic -m carnatic
-RUN chown -R carnatic:carnatic /app
+# Create a non-root user for security. Normalize perms with chmod a+rX so the
+# non-root user can traverse dirs and read sources regardless of the modes the
+# files carried in (several __init__.py are mode 600 in the repo).
+RUN groupadd -r carnatic && useradd -r -g carnatic -m carnatic \
+    && chown -R carnatic:carnatic /app \
+    && chmod -R a+rX /app
 USER carnatic
 
 # Expose port for web interface
