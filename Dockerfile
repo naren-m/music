@@ -44,7 +44,6 @@ COPY core/ ./core/
 COPY modules/ ./modules/
 COPY config/ ./config/
 COPY static/ ./static/
-COPY templates/ ./templates/
 
 # Copy the built SPA from the frontend stage and point Flask at it
 COPY --from=frontend /fe/dist ./frontend_dist
