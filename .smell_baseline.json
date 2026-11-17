@@ -1,0 +1,72 @@
+{
+ "api/__init__.py": {
+  "SML003": 1,
+  "SML004": 1,
+  "SML006": 6
+ },
+ "api/analytics/dashboard.py": {
+  "SML003": 12,
+  "SML004": 4,
+  "SML006": 12
+ },
+ "api/audio/websocket.py": {
+  "SML004": 1
+ },
+ "api/error_handlers.py": {
+  "SML004": 1
+ },
+ "api/gamification/achievements.py": {
+  "SML003": 5,
+  "SML004": 1,
+  "SML006": 6
+ },
+ "api/raga/database.py": {
+  "SML004": 1
+ },
+ "api/rate_limiting.py": {
+  "SML005": 1
+ },
+ "api/social/routes.py": {
+  "SML004": 3
+ },
+ "api/tala/rhythm_training.py": {
+  "SML004": 2
+ },
+ "app.py": {
+  "SML006": 2
+ },
+ "config/database.py": {
+  "SML006": 2
+ },
+ "config/settings.py": {
+  "SML006": 2
+ },
+ "core/models/shruti.py": {
+  "SML003": 1
+ },
+ "core/services/audio_engine.py": {
+  "SML004": 1
+ },
+ "migrations/init_db.py": {
+  "SML004": 1,
+  "SML012": 1
+ },
+ "modules/exercises/alankaram/patterns.py": {
+  "SML004": 2
+ },
+ "modules/exercises/janta/patterns.py": {
+  "SML003": 1,
+  "SML006": 1
+ },
+ "modules/swara/recognition.py": {
+  "SML003": 11,
+  "SML006": 1
+ },
+ "modules/swara/trainer.py": {
+  "SML003": 1,
+  "SML006": 1
+ },
+ "monitoring/performance_monitor.py": {
+  "SML006": 3
+ }
+}
