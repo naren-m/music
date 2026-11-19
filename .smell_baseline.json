@@ -1,6 +1,5 @@
 {
  "api/__init__.py": {
-  "SML003": 1,
   "SML004": 1
  },
  "api/analytics/dashboard.py": {
@@ -27,9 +26,6 @@
  "api/tala/rhythm_training.py": {
   "SML004": 2
  },
- "core/models/shruti.py": {
-  "SML003": 1
- },
  "core/services/audio_engine.py": {
   "SML004": 1
  },
@@ -39,8 +35,5 @@
  },
  "modules/exercises/alankaram/patterns.py": {
   "SML004": 2
- },
- "modules/swara/recognition.py": {
-  "SML003": 10
  }
 }

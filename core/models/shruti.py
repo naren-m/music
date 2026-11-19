@@ -54,7 +54,7 @@ class Shruti:
             note_idx = midi_note_round % 12
             
             return f"{note_names[note_idx]}{octave}"
-        except Exception:
+        except (ValueError, OverflowError):  # NaN / inf frequency
             return ""
 
 
