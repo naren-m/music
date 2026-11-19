@@ -6,6 +6,7 @@ Prevents DoS attacks and API abuse with intelligent rate limiting
 import hashlib
 import logging
 import os
+import threading
 import time
 from dataclasses import dataclass
 from functools import wraps
@@ -167,16 +168,36 @@ class RedisRateLimiter:
         )
 
 
-# Global rate limiter instance
-rate_limiter = None
+class _RateLimiterHolder:
+    """Builds the process-wide RedisRateLimiter once.
+
+    The lock stops two concurrent first requests from building two limiters.
+    Two limiters would split the in-memory fallback store and undercount.
+    """
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._limiter: Optional[RedisRateLimiter] = None
+
+    def get(self) -> RedisRateLimiter:
+        if self._limiter is None:
+            with self._lock:
+                if self._limiter is None:
+                    self._limiter = RedisRateLimiter()
+        return self._limiter
+
+    def reset(self) -> None:
+        """Drop the cached limiter. For tests."""
+        with self._lock:
+            self._limiter = None
 
 
-def get_rate_limiter():
+_limiter_holder = _RateLimiterHolder()
+
+
+def get_rate_limiter() -> RedisRateLimiter:
     """Get or create rate limiter instance"""
-    global rate_limiter
-    if rate_limiter is None:
-        rate_limiter = RedisRateLimiter()
-    return rate_limiter
+    return _limiter_holder.get()
 
 
 class RateLimitConfig:

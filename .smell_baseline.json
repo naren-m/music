@@ -17,9 +17,6 @@
  "api/raga/database.py": {
   "SML004": 1
  },
- "api/rate_limiting.py": {
-  "SML005": 1
- },
  "api/social/routes.py": {
   "SML004": 3
  },
