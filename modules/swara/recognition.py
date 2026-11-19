@@ -86,8 +86,9 @@ class SwaraFeatureExtractor:
             carnatic_features = self._extract_carnatic_features(audio, sr)
             features.extend(carnatic_features)
 
-        except Exception as e:
+        except Exception:
             # Return zeros if feature extraction fails
+            logger.debug("feature extraction failed; returning zeros", exc_info=True)
             return np.zeros(self._get_feature_dimension())
 
         return np.array(features, dtype=np.float32)
@@ -132,6 +133,7 @@ class SwaraFeatureExtractor:
                 features.extend([0.0] * 3)
 
         except Exception:
+            logger.debug("pitch features failed; padding with zeros", exc_info=True)
             features.extend([0.0] * 10)
 
         return features
@@ -170,6 +172,7 @@ class SwaraFeatureExtractor:
             ])
 
         except Exception:
+            logger.debug("spectral features failed; padding with zeros", exc_info=True)
             features.extend([0.0] * 8)
 
         return features
@@ -206,6 +209,7 @@ class SwaraFeatureExtractor:
             ])
 
         except Exception:
+            logger.debug("MFCC features failed; padding with zeros", exc_info=True)
             features.extend([0.0] * (self.config.n_mfcc * 2 + 4))
 
         return features
@@ -242,6 +246,7 @@ class SwaraFeatureExtractor:
             ][0])
 
         except Exception:
+            logger.debug("harmonic features failed; padding with zeros", exc_info=True)
             features.extend([0.0] * 15)  # 1 + 2 + 12 chroma features
 
         return features
@@ -280,6 +285,7 @@ class SwaraFeatureExtractor:
             features.append(tempo)
 
         except Exception:
+            logger.debug("temporal features failed; padding with zeros", exc_info=True)
             features.extend([0.0] * 6)
 
         return features
@@ -341,6 +347,7 @@ class SwaraFeatureExtractor:
                 features.extend([0.0] * 3)
 
         except Exception:
+            logger.debug("carnatic features failed; padding with zeros", exc_info=True)
             features.extend([0.0] * 7)
 
         return features
@@ -468,6 +475,7 @@ class SwaraClassifier:
             }
 
         except Exception as e:
+            logger.warning("swara model training failed", exc_info=True)
             return {
                 'success': False,
                 'error': str(e)
@@ -542,6 +550,7 @@ class SwaraClassifier:
             }
 
         except Exception as e:
+            logger.warning("swara prediction failed", exc_info=True)
             return {
                 'success': False,
                 'error': str(e)
@@ -603,6 +612,7 @@ class SwaraRecognitionEngine:
             return result
 
         except Exception as e:
+            logger.warning("swara analysis failed", exc_info=True)
             return {
                 'success': False,
                 'error': str(e),

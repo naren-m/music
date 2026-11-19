@@ -267,6 +267,7 @@ def register_cli_commands(app: Flask) -> None:
             main()
             sys.stdout.write("Database initialized successfully\n")
         except Exception as e:
+            app.logger.error("Database initialization failed", exc_info=True)
             sys.stdout.write(f"Database initialization failed: {e}\n")
 
     @app.cli.command()

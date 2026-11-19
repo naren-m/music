@@ -129,6 +129,18 @@ class TestShrutiModel:
         assert analysis['deviation_cents'] < 0
         assert analysis['direction'] == 'flat'
 
+    @pytest.mark.parametrize("frequency, expected", [
+        (440.0, "A4"),
+        (261.63, "C4"),
+        (0.0, ""),
+        (-5.0, ""),
+        (float('nan'), ""),
+        (float('inf'), ""),
+    ])
+    def test_freq_to_note_name(self, frequency, expected):
+        """Non-finite frequencies fall back to '' via the narrowed except."""
+        assert Shruti._freq_to_note_name(frequency) == expected
+
 
 class TestUserProfile:
     """Test UserProfile model and related functionality."""
