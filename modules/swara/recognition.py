@@ -3,6 +3,7 @@ Advanced Swara Recognition Engine
 Phase 2: Carnatic Music Learning Platform
 """
 
+import logging
 import numpy as np
 import librosa
 from typing import Dict, List, Optional, Tuple, Any
@@ -14,6 +15,8 @@ from sklearn.preprocessing import StandardScaler
 import joblib
 
 from core.models.shruti import ShrutiSystem, SwaraName
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class SwaraRecognitionConfig:
@@ -483,7 +486,7 @@ class SwaraClassifier:
             return self.is_trained
 
         except Exception as e:
-            print(f"Error loading model: {e}")
+            logger.exception("Error loading model: %s", e)
             return False
 
     def predict_swara(self, audio: np.ndarray, sr: int = None) -> Dict[str, Any]:

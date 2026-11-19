@@ -2,10 +2,13 @@
 Configuration settings for Carnatic Learning Application
 """
 
+import logging
 import os
 import secrets
 from datetime import timedelta
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 # Load environment variables from .env file
 try:
@@ -31,8 +34,10 @@ class Config:
             )
         # Generate temporary key for development
         _secret_key = secrets.token_urlsafe(32)
-        print(f"⚠️  WARNING: Generated temporary SECRET_KEY for development: {_secret_key}")
-        print("   Set SECRET_KEY environment variable for production deployment")
+        logger.warning(
+            "Generated temporary SECRET_KEY for development; "
+            "set SECRET_KEY environment variable for production deployment"
+        )
 
     SECRET_KEY = _secret_key
     

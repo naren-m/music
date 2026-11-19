@@ -228,3 +228,33 @@ def test_get_swara_performance(client, db_session, sample_user, sample_progress_
     assert swara_analysis[0]['swara'] == 'Sa'
 
 # Test for other analytics endpoints can be added similarly.
+
+
+# Each analysis step swallows a DB failure and returns its fallback. The failure
+# must reach the module logger at ERROR with a traceback, not stdout (SML006).
+DB_FAILURE_LOG_CASES = [
+    # (method, takes_period, expected log message prefix)
+    ("_analyze_performance_metrics", True, "Error analyzing performance metrics"),
+    ("_generate_learning_insights", True, "Error generating learning insights"),
+    ("_analyze_practice_patterns", True, "Error analyzing practice patterns"),
+    ("_analyze_swara_performance", True, "Error analyzing swara performance"),
+    ("_generate_progress_predictions", False, "Error generating progress predictions"),
+    ("_analyze_streaks", True, "Error analyzing streaks"),
+    ("_analyze_accuracy_trends", True, "Error analyzing accuracy trends"),
+    ("_analyze_time_distribution", True, "Error analyzing time distribution"),
+    ("_analyze_difficulty_progression", True, "Error analyzing difficulty progression"),
+    ("_generate_comparative_analysis", True, "Error generating comparative analysis"),
+    ("_generate_personalized_recommendations", False, "Error generating recommendations"),
+]
+
+
+@pytest.mark.parametrize("method,takes_period,message", DB_FAILURE_LOG_CASES)
+def test_analysis_db_failure_is_logged(caplog, method, takes_period, message):
+    analytics = AdvancedAnalytics()
+    args = (1, AnalyticsPeriod.MONTHLY) if takes_period else (1,)
+    with patch('api.analytics.dashboard.get_db_session', side_effect=RuntimeError("db down")), \
+            caplog.at_level("ERROR", logger="api.analytics.dashboard"):
+        asyncio.run(getattr(analytics, method)(*args))
+    records = [r for r in caplog.records if r.name == "api.analytics.dashboard"]
+    assert any(r.getMessage().startswith(message) and "db down" in r.getMessage()
+               and r.exc_info for r in records), [r.getMessage() for r in records]

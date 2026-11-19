@@ -3,8 +3,12 @@ Carnatic Learning Application
 Main application entry point.
 """
 
+import logging
 import os
+
 from api import create_app
+
+logger = logging.getLogger(__name__)
 
 # Create application using factory pattern
 app, socketio = create_app(os.environ.get('FLASK_ENV', 'development'))
@@ -13,8 +17,8 @@ if __name__ == '__main__':
     # Development server
     port = int(os.environ.get('PORT', 5002))
     is_dev = os.environ.get('FLASK_ENV', 'development') == 'development'
-    print("🎵 Starting Carnatic Learning Application")
-    print(f"🔗 Access the app at: http://localhost:{port}")
+    logger.info("Starting Carnatic Learning Application")
+    logger.info("Access the app at: http://localhost:%s", port)
 
     # Debug and the auto-reloader stay gated to development. The Socket.IO
     # server uses async_mode='threading' (Werkzeug), so a production container

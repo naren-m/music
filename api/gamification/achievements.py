@@ -5,6 +5,7 @@ Comprehensive system for user engagement through achievements, badges,
 streaks, leaderboards, and progressive challenges in Carnatic music learning.
 """
 
+import logging
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, asdict
 from enum import Enum
@@ -16,6 +17,8 @@ from sqlalchemy import func
 
 from ..database import get_db_session
 from ..models import User, Progress, Achievement, UserAchievement
+
+logger = logging.getLogger(__name__)
 
 class AchievementType(Enum):
     PRACTICE = "practice"
@@ -390,7 +393,7 @@ class GamificationEngine:
             return newly_earned
 
         except Exception as e:
-            print(f"Error checking achievements for user {user_id}: {e}")
+            logger.exception("Error checking achievements for user %s: %s", user_id, e)
             return []
 
     def _check_badge_requirements(self, badge: Badge, user_stats: UserStats, session_data: Dict) -> bool:
@@ -461,10 +464,10 @@ class GamificationEngine:
                     user.level = self._calculate_level(user.total_points)
 
                 db.commit()
-                print(f"Awarded badge '{badge.name}' to user {user_id}")
+                logger.info("Awarded badge '%s' to user %s", badge.name, user_id)
 
         except Exception as e:
-            print(f"Error awarding badge {badge.id} to user {user_id}: {e}")
+            logger.exception("Error awarding badge %s to user %s: %s", badge.id, user_id, e)
 
     def _calculate_level(self, total_points: int) -> int:
         """Calculate user level based on total points"""
@@ -530,7 +533,7 @@ class GamificationEngine:
                 )
 
         except Exception as e:
-            print(f"Error getting user stats for {user_id}: {e}")
+            logger.exception("Error getting user stats for %s: %s", user_id, e)
             return self._create_empty_user_stats(user_id)
 
     def _create_empty_user_stats(self, user_id: int) -> UserStats:
@@ -633,7 +636,7 @@ class GamificationEngine:
                 ]
 
         except Exception as e:
-            print(f"Error getting user achievements for {user_id}: {e}")
+            logger.exception("Error getting user achievements for %s: %s", user_id, e)
             return []
 
     async def get_leaderboard(self, period: str = "monthly", limit: int = 100) -> List[LeaderboardEntry]:
@@ -714,7 +717,7 @@ class GamificationEngine:
                 return entries
 
         except Exception as e:
-            print(f"Error getting leaderboard for {period}: {e}")
+            logger.exception("Error getting leaderboard for %s: %s", period, e)
             return []
 
     async def create_challenge(self, challenge_data: Dict) -> Challenge:
