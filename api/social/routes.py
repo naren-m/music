@@ -142,6 +142,25 @@ def search_users():
         return jsonify({'error': 'Failed to search users'}), 500
 
 
+def _accepted_friend_ids(db, user_id: int) -> list:
+    """IDs of users with an accepted friendship with user_id, in query order."""
+    friendships = db.query(FriendRequest).filter(
+        or_(
+            FriendRequest.sender_id == user_id,
+            FriendRequest.receiver_id == user_id
+        ),
+        FriendRequest.status == 'accepted'
+    ).all()
+
+    friend_ids = []
+    for fr in friendships:
+        if fr.sender_id == user_id:
+            friend_ids.append(fr.receiver_id)
+        else:
+            friend_ids.append(fr.sender_id)
+    return friend_ids
+
+
 @social_bp.route('/users/<int:user_id>/profile', methods=['GET'])
 def get_user_profile(user_id: int):
     """
@@ -192,36 +211,8 @@ def get_user_profile(user_id: int):
             ).order_by(desc(Achievement.earned_date)).limit(5).all()
 
             # Get mutual friends count
-            current_user_friends = db.query(FriendRequest).filter(
-                or_(
-                    FriendRequest.sender_id == current_user_id,
-                    FriendRequest.receiver_id == current_user_id
-                ),
-                FriendRequest.status == 'accepted'
-            ).all()
-
-            current_friend_ids = set()
-            for fr in current_user_friends:
-                if fr.sender_id == current_user_id:
-                    current_friend_ids.add(fr.receiver_id)
-                else:
-                    current_friend_ids.add(fr.sender_id)
-
-            target_user_friends = db.query(FriendRequest).filter(
-                or_(
-                    FriendRequest.sender_id == user_id,
-                    FriendRequest.receiver_id == user_id
-                ),
-                FriendRequest.status == 'accepted'
-            ).all()
-
-            target_friend_ids = set()
-            for fr in target_user_friends:
-                if fr.sender_id == user_id:
-                    target_friend_ids.add(fr.receiver_id)
-                else:
-                    target_friend_ids.add(fr.sender_id)
-
+            current_friend_ids = set(_accepted_friend_ids(db, current_user_id))
+            target_friend_ids = set(_accepted_friend_ids(db, user_id))
             mutual_friends = current_friend_ids.intersection(target_friend_ids)
 
             return jsonify({
@@ -255,6 +246,86 @@ def get_user_profile(user_id: int):
 # Activity Feed
 # ============================================================================
 
+def _practice_activities(db, relevant_user_ids, limit) -> list:
+    """Feed items for recent practice sessions of the given users."""
+    activities = []
+    # Get recent practice sessions
+    recent_exercises = db.query(Exercise).filter(
+        Exercise.user_id.in_(relevant_user_ids)
+    ).order_by(desc(Exercise.started_at)).limit(limit * 2).all()
+
+    for exercise in recent_exercises:
+        user = db.query(User).filter_by(id=exercise.user_id).first()
+        if user:
+            activities.append({
+                'type': ActivityType.PRACTICE_SESSION,
+                'user_id': user.id,
+                'username': user.username,
+                'timestamp': exercise.started_at.isoformat() if exercise.started_at else None,
+                'data': {
+                    'module': exercise.module,
+                    'duration_minutes': exercise.duration_minutes,
+                    'accuracy_score': exercise.accuracy_score
+                }
+            })
+    return activities
+
+
+def _achievement_activities(db, relevant_user_ids, limit) -> list:
+    """Feed items for recent achievements of the given users."""
+    activities = []
+    # Get recent achievements
+    recent_achievements = db.query(Achievement).filter(
+        Achievement.user_id.in_(relevant_user_ids)
+    ).order_by(desc(Achievement.earned_date)).limit(limit).all()
+
+    for ach in recent_achievements:
+        user = db.query(User).filter_by(id=ach.user_id).first()
+        if user:
+            activities.append({
+                'type': ActivityType.ACHIEVEMENT_EARNED,
+                'user_id': user.id,
+                'username': user.username,
+                'timestamp': ach.earned_date.isoformat(),
+                'data': {
+                    'achievement_name': ach.name,
+                    'icon': ach.icon,
+                    'points': ach.points
+                }
+            })
+    return activities
+
+
+def _friendship_activities(db, current_user_id) -> list:
+    """Feed items for the current user's recent accepted friendships."""
+    activities = []
+    # Get recent friendships (for current user only)
+    recent_friendships = db.query(FriendRequest).filter(
+        or_(
+            FriendRequest.sender_id == current_user_id,
+            FriendRequest.receiver_id == current_user_id
+        ),
+        FriendRequest.status == 'accepted',
+        FriendRequest.responded_at != None
+    ).order_by(desc(FriendRequest.responded_at)).limit(10).all()
+
+    for fr in recent_friendships:
+        other_user_id = fr.receiver_id if fr.sender_id == current_user_id else fr.sender_id
+        other_user = db.query(User).filter_by(id=other_user_id).first()
+        if other_user:
+            activities.append({
+                'type': ActivityType.FRIEND_ADDED,
+                'user_id': current_user_id,
+                'username': 'You',
+                'timestamp': fr.responded_at.isoformat() if fr.responded_at else None,
+                'data': {
+                    'friend_id': other_user.id,
+                    'friend_username': other_user.username
+                }
+            })
+    return activities
+
+
 @social_bp.route('/feed', methods=['GET'])
 def get_activity_feed():
     """
@@ -273,20 +344,7 @@ def get_activity_feed():
     try:
         with get_db_session() as db:
             # Get friend IDs
-            friendships = db.query(FriendRequest).filter(
-                or_(
-                    FriendRequest.sender_id == current_user_id,
-                    FriendRequest.receiver_id == current_user_id
-                ),
-                FriendRequest.status == 'accepted'
-            ).all()
-
-            friend_ids = []
-            for fr in friendships:
-                if fr.sender_id == current_user_id:
-                    friend_ids.append(fr.receiver_id)
-                else:
-                    friend_ids.append(fr.sender_id)
+            friend_ids = _accepted_friend_ids(db, current_user_id)
 
             relevant_user_ids = friend_ids.copy()
             if include_self:
@@ -301,71 +359,9 @@ def get_activity_feed():
                 })
 
             activities = []
-
-            # Get recent practice sessions
-            recent_exercises = db.query(Exercise).filter(
-                Exercise.user_id.in_(relevant_user_ids)
-            ).order_by(desc(Exercise.started_at)).limit(limit * 2).all()
-
-            for exercise in recent_exercises:
-                user = db.query(User).filter_by(id=exercise.user_id).first()
-                if user:
-                    activities.append({
-                        'type': ActivityType.PRACTICE_SESSION,
-                        'user_id': user.id,
-                        'username': user.username,
-                        'timestamp': exercise.started_at.isoformat() if exercise.started_at else None,
-                        'data': {
-                            'module': exercise.module,
-                            'duration_minutes': exercise.duration_minutes,
-                            'accuracy_score': exercise.accuracy_score
-                        }
-                    })
-
-            # Get recent achievements
-            recent_achievements = db.query(Achievement).filter(
-                Achievement.user_id.in_(relevant_user_ids)
-            ).order_by(desc(Achievement.earned_date)).limit(limit).all()
-
-            for ach in recent_achievements:
-                user = db.query(User).filter_by(id=ach.user_id).first()
-                if user:
-                    activities.append({
-                        'type': ActivityType.ACHIEVEMENT_EARNED,
-                        'user_id': user.id,
-                        'username': user.username,
-                        'timestamp': ach.earned_date.isoformat(),
-                        'data': {
-                            'achievement_name': ach.name,
-                            'icon': ach.icon,
-                            'points': ach.points
-                        }
-                    })
-
-            # Get recent friendships (for current user only)
-            recent_friendships = db.query(FriendRequest).filter(
-                or_(
-                    FriendRequest.sender_id == current_user_id,
-                    FriendRequest.receiver_id == current_user_id
-                ),
-                FriendRequest.status == 'accepted',
-                FriendRequest.responded_at != None
-            ).order_by(desc(FriendRequest.responded_at)).limit(10).all()
-
-            for fr in recent_friendships:
-                other_user_id = fr.receiver_id if fr.sender_id == current_user_id else fr.sender_id
-                other_user = db.query(User).filter_by(id=other_user_id).first()
-                if other_user:
-                    activities.append({
-                        'type': ActivityType.FRIEND_ADDED,
-                        'user_id': current_user_id,
-                        'username': 'You',
-                        'timestamp': fr.responded_at.isoformat() if fr.responded_at else None,
-                        'data': {
-                            'friend_id': other_user.id,
-                            'friend_username': other_user.username
-                        }
-                    })
+            activities.extend(_practice_activities(db, relevant_user_ids, limit))
+            activities.extend(_achievement_activities(db, relevant_user_ids, limit))
+            activities.extend(_friendship_activities(db, current_user_id))
 
             # Sort all activities by timestamp
             activities.sort(
@@ -393,6 +389,155 @@ def get_activity_feed():
 # Leaderboards
 # ============================================================================
 
+def _accuracy_rankings(db, user_filter, time_filter, limit, current_user_id) -> list:
+    """Rank users by average accuracy (minimum 5 sessions)."""
+    rankings = []
+    # Rank by average accuracy
+    query = db.query(
+        Exercise.user_id,
+        func.avg(Exercise.accuracy_score).label('avg_accuracy'),
+        func.count(Exercise.id).label('session_count')
+    ).group_by(Exercise.user_id)
+
+    if user_filter:
+        query = query.filter(Exercise.user_id.in_(user_filter))
+    if time_filter:
+        query = query.filter(Exercise.started_at >= time_filter)
+
+    # Require minimum sessions for ranking
+    results = query.having(func.count(Exercise.id) >= 5).order_by(
+        desc('avg_accuracy')
+    ).limit(limit).all()
+
+    for rank, (user_id, avg_acc, sessions) in enumerate(results, 1):
+        user = db.query(User).filter_by(id=user_id).first()
+        if user:
+            rankings.append({
+                'rank': rank,
+                'user_id': user.id,
+                'username': user.username,
+                'value': round(avg_acc, 2),
+                'session_count': sessions,
+                'is_current_user': user.id == current_user_id
+            })
+    return rankings
+
+
+def _practice_time_rankings(db, user_filter, time_filter, limit, current_user_id) -> list:
+    """Rank users by total practice minutes."""
+    rankings = []
+    # Rank by total practice time
+    query = db.query(
+        Exercise.user_id,
+        func.sum(Exercise.duration_minutes).label('total_time'),
+        func.count(Exercise.id).label('session_count')
+    ).group_by(Exercise.user_id)
+
+    if user_filter:
+        query = query.filter(Exercise.user_id.in_(user_filter))
+    if time_filter:
+        query = query.filter(Exercise.started_at >= time_filter)
+
+    results = query.order_by(desc('total_time')).limit(limit).all()
+
+    for rank, (user_id, total_time, sessions) in enumerate(results, 1):
+        user = db.query(User).filter_by(id=user_id).first()
+        if user:
+            rankings.append({
+                'rank': rank,
+                'user_id': user.id,
+                'username': user.username,
+                'value': round(total_time, 1),
+                'session_count': sessions,
+                'is_current_user': user.id == current_user_id
+            })
+    return rankings
+
+
+def _achievement_rankings(db, user_filter, time_filter, limit, current_user_id) -> list:
+    """Rank users by total achievement points."""
+    rankings = []
+    # Rank by achievement points
+    query = db.query(
+        Achievement.user_id,
+        func.sum(Achievement.points).label('total_points'),
+        func.count(Achievement.id).label('achievement_count')
+    ).group_by(Achievement.user_id)
+
+    if user_filter:
+        query = query.filter(Achievement.user_id.in_(user_filter))
+    if time_filter:
+        query = query.filter(Achievement.earned_date >= time_filter)
+
+    results = query.order_by(desc('total_points')).limit(limit).all()
+
+    for rank, (user_id, total_points, count) in enumerate(results, 1):
+        user = db.query(User).filter_by(id=user_id).first()
+        if user:
+            rankings.append({
+                'rank': rank,
+                'user_id': user.id,
+                'username': user.username,
+                'value': total_points or 0,
+                'achievement_count': count,
+                'is_current_user': user.id == current_user_id
+            })
+    return rankings
+
+
+def _streak_rankings(db, user_filter, limit, current_user_id) -> list:
+    """Rank users by current consecutive-day practice streak."""
+    rankings = []
+    # Calculate current practice streaks
+    all_users = db.query(User).filter_by(is_active=True)
+    if user_filter:
+        all_users = all_users.filter(User.id.in_(user_filter))
+    all_users = all_users.all()
+
+    streak_data = []
+    for user in all_users:
+        exercises = db.query(Exercise).filter(
+            Exercise.user_id == user.id
+        ).order_by(desc(Exercise.started_at)).all()
+
+        if not exercises:
+            continue
+
+        # Calculate current streak
+        current_streak = 0
+        today = datetime.now(timezone.utc).date()
+
+        practice_dates = set()
+        for ex in exercises:
+            if ex.started_at:
+                practice_dates.add(ex.started_at.date())
+
+        check_date = today
+        while check_date in practice_dates:
+            current_streak += 1
+            check_date -= timedelta(days=1)
+
+        if current_streak > 0:
+            streak_data.append({
+                'user': user,
+                'streak': current_streak,
+                'last_practice': max(practice_dates) if practice_dates else None
+            })
+
+    streak_data.sort(key=lambda x: x['streak'], reverse=True)
+
+    for rank, item in enumerate(streak_data[:limit], 1):
+        rankings.append({
+            'rank': rank,
+            'user_id': item['user'].id,
+            'username': item['user'].username,
+            'value': item['streak'],
+            'last_practice': item['last_practice'].isoformat() if item['last_practice'] else None,
+            'is_current_user': item['user'].id == current_user_id
+        })
+    return rankings
+
+
 @social_bp.route('/leaderboard', methods=['GET'])
 def get_leaderboard():
     """
@@ -417,21 +562,7 @@ def get_leaderboard():
             # Determine user filter based on scope
             user_filter = None
             if scope == 'friends':
-                friendships = db.query(FriendRequest).filter(
-                    or_(
-                        FriendRequest.sender_id == current_user_id,
-                        FriendRequest.receiver_id == current_user_id
-                    ),
-                    FriendRequest.status == 'accepted'
-                ).all()
-
-                friend_ids = [current_user_id]
-                for fr in friendships:
-                    if fr.sender_id == current_user_id:
-                        friend_ids.append(fr.receiver_id)
-                    else:
-                        friend_ids.append(fr.sender_id)
-                user_filter = friend_ids
+                user_filter = [current_user_id] + _accepted_friend_ids(db, current_user_id)
 
             # Time filter for weekly scope
             time_filter = None
@@ -441,137 +572,16 @@ def get_leaderboard():
             rankings = []
 
             if leaderboard_type == 'accuracy':
-                # Rank by average accuracy
-                query = db.query(
-                    Exercise.user_id,
-                    func.avg(Exercise.accuracy_score).label('avg_accuracy'),
-                    func.count(Exercise.id).label('session_count')
-                ).group_by(Exercise.user_id)
-
-                if user_filter:
-                    query = query.filter(Exercise.user_id.in_(user_filter))
-                if time_filter:
-                    query = query.filter(Exercise.started_at >= time_filter)
-
-                # Require minimum sessions for ranking
-                results = query.having(func.count(Exercise.id) >= 5).order_by(
-                    desc('avg_accuracy')
-                ).limit(limit).all()
-
-                for rank, (user_id, avg_acc, sessions) in enumerate(results, 1):
-                    user = db.query(User).filter_by(id=user_id).first()
-                    if user:
-                        rankings.append({
-                            'rank': rank,
-                            'user_id': user.id,
-                            'username': user.username,
-                            'value': round(avg_acc, 2),
-                            'session_count': sessions,
-                            'is_current_user': user.id == current_user_id
-                        })
+                rankings = _accuracy_rankings(db, user_filter, time_filter, limit, current_user_id)
 
             elif leaderboard_type == 'practice_time':
-                # Rank by total practice time
-                query = db.query(
-                    Exercise.user_id,
-                    func.sum(Exercise.duration_minutes).label('total_time'),
-                    func.count(Exercise.id).label('session_count')
-                ).group_by(Exercise.user_id)
-
-                if user_filter:
-                    query = query.filter(Exercise.user_id.in_(user_filter))
-                if time_filter:
-                    query = query.filter(Exercise.started_at >= time_filter)
-
-                results = query.order_by(desc('total_time')).limit(limit).all()
-
-                for rank, (user_id, total_time, sessions) in enumerate(results, 1):
-                    user = db.query(User).filter_by(id=user_id).first()
-                    if user:
-                        rankings.append({
-                            'rank': rank,
-                            'user_id': user.id,
-                            'username': user.username,
-                            'value': round(total_time, 1),
-                            'session_count': sessions,
-                            'is_current_user': user.id == current_user_id
-                        })
+                rankings = _practice_time_rankings(db, user_filter, time_filter, limit, current_user_id)
 
             elif leaderboard_type == 'achievements':
-                # Rank by achievement points
-                query = db.query(
-                    Achievement.user_id,
-                    func.sum(Achievement.points).label('total_points'),
-                    func.count(Achievement.id).label('achievement_count')
-                ).group_by(Achievement.user_id)
-
-                if user_filter:
-                    query = query.filter(Achievement.user_id.in_(user_filter))
-                if time_filter:
-                    query = query.filter(Achievement.earned_date >= time_filter)
-
-                results = query.order_by(desc('total_points')).limit(limit).all()
-
-                for rank, (user_id, total_points, count) in enumerate(results, 1):
-                    user = db.query(User).filter_by(id=user_id).first()
-                    if user:
-                        rankings.append({
-                            'rank': rank,
-                            'user_id': user.id,
-                            'username': user.username,
-                            'value': total_points or 0,
-                            'achievement_count': count,
-                            'is_current_user': user.id == current_user_id
-                        })
+                rankings = _achievement_rankings(db, user_filter, time_filter, limit, current_user_id)
 
             elif leaderboard_type == 'streak':
-                # Calculate current practice streaks
-                all_users = db.query(User).filter_by(is_active=True)
-                if user_filter:
-                    all_users = all_users.filter(User.id.in_(user_filter))
-                all_users = all_users.all()
-
-                streak_data = []
-                for user in all_users:
-                    exercises = db.query(Exercise).filter(
-                        Exercise.user_id == user.id
-                    ).order_by(desc(Exercise.started_at)).all()
-
-                    if not exercises:
-                        continue
-
-                    # Calculate current streak
-                    current_streak = 0
-                    today = datetime.now(timezone.utc).date()
-
-                    practice_dates = set()
-                    for ex in exercises:
-                        if ex.started_at:
-                            practice_dates.add(ex.started_at.date())
-
-                    check_date = today
-                    while check_date in practice_dates:
-                        current_streak += 1
-                        check_date -= timedelta(days=1)
-
-                    if current_streak > 0:
-                        streak_data.append({
-                            'user': user,
-                            'streak': current_streak,
-                            'last_practice': max(practice_dates) if practice_dates else None
-                        })
-
-                streak_data.sort(key=lambda x: x['streak'], reverse=True)
-
-                for rank, item in enumerate(streak_data[:limit], 1):
-                    rankings.append({
-                        'rank': rank,
-                        'user_id': item['user'].id,
-                        'username': item['user'].username,
-                        'value': item['streak'],
-                        'last_practice': item['last_practice'].isoformat() if item['last_practice'] else None,
-                        'is_current_user': item['user'].id == current_user_id
-                    })
+                rankings = _streak_rankings(db, user_filter, limit, current_user_id)
 
             # Find current user's rank if not in top results
             current_user_rank = None

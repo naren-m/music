@@ -115,6 +115,14 @@ def register_blueprints(app: Flask) -> None:
 
 def register_main_routes(app: Flask) -> None:
     """Register main application routes."""
+    _register_page_routes(app)
+    _register_practice_routes(app)
+    _register_alias_routes(app)
+    _register_spa_route(app)
+
+
+def _register_page_routes(app: Flask) -> None:
+    """Register static pages, health check and the Sarali patterns shortcut."""
     @app.route('/')
     def index():
         dist = os.environ.get('SPA_DIST_DIR')
@@ -162,6 +170,9 @@ def register_main_routes(app: Flask) -> None:
     def favicon():
         return app.send_static_file('favicon.ico')
 
+
+def _register_practice_routes(app: Flask) -> None:
+    """Register practice settings and stats endpoints."""
     # Practice endpoints for frontend compatibility
     @app.route('/api/practice/settings', methods=['GET', 'POST'])
     def practice_settings():
@@ -199,6 +210,9 @@ def register_main_routes(app: Flask) -> None:
             'weeklyGoalProgress': 0
         })
 
+
+def _register_alias_routes(app: Flask) -> None:
+    """Register /api/* aliases for /api/v1/* routes used by the frontend."""
     # Auth alias routes for frontend compatibility (frontend calls /api/auth/*, backend has /api/v1/auth/*)
     @app.route('/api/auth/guest', methods=['POST'])
     def auth_guest_alias():
@@ -231,6 +245,9 @@ def register_main_routes(app: Flask) -> None:
         from .audio.routes import get_audio_config
         return get_audio_config()
 
+
+def _register_spa_route(app: Flask) -> None:
+    """Register the SPA catch-all route."""
     # Built React SPA — served only when SPA_DIST_DIR is set (production
     # container bundles frontend/dist). Real files (assets, favicon) return
     # directly; unknown non-API paths fall back to index.html for client-side

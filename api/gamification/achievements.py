@@ -113,6 +113,16 @@ class GamificationEngine:
     def _load_achievement_definitions(self) -> List[Badge]:
         """Load all achievement and badge definitions"""
         return [
+            *self._practice_and_accuracy_badges(),
+            *self._swara_and_time_badges(),
+            *self._sarali_badges(),
+            *self._social_and_seasonal_badges(),
+        ]
+
+    @staticmethod
+    def _practice_and_accuracy_badges() -> List[Badge]:
+        """Practice-count and accuracy badges."""
+        return [
             # Practice-based achievements
             Badge(
                 id="first_practice",
@@ -176,7 +186,12 @@ class GamificationEngine:
                 requirements={"consecutive_high_accuracy": 10, "min_accuracy": 0.90},
                 category=AchievementType.CONSISTENCY
             ),
+        ]
 
+    @staticmethod
+    def _swara_and_time_badges() -> List[Badge]:
+        """Swara mastery, practice-time and raga badges."""
+        return [
             # Swara mastery achievements
             Badge(
                 id="sa_foundation",
@@ -262,7 +277,12 @@ class GamificationEngine:
                 requirements={"ragas_practiced": 25},
                 category=AchievementType.EXPLORATION
             ),
+        ]
 
+    @staticmethod
+    def _sarali_badges() -> List[Badge]:
+        """Sarali Varisai level badges."""
+        return [
             # Sarali Varisai achievements
             Badge(
                 id="sarali_beginner",
@@ -304,7 +324,12 @@ class GamificationEngine:
                 requirements={"sarali_levels_completed": 12},
                 category=AchievementType.MASTERY
             ),
+        ]
 
+    @staticmethod
+    def _social_and_seasonal_badges() -> List[Badge]:
+        """Social and seasonal badges."""
+        return [
             # Social achievements
             Badge(
                 id="helpful_friend",

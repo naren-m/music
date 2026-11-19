@@ -161,7 +161,19 @@ class RagaDatabase:
 
     def _initialize_melakarta_ragas(self):
         """Initialize all 72 Melakarta ragas with complete specifications"""
+        self._add_kanakangi()
+        self._add_mayamalavagowla()
+        self._add_shankarabharanam()
 
+        # Continue with more Melakarta ragas (simplified for brevity)
+        # In production, all 72 would be fully implemented
+
+        # Build the all_ragas dictionary
+        for raga in self.melakarta_ragas.values():
+            self.all_ragas[raga.name] = raga
+
+    def _add_kanakangi(self):
+        """Add Melakarta 1, Kanakangi."""
         # Raga 1: Kanakangi
         self.melakarta_ragas[1] = RagaDefinition(
             id=1,
@@ -222,6 +234,8 @@ class RagaDatabase:
             ]
         )
 
+    def _add_mayamalavagowla(self):
+        """Add Melakarta 15, Mayamalavagowla."""
         # Raga 15: Mayamalavagowla
         self.melakarta_ragas[15] = RagaDefinition(
             id=15,
@@ -294,6 +308,8 @@ class RagaDatabase:
             ]
         )
 
+    def _add_shankarabharanam(self):
+        """Add Melakarta 29, Shankarabharanam."""
         # Raga 29: Shankarabharanam (Bilaval equivalent)
         self.melakarta_ragas[29] = RagaDefinition(
             id=29,
@@ -354,13 +370,6 @@ class RagaDatabase:
                 "Use for advanced scale exercises"
             ]
         )
-
-        # Continue with more Melakarta ragas (simplified for brevity)
-        # In production, all 72 would be fully implemented
-
-        # Build the all_ragas dictionary
-        for raga in self.melakarta_ragas.values():
-            self.all_ragas[raga.name] = raga
 
     def _initialize_popular_janya_ragas(self):
         """Initialize popular Janya (derived) ragas"""
