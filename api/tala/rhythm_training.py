@@ -158,6 +158,17 @@ class TalaTrainingSystem:
         """Initialize comprehensive tala definitions"""
         talas = {}
 
+        self._add_suladi_talas(talas)
+        self._add_chapu_talas(talas)
+
+        # Continue with more talas...
+        # Simplified for brevity - in production, all 7 Suladi talas + Chapu talas would be included
+
+        return talas
+
+    @staticmethod
+    def _add_suladi_talas(talas):
+        """Add Adi and Rupaka talas to the given dict."""
         # Adi Tala (8 beats) - Most common
         talas["Adi"] = TalaDefinition(
             id=1,
@@ -250,6 +261,9 @@ class TalaTrainingSystem:
             historical_background="Classical tala adapted for modern compositions and film music"
         )
 
+    @staticmethod
+    def _add_chapu_talas(talas):
+        """Add Khanda Chapu and Misra Chapu talas to the given dict."""
         # Khanda Chapu (5 beats) - Irregular
         talas["Khanda Chapu"] = TalaDefinition(
             id=3,
@@ -341,15 +355,65 @@ class TalaTrainingSystem:
             historical_background="Advanced tala for sophisticated musical expression"
         )
 
-        # Continue with more talas...
-        # Simplified for brevity - in production, all 7 Suladi talas + Chapu talas would be included
-
-        return talas
-
     def _create_rhythmic_exercises(self) -> List[RhythmicExercise]:
         """Create comprehensive rhythmic exercises"""
         exercises = []
 
+        exercises.extend(self._clapping_and_polyrhythm_exercises())
+
+        # Speed exercise (Nadai changes)
+        exercises.append(RhythmicExercise(
+            id=3,
+            name="Adi Tala Speed Variations",
+            tala="Adi",
+            exercise_type="speed",
+            description="Practice Adi tala at different nadais (speed variations)",
+            patterns=[
+                {
+                    "name": "First Speed",
+                    "nadai": 1,
+                    "subdivisions_per_beat": 1,
+                    "syllables": ["Ta", "", "", "", "Ta", "Ta", "Ta", "Ta"]
+                },
+                {
+                    "name": "Second Speed",
+                    "nadai": 2,
+                    "subdivisions_per_beat": 2,
+                    "syllables": ["Ta Ka", "Di Mi", "Ta Ka", "Jha Nu",
+                                 "Ta Ka", "Ta Ka", "Ta Ka", "Ta Ka"]
+                }
+            ],
+            tempo_progression=[80, 100, 120, 140],
+            duration_minutes=12,
+            difficulty_rating=0.7,
+            learning_objectives=[
+                "Master nadai concept",
+                "Develop speed control",
+                "Practice tempo transitions"
+            ],
+            prerequisites=["Basic Adi Tala Clapping"],
+            timing_tolerance=25.0,
+            success_threshold=0.85,
+            instructions=[
+                "Start with first speed (one syllable per beat)",
+                "Progress to second speed (two syllables per beat)",
+                "Maintain same hand pattern throughout",
+                "Keep transitions smooth"
+            ],
+            practice_tips=[
+                "Practice each speed separately first",
+                "Use clear syllable pronunciation",
+                "Maintain hand pattern accuracy",
+                "Build speed gradually"
+            ]
+        ))
+
+        return exercises
+
+    @staticmethod
+    def _clapping_and_polyrhythm_exercises() -> List[RhythmicExercise]:
+        """Basic Adi clapping and polyrhythm exercises."""
+        exercises = []
         # Basic Adi Tala clapping
         exercises.append(RhythmicExercise(
             id=1,
@@ -431,54 +495,6 @@ class TalaTrainingSystem:
                 "Focus on coordination between hands and voice"
             ]
         ))
-
-        # Speed exercise (Nadai changes)
-        exercises.append(RhythmicExercise(
-            id=3,
-            name="Adi Tala Speed Variations",
-            tala="Adi",
-            exercise_type="speed",
-            description="Practice Adi tala at different nadais (speed variations)",
-            patterns=[
-                {
-                    "name": "First Speed",
-                    "nadai": 1,
-                    "subdivisions_per_beat": 1,
-                    "syllables": ["Ta", "", "", "", "Ta", "Ta", "Ta", "Ta"]
-                },
-                {
-                    "name": "Second Speed",
-                    "nadai": 2,
-                    "subdivisions_per_beat": 2,
-                    "syllables": ["Ta Ka", "Di Mi", "Ta Ka", "Jha Nu",
-                                 "Ta Ka", "Ta Ka", "Ta Ka", "Ta Ka"]
-                }
-            ],
-            tempo_progression=[80, 100, 120, 140],
-            duration_minutes=12,
-            difficulty_rating=0.7,
-            learning_objectives=[
-                "Master nadai concept",
-                "Develop speed control",
-                "Practice tempo transitions"
-            ],
-            prerequisites=["Basic Adi Tala Clapping"],
-            timing_tolerance=25.0,
-            success_threshold=0.85,
-            instructions=[
-                "Start with first speed (one syllable per beat)",
-                "Progress to second speed (two syllables per beat)",
-                "Maintain same hand pattern throughout",
-                "Keep transitions smooth"
-            ],
-            practice_tips=[
-                "Practice each speed separately first",
-                "Use clear syllable pronunciation",
-                "Maintain hand pattern accuracy",
-                "Build speed gradually"
-            ]
-        ))
-
         return exercises
 
     async def start_tala_practice_session(

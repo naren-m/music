@@ -234,77 +234,9 @@ class AdvancedAnalytics:
 
                 # Analyze accuracy patterns
                 accuracies = [p.average_accuracy for p in progress_data if p.average_accuracy]
-                if accuracies:
-                    avg_accuracy = np.mean(accuracies)
-                    accuracy_std = np.std(accuracies)
+                insights.extend(self._accuracy_insights(accuracies))
 
-                    if accuracy_std > 0.15:
-                        insights.append(LearningInsight(
-                            category="Performance",
-                            title="Inconsistent accuracy detected",
-                            description=f"Your accuracy varies significantly (std: {accuracy_std:.2f}). This suggests inconsistent practice conditions or techniques.",
-                            severity="warning",
-                            data_points={"average_accuracy": avg_accuracy, "std_deviation": accuracy_std},
-                            action_items=[
-                                "Practice in a quiet, consistent environment",
-                                "Warm up before each session",
-                                "Focus on slower, more deliberate practice"
-                            ],
-                            priority=2
-                        ))
-
-                    if avg_accuracy < 0.7:
-                        insights.append(LearningInsight(
-                            category="Accuracy",
-                            title="Below target accuracy",
-                            description=f"Your average accuracy ({avg_accuracy:.1%}) is below the recommended 70% threshold.",
-                            severity="critical",
-                            data_points={"current_accuracy": avg_accuracy, "target_accuracy": 0.7},
-                            action_items=[
-                                "Slow down your practice tempo",
-                                "Focus on pitch accuracy over speed",
-                                "Use a drone or tuner for reference"
-                            ],
-                            priority=1
-                        ))
-
-                # Analyze practice frequency
-                practice_days = len(set(p.created_at.date() for p in progress_data))
-                period_days = max(1, (current_end - current_start).days)
-                practice_frequency = practice_days / period_days
-
-                if practice_frequency < 0.5:
-                    insights.append(LearningInsight(
-                        category="Consistency",
-                        title="Low practice frequency",
-                        description=f"You practiced on only {practice_days} out of {period_days} days ({practice_frequency:.1%}).",
-                        severity="warning",
-                        data_points={"practice_days": practice_days, "total_days": period_days},
-                        action_items=[
-                            "Set up a daily practice routine",
-                            "Start with shorter, more frequent sessions",
-                            "Use practice reminders"
-                        ],
-                        priority=2
-                    ))
-
-                durations = [(p.practice_time / 60) if p.practice_time is not None else 0 for p in progress_data if p.practice_time is not None]
-                if durations:
-                    avg_duration = np.mean(durations)
-                    if avg_duration < 10:
-                        insights.append(LearningInsight(
-                            category="Practice Duration",
-                            title="Short practice sessions",
-                            description=f"Your average session is only {avg_duration:.1f} minutes. Longer sessions may be more beneficial.",
-                            severity="info",
-                            data_points={"average_duration": avg_duration},
-                            action_items=[
-                                "Gradually increase session length to 15-20 minutes",
-                                "Include warmup and cooldown time",
-                                "Focus on one skill per session"
-                            ],
-                            priority=3
-                        ))
+                insights.extend(self._frequency_and_duration_insights(progress_data, current_start, current_end))
 
                 # Positive insights
                 if accuracies and np.mean(accuracies) > 0.85:
@@ -327,6 +259,86 @@ class AdvancedAnalytics:
         except Exception as e:
             logger.exception("Error generating learning insights: %s", e)
             return []
+
+    def _accuracy_insights(self, accuracies) -> List[LearningInsight]:
+        """Insights on accuracy spread and level."""
+        insights = []
+        if accuracies:
+            avg_accuracy = np.mean(accuracies)
+            accuracy_std = np.std(accuracies)
+
+            if accuracy_std > 0.15:
+                insights.append(LearningInsight(
+                    category="Performance",
+                    title="Inconsistent accuracy detected",
+                    description=f"Your accuracy varies significantly (std: {accuracy_std:.2f}). This suggests inconsistent practice conditions or techniques.",
+                    severity="warning",
+                    data_points={"average_accuracy": avg_accuracy, "std_deviation": accuracy_std},
+                    action_items=[
+                        "Practice in a quiet, consistent environment",
+                        "Warm up before each session",
+                        "Focus on slower, more deliberate practice"
+                    ],
+                    priority=2
+                ))
+
+            if avg_accuracy < 0.7:
+                insights.append(LearningInsight(
+                    category="Accuracy",
+                    title="Below target accuracy",
+                    description=f"Your average accuracy ({avg_accuracy:.1%}) is below the recommended 70% threshold.",
+                    severity="critical",
+                    data_points={"current_accuracy": avg_accuracy, "target_accuracy": 0.7},
+                    action_items=[
+                        "Slow down your practice tempo",
+                        "Focus on pitch accuracy over speed",
+                        "Use a drone or tuner for reference"
+                    ],
+                    priority=1
+                ))
+        return insights
+
+    def _frequency_and_duration_insights(self, progress_data, current_start, current_end) -> List[LearningInsight]:
+        """Insights on how often and how long the user practices."""
+        insights = []
+        # Analyze practice frequency
+        practice_days = len(set(p.created_at.date() for p in progress_data))
+        period_days = max(1, (current_end - current_start).days)
+        practice_frequency = practice_days / period_days
+
+        if practice_frequency < 0.5:
+            insights.append(LearningInsight(
+                category="Consistency",
+                title="Low practice frequency",
+                description=f"You practiced on only {practice_days} out of {period_days} days ({practice_frequency:.1%}).",
+                severity="warning",
+                data_points={"practice_days": practice_days, "total_days": period_days},
+                action_items=[
+                    "Set up a daily practice routine",
+                    "Start with shorter, more frequent sessions",
+                    "Use practice reminders"
+                ],
+                priority=2
+            ))
+
+        durations = [(p.practice_time / 60) if p.practice_time is not None else 0 for p in progress_data if p.practice_time is not None]
+        if durations:
+            avg_duration = np.mean(durations)
+            if avg_duration < 10:
+                insights.append(LearningInsight(
+                    category="Practice Duration",
+                    title="Short practice sessions",
+                    description=f"Your average session is only {avg_duration:.1f} minutes. Longer sessions may be more beneficial.",
+                    severity="info",
+                    data_points={"average_duration": avg_duration},
+                    action_items=[
+                        "Gradually increase session length to 15-20 minutes",
+                        "Include warmup and cooldown time",
+                        "Focus on one skill per session"
+                    ],
+                    priority=3
+                ))
+        return insights
 
     async def _analyze_practice_patterns(self, user_id: int, period: AnalyticsPeriod) -> PracticePattern:
         """Analyze user's practice patterns and habits"""
@@ -794,55 +806,9 @@ class AdvancedAnalytics:
                     else:
                         break
 
-                # Calculate longest streak
-                longest_streak = 0
-                current_run = 1
-                best_streak_start = None
-                best_streak_end = None
-                current_run_start = practice_dates[0] if practice_dates else None
-
-                for i in range(1, len(practice_dates)):
-                    if practice_dates[i-1] - practice_dates[i] == timedelta(days=1):
-                        current_run += 1
-                    else:
-                        if current_run > longest_streak:
-                            longest_streak = current_run
-                            best_streak_end = current_run_start
-                            best_streak_start = practice_dates[i-1]
-                        current_run = 1
-                        current_run_start = practice_dates[i]
-
-                # Check final run
-                if current_run > longest_streak:
-                    longest_streak = current_run
-                    best_streak_end = current_run_start
-                    best_streak_start = practice_dates[-1] if practice_dates else None
-
-                # Generate streak insights
-                insights = []
-                if current_streak >= 7:
-                    insights.append(f"Amazing! You're on a {current_streak}-day streak!")
-                elif current_streak >= 3:
-                    insights.append(f"Good momentum! {current_streak} days and counting.")
-                elif current_streak == 0:
-                    insights.append("Practice today to start a new streak!")
-                else:
-                    insights.append(f"You have a {current_streak}-day streak. Keep it up!")
-
-                if longest_streak > current_streak:
-                    insights.append(f"Your record is {longest_streak} days. Can you beat it?")
-
-                # Calculate weekly streak history
-                streak_history = []
-                for week in range(4):  # Last 4 weeks
-                    week_start = today - timedelta(days=today.weekday() + week*7)
-                    week_end = week_start + timedelta(days=6)
-                    week_practices = sum(1 for d in practice_dates if week_start <= d <= week_end)
-                    streak_history.append({
-                        "week_start": week_start.isoformat(),
-                        "days_practiced": week_practices,
-                        "percentage": round(week_practices / 7 * 100, 1)
-                    })
+                longest_streak, best_streak_start, best_streak_end = self._longest_streak(practice_dates)
+                insights = self._streak_insights(current_streak, longest_streak)
+                streak_history = self._weekly_streak_history(today, practice_dates)
 
                 return {
                     "current_streak": current_streak,
@@ -859,6 +825,68 @@ class AdvancedAnalytics:
         except Exception as e:
             logger.exception("Error analyzing streaks: %s", e)
             return {"current_streak": 0, "longest_streak": 0, "streak_insights": [], "streak_history": []}
+
+    @staticmethod
+    def _longest_streak(practice_dates):
+        """Longest run of consecutive practice days as (length, start, end)."""
+        # Calculate longest streak
+        longest_streak = 0
+        current_run = 1
+        best_streak_start = None
+        best_streak_end = None
+        current_run_start = practice_dates[0] if practice_dates else None
+
+        for i in range(1, len(practice_dates)):
+            if practice_dates[i-1] - practice_dates[i] == timedelta(days=1):
+                current_run += 1
+            else:
+                if current_run > longest_streak:
+                    longest_streak = current_run
+                    best_streak_end = current_run_start
+                    best_streak_start = practice_dates[i-1]
+                current_run = 1
+                current_run_start = practice_dates[i]
+
+        # Check final run
+        if current_run > longest_streak:
+            longest_streak = current_run
+            best_streak_end = current_run_start
+            best_streak_start = practice_dates[-1] if practice_dates else None
+        return longest_streak, best_streak_start, best_streak_end
+
+    @staticmethod
+    def _streak_insights(current_streak, longest_streak) -> List[str]:
+        """Motivational messages for the current and record streaks."""
+        # Generate streak insights
+        insights = []
+        if current_streak >= 7:
+            insights.append(f"Amazing! You're on a {current_streak}-day streak!")
+        elif current_streak >= 3:
+            insights.append(f"Good momentum! {current_streak} days and counting.")
+        elif current_streak == 0:
+            insights.append("Practice today to start a new streak!")
+        else:
+            insights.append(f"You have a {current_streak}-day streak. Keep it up!")
+
+        if longest_streak > current_streak:
+            insights.append(f"Your record is {longest_streak} days. Can you beat it?")
+        return insights
+
+    @staticmethod
+    def _weekly_streak_history(today, practice_dates) -> List[Dict]:
+        """Days practiced in each of the last 4 weeks, newest first."""
+        # Calculate weekly streak history
+        streak_history = []
+        for week in range(4):  # Last 4 weeks
+            week_start = today - timedelta(days=today.weekday() + week*7)
+            week_end = week_start + timedelta(days=6)
+            week_practices = sum(1 for d in practice_dates if week_start <= d <= week_end)
+            streak_history.append({
+                "week_start": week_start.isoformat(),
+                "days_practiced": week_practices,
+                "percentage": round(week_practices / 7 * 100, 1)
+            })
+        return streak_history
 
     async def _analyze_accuracy_trends(self, user_id: int, period: AnalyticsPeriod) -> Dict:
         """Analyze accuracy trends over time with detailed breakdown"""
@@ -1000,17 +1028,7 @@ class AdvancedAnalytics:
                     reverse=True
                 )[:3]
 
-                peak_hours_formatted = []
-                for hour, minutes in peak_hours:
-                    h = int(hour)
-                    time_label = f"{h:02d}:00-{(h+1)%24:02d}:00"
-                    period_label = "Morning" if 6 <= h < 12 else "Afternoon" if 12 <= h < 17 else "Evening" if 17 <= h < 21 else "Night"
-                    peak_hours_formatted.append({
-                        "hour": time_label,
-                        "period": period_label,
-                        "total_minutes": round(minutes, 1),
-                        "sessions": hourly_sessions[hour]
-                    })
+                peak_hours_formatted = self._format_peak_hours(peak_hours, hourly_sessions)
 
                 # Find peak days
                 peak_days = sorted(
@@ -1024,21 +1042,9 @@ class AdvancedAnalytics:
                     for day, minutes in peak_days
                 ]
 
-                # Generate recommendations
-                recommendations = []
-                avg_duration = np.mean(session_durations) if session_durations else 0
-
-                if avg_duration < 10:
-                    recommendations.append("Consider longer practice sessions (15-20 minutes)")
-
-                weekend_time = daily_distribution["Saturday"] + daily_distribution["Sunday"]
-                weekday_time = sum(daily_distribution[d] for d in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
-
-                if weekend_time > weekday_time * 2:
-                    recommendations.append("Try to distribute practice more evenly across the week")
-
-                if len(peak_hours) > 0:
-                    recommendations.append(f"Your most productive time is around {peak_hours[0][0]}:00")
+                recommendations, avg_duration = self._time_distribution_recommendations(
+                    session_durations, daily_distribution, peak_hours
+                )
 
                 return {
                     "hourly_distribution": {h: round(t, 1) for h, t in hourly_distribution.items()},
@@ -1054,6 +1060,42 @@ class AdvancedAnalytics:
         except Exception as e:
             logger.exception("Error analyzing time distribution: %s", e)
             return {"hourly_distribution": {}, "daily_distribution": {}, "peak_hours": [], "peak_days": []}
+
+    @staticmethod
+    def _format_peak_hours(peak_hours, hourly_sessions) -> List[Dict]:
+        """Label each peak hour with its time range, part of day and session count."""
+        peak_hours_formatted = []
+        for hour, minutes in peak_hours:
+            h = int(hour)
+            time_label = f"{h:02d}:00-{(h+1)%24:02d}:00"
+            period_label = "Morning" if 6 <= h < 12 else "Afternoon" if 12 <= h < 17 else "Evening" if 17 <= h < 21 else "Night"
+            peak_hours_formatted.append({
+                "hour": time_label,
+                "period": period_label,
+                "total_minutes": round(minutes, 1),
+                "sessions": hourly_sessions[hour]
+            })
+        return peak_hours_formatted
+
+    @staticmethod
+    def _time_distribution_recommendations(session_durations, daily_distribution, peak_hours):
+        """Recommendations from session length and spread, plus the average duration."""
+        # Generate recommendations
+        recommendations = []
+        avg_duration = np.mean(session_durations) if session_durations else 0
+
+        if avg_duration < 10:
+            recommendations.append("Consider longer practice sessions (15-20 minutes)")
+
+        weekend_time = daily_distribution["Saturday"] + daily_distribution["Sunday"]
+        weekday_time = sum(daily_distribution[d] for d in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
+
+        if weekend_time > weekday_time * 2:
+            recommendations.append("Try to distribute practice more evenly across the week")
+
+        if len(peak_hours) > 0:
+            recommendations.append(f"Your most productive time is around {peak_hours[0][0]}:00")
+        return recommendations, avg_duration
 
     async def _analyze_difficulty_progression(self, user_id: int, period: AnalyticsPeriod) -> Dict:
         """Analyze progression through difficulty levels"""
@@ -1080,24 +1122,7 @@ class AdvancedAnalytics:
                     "expert": 4
                 }
 
-                level_sessions = {level: [] for level in difficulty_levels.keys()}
-                level_accuracies = {level: [] for level in difficulty_levels.keys()}
-
-                for record in progress_data:
-                    if record.exercise:
-                        level = None
-                        if record.exercise.content_data:
-                            level = record.exercise.content_data.get("difficulty")
-                        if not level:
-                            lv = record.exercise.difficulty_level or 1
-                            if lv <= 3: level = "beginner"
-                            elif lv <= 6: level = "intermediate"
-                            elif lv <= 8: level = "advanced"
-                            else: level = "expert"
-                        if level in level_sessions:
-                            level_sessions[level].append(record)
-                            if record.average_accuracy is not None:
-                                level_accuracies[level].append(record.average_accuracy)
+                level_sessions, level_accuracies = self._bucket_sessions_by_level(progress_data, difficulty_levels)
 
                 # Determine current level based on recent activity
                 current_level = "beginner"
@@ -1108,28 +1133,7 @@ class AdvancedAnalytics:
 
                 current_level_num = difficulty_levels.get(current_level, 1)
 
-                # Calculate progression rate
-                sorted_data = sorted(progress_data, key=lambda x: x.created_at)
-                if len(sorted_data) >= 2:
-                    first_quarter = sorted_data[:len(sorted_data)//4] if len(sorted_data) >= 4 else sorted_data[:1]
-                    last_quarter = sorted_data[-len(sorted_data)//4:] if len(sorted_data) >= 4 else sorted_data[-1:]
-
-                    first_levels = []
-                    for r in first_quarter:
-                        if r.exercise:
-                            lv = r.exercise.difficulty_level or 1
-                            first_levels.append(lv)
-                    first_avg_level = float(np.mean(first_levels)) if first_levels else 1.0
-
-                    last_levels = []
-                    for r in last_quarter:
-                        if r.exercise:
-                            lv = r.exercise.difficulty_level or 1
-                            last_levels.append(lv)
-                    last_avg_level = float(np.mean(last_levels)) if last_levels else 1.0
-                    progression_rate = float(last_avg_level - first_avg_level)
-                else:
-                    progression_rate = 0.0
+                progression_rate = self._progression_rate(progress_data)
 
                 # Check readiness for advancement
                 current_accuracies = level_accuracies.get(current_level, [])
@@ -1177,6 +1181,56 @@ class AdvancedAnalytics:
         except Exception as e:
             logger.exception("Error analyzing difficulty progression: %s", e)
             return {"current_level": 1, "progression_rate": 0}
+
+    @staticmethod
+    def _bucket_sessions_by_level(progress_data, difficulty_levels):
+        """Group sessions and their accuracies by difficulty level name."""
+        level_sessions = {level: [] for level in difficulty_levels.keys()}
+        level_accuracies = {level: [] for level in difficulty_levels.keys()}
+
+        for record in progress_data:
+            if record.exercise:
+                level = None
+                if record.exercise.content_data:
+                    level = record.exercise.content_data.get("difficulty")
+                if not level:
+                    lv = record.exercise.difficulty_level or 1
+                    if lv <= 3: level = "beginner"
+                    elif lv <= 6: level = "intermediate"
+                    elif lv <= 8: level = "advanced"
+                    else: level = "expert"
+                if level in level_sessions:
+                    level_sessions[level].append(record)
+                    if record.average_accuracy is not None:
+                        level_accuracies[level].append(record.average_accuracy)
+        return level_sessions, level_accuracies
+
+    @staticmethod
+    def _progression_rate(progress_data) -> float:
+        """Average difficulty of the last quarter of sessions minus the first quarter."""
+        # Calculate progression rate
+        sorted_data = sorted(progress_data, key=lambda x: x.created_at)
+        if len(sorted_data) >= 2:
+            first_quarter = sorted_data[:len(sorted_data)//4] if len(sorted_data) >= 4 else sorted_data[:1]
+            last_quarter = sorted_data[-len(sorted_data)//4:] if len(sorted_data) >= 4 else sorted_data[-1:]
+
+            first_levels = []
+            for r in first_quarter:
+                if r.exercise:
+                    lv = r.exercise.difficulty_level or 1
+                    first_levels.append(lv)
+            first_avg_level = float(np.mean(first_levels)) if first_levels else 1.0
+
+            last_levels = []
+            for r in last_quarter:
+                if r.exercise:
+                    lv = r.exercise.difficulty_level or 1
+                    last_levels.append(lv)
+            last_avg_level = float(np.mean(last_levels)) if last_levels else 1.0
+            progression_rate = float(last_avg_level - first_avg_level)
+        else:
+            progression_rate = 0.0
+        return progression_rate
 
     async def _generate_comparative_analysis(self, user_id: int, period: AnalyticsPeriod) -> Dict:
         """Generate comparative analysis with peer performance (anonymized)"""

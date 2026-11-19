@@ -78,6 +78,13 @@ class AudioProcessingError(Exception):
 
 def register_error_handlers(app: Flask):
     """Register all error handlers with the Flask app"""
+    _register_app_error_handlers(app)
+    _register_http_error_handlers(app)
+    _register_request_logging(app)
+
+
+def _register_app_error_handlers(app: Flask):
+    """Register handlers for the application's own exception types."""
 
     @app.errorhandler(ValidationError)
     def handle_validation_error(error):
@@ -167,6 +174,10 @@ def register_error_handlers(app: Flask):
             'message': 'Please try again with different audio data'
         }), error.status_code
 
+
+def _register_http_error_handlers(app: Flask):
+    """Register handlers for HTTP errors and unexpected exceptions."""
+
     @app.errorhandler(HTTPException)
     def handle_http_exception(error):
         """Handle HTTP exceptions with secure error messages"""
@@ -246,6 +257,10 @@ def register_error_handlers(app: Flask):
             'error': 'Resource not found',
             'error_code': 'NOT_FOUND'
         }), 404
+
+
+def _register_request_logging(app: Flask):
+    """Register before/after request hooks that log traffic."""
 
     @app.before_request
     def log_request_info():

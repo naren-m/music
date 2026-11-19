@@ -113,60 +113,88 @@ def initialize_database():
         logger.error(f"❌ Database initialization failed: {e}")
         return False
 
+def _sample_exercises():
+    """Sample exercise rows for development and testing."""
+    return [
+        {
+            'type': 'swara',
+            'category': 'basic',
+            'difficulty_level': 1,
+            'title': 'Single Swara Practice - Sa',
+            'description': 'Practice singing Sa with proper intonation',
+            'content_data': {
+                'target_notes': ['Sa'],
+                'drone_notes': ['Sa', 'Pa'],
+                'tempo': 60,
+                'duration': 300  # 5 minutes
+            },
+            'estimated_duration': 5
+        },
+        {
+            'type': 'sarali',
+            'category': 'traditional',
+            'difficulty_level': 2,
+            'title': 'Sarali Varisai - Pattern 1',
+            'description': 'First sarali varisai pattern in ascending order',
+            'content_data': {
+                'pattern': ['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni', 'Sa'],
+                'repetitions': 3,
+                'tempo_progression': [60, 80, 100],
+                'evaluation_criteria': {
+                    'pitch_accuracy': 0.8,
+                    'rhythm_accuracy': 0.85,
+                    'smoothness': 0.7
+                }
+            },
+            'estimated_duration': 8
+        },
+        {
+            'type': 'janta',
+            'category': 'traditional',
+            'difficulty_level': 3,
+            'title': 'Janta Varisai - Double Notes',
+            'description': 'Practice double note patterns with even emphasis',
+            'content_data': {
+                'pattern': ['Sa', 'Sa', 'Ri', 'Ri', 'Ga', 'Ga', 'Ma', 'Ma'],
+                'emphasis': 'equal',
+                'tempo_range': [70, 120],
+                'smoothness_target': 0.85
+            },
+            'estimated_duration': 10
+        }
+    ]
+
+
+def _sample_compositions():
+    """Sample composition rows for development and testing."""
+    return [
+        {
+            'title': 'Vathapi Ganapathim',
+            'composer': 'Muthuswami Dikshitar',
+            'type': 'kriti',
+            'difficulty': 6,
+            'lyrics': {
+                'sanskrit': 'Vathapi ganapathim bhajeham',
+                'transliteration': 'Vathapi ganapathim bhajeham',
+                'translation': 'I worship Lord Ganesha of Vathapi'
+            },
+            'sections': [
+                {'name': 'Pallavi', 'content': 'Vathapi ganapathim bhajeham'},
+                {'name': 'Anupallavi', 'content': 'Bhoothathi sevitham'},
+                {'name': 'Charanam', 'content': 'Ekadantham eka nethram'}
+            ],
+            'teaching_notes': 'Focus on clear pronunciation and steady tempo'
+        }
+    ]
+
+
 def create_sample_data():
     """Create sample data for development and testing"""
     try:
         with get_db_session() as session:
 
             # Create sample exercises
-            sample_exercises = [
-                {
-                    'type': 'swara',
-                    'category': 'basic',
-                    'difficulty_level': 1,
-                    'title': 'Single Swara Practice - Sa',
-                    'description': 'Practice singing Sa with proper intonation',
-                    'content_data': {
-                        'target_notes': ['Sa'],
-                        'drone_notes': ['Sa', 'Pa'],
-                        'tempo': 60,
-                        'duration': 300  # 5 minutes
-                    },
-                    'estimated_duration': 5
-                },
-                {
-                    'type': 'sarali',
-                    'category': 'traditional',
-                    'difficulty_level': 2,
-                    'title': 'Sarali Varisai - Pattern 1',
-                    'description': 'First sarali varisai pattern in ascending order',
-                    'content_data': {
-                        'pattern': ['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni', 'Sa'],
-                        'repetitions': 3,
-                        'tempo_progression': [60, 80, 100],
-                        'evaluation_criteria': {
-                            'pitch_accuracy': 0.8,
-                            'rhythm_accuracy': 0.85,
-                            'smoothness': 0.7
-                        }
-                    },
-                    'estimated_duration': 8
-                },
-                {
-                    'type': 'janta',
-                    'category': 'traditional',
-                    'difficulty_level': 3,
-                    'title': 'Janta Varisai - Double Notes',
-                    'description': 'Practice double note patterns with even emphasis',
-                    'content_data': {
-                        'pattern': ['Sa', 'Sa', 'Ri', 'Ri', 'Ga', 'Ga', 'Ma', 'Ma'],
-                        'emphasis': 'equal',
-                        'tempo_range': [70, 120],
-                        'smoothness_target': 0.85
-                    },
-                    'estimated_duration': 10
-                }
-            ]
+            sample_exercises = _sample_exercises()
 
             for exercise_data in sample_exercises:
                 existing = session.query(Exercise).filter_by(title=exercise_data['title']).first()
@@ -175,25 +203,7 @@ def create_sample_data():
                     session.add(exercise)
 
             # Create sample compositions
-            sample_compositions = [
-                {
-                    'title': 'Vathapi Ganapathim',
-                    'composer': 'Muthuswami Dikshitar',
-                    'type': 'kriti',
-                    'difficulty': 6,
-                    'lyrics': {
-                        'sanskrit': 'Vathapi ganapathim bhajeham',
-                        'transliteration': 'Vathapi ganapathim bhajeham',
-                        'translation': 'I worship Lord Ganesha of Vathapi'
-                    },
-                    'sections': [
-                        {'name': 'Pallavi', 'content': 'Vathapi ganapathim bhajeham'},
-                        {'name': 'Anupallavi', 'content': 'Bhoothathi sevitham'},
-                        {'name': 'Charanam', 'content': 'Ekadantham eka nethram'}
-                    ],
-                    'teaching_notes': 'Focus on clear pronunciation and steady tempo'
-                }
-            ]
+            sample_compositions = _sample_compositions()
 
             # Get Hamsadhwani raga for the composition (we'll add it if needed)
             hamsadhwani = session.query(Raga).filter_by(name='Hamsadhwani').first()

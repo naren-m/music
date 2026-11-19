@@ -280,62 +280,9 @@ class AlanakaramPatternGenerator:
             # Get level-specific config if available
             level_config = get_level_config(config, exercise.level) if config else {}
 
-            # Process arohanam (ascending) phrase
-            arohanam_swaras = []
-            arohanam_octaves = []
-            for swara in exercise.arohanam:
-                base_swara, octave_shift = extract_octave_shift(swara)
-                arohanam_swaras.append(base_swara)
-                arohanam_octaves.append(octave_shift)
+            phrases = self._build_scale_phrases(exercise, level_config)
 
-            # Process avarohanam (descending) phrase
-            avarohanam_swaras = []
-            avarohanam_octaves = []
-            for swara in exercise.avarohanam:
-                base_swara, octave_shift = extract_octave_shift(swara)
-                avarohanam_swaras.append(base_swara)
-                avarohanam_octaves.append(octave_shift)
-
-            # Create melodic phrases for arohanam and avarohanam
-            phrases = []
-
-            # Arohanam phrase
-            if arohanam_swaras:
-                phrases.append(MelodicPhrase(
-                    swaras=arohanam_swaras,
-                    octave_shifts=arohanam_octaves,
-                    duration_ratios=[0.5] * (len(arohanam_swaras) - 1) + [1.0],
-                    ornamentations=[None] * len(arohanam_swaras),
-                    emphasis_points=[0, len(arohanam_swaras) - 1],
-                    phrase_type="arohanam",
-                    difficulty_weight=level_config.get('difficulty', 0.5)
-                ))
-
-            # Avarohanam phrase
-            if avarohanam_swaras:
-                phrases.append(MelodicPhrase(
-                    swaras=avarohanam_swaras,
-                    octave_shifts=avarohanam_octaves,
-                    duration_ratios=[0.5] * (len(avarohanam_swaras) - 1) + [1.0],
-                    ornamentations=[None] * len(avarohanam_swaras),
-                    emphasis_points=[0, len(avarohanam_swaras) - 1],
-                    phrase_type="avarohanam",
-                    difficulty_weight=level_config.get('difficulty', 0.5)
-                ))
-
-            # Determine complexity level based on level number
-            if exercise.level <= 2:
-                complexity = ComplexityLevel.BEGINNER
-                pattern_type = AlanakaramType.SIMPLE
-            elif exercise.level <= 3:
-                complexity = ComplexityLevel.ELEMENTARY
-                pattern_type = AlanakaramType.SIMPLE
-            elif exercise.level <= 4:
-                complexity = ComplexityLevel.INTERMEDIATE
-                pattern_type = AlanakaramType.COMPLEX
-            else:
-                complexity = ComplexityLevel.ADVANCED
-                pattern_type = AlanakaramType.ADVANCED
+            complexity, pattern_type = self._complexity_for_level(exercise.level)
 
             # Get tempo range from config or use defaults
             tempo_range = tuple(level_config.get('tempo_range', [60, 120]))
@@ -382,10 +329,88 @@ class AlanakaramPatternGenerator:
             logger.error(f"Error converting exercise to AlanakaramPattern: {e}")
             return None
 
+    @staticmethod
+    def _build_scale_phrases(exercise: ParsedExercise, level_config) -> List[MelodicPhrase]:
+        """Arohanam and avarohanam MelodicPhrases for a parsed exercise."""
+        # Process arohanam (ascending) phrase
+        arohanam_swaras = []
+        arohanam_octaves = []
+        for swara in exercise.arohanam:
+            base_swara, octave_shift = extract_octave_shift(swara)
+            arohanam_swaras.append(base_swara)
+            arohanam_octaves.append(octave_shift)
+
+        # Process avarohanam (descending) phrase
+        avarohanam_swaras = []
+        avarohanam_octaves = []
+        for swara in exercise.avarohanam:
+            base_swara, octave_shift = extract_octave_shift(swara)
+            avarohanam_swaras.append(base_swara)
+            avarohanam_octaves.append(octave_shift)
+
+        # Create melodic phrases for arohanam and avarohanam
+        phrases = []
+
+        # Arohanam phrase
+        if arohanam_swaras:
+            phrases.append(MelodicPhrase(
+                swaras=arohanam_swaras,
+                octave_shifts=arohanam_octaves,
+                duration_ratios=[0.5] * (len(arohanam_swaras) - 1) + [1.0],
+                ornamentations=[None] * len(arohanam_swaras),
+                emphasis_points=[0, len(arohanam_swaras) - 1],
+                phrase_type="arohanam",
+                difficulty_weight=level_config.get('difficulty', 0.5)
+            ))
+
+        # Avarohanam phrase
+        if avarohanam_swaras:
+            phrases.append(MelodicPhrase(
+                swaras=avarohanam_swaras,
+                octave_shifts=avarohanam_octaves,
+                duration_ratios=[0.5] * (len(avarohanam_swaras) - 1) + [1.0],
+                ornamentations=[None] * len(avarohanam_swaras),
+                emphasis_points=[0, len(avarohanam_swaras) - 1],
+                phrase_type="avarohanam",
+                difficulty_weight=level_config.get('difficulty', 0.5)
+            ))
+        return phrases
+
+    @staticmethod
+    def _complexity_for_level(level: int):
+        """(ComplexityLevel, AlanakaramType) for an exercise level number."""
+        # Determine complexity level based on level number
+        if level <= 2:
+            complexity = ComplexityLevel.BEGINNER
+            pattern_type = AlanakaramType.SIMPLE
+        elif level <= 3:
+            complexity = ComplexityLevel.ELEMENTARY
+            pattern_type = AlanakaramType.SIMPLE
+        elif level <= 4:
+            complexity = ComplexityLevel.INTERMEDIATE
+            pattern_type = AlanakaramType.COMPLEX
+        else:
+            complexity = ComplexityLevel.ADVANCED
+            pattern_type = AlanakaramType.ADVANCED
+        return complexity, pattern_type
+
     def _generate_simple_patterns(self) -> List[AlanakaramPattern]:
         """Generate simple Alankaram patterns (1-7)"""
         patterns = []
 
+        patterns.append(self._returning_pattern())
+        patterns.append(self._extended_returning_pattern())
+
+        # Continue with patterns 3-7...
+        patterns.append(self._ascending_scale_pattern())
+
+        # Add more simple patterns (4-7) following similar structure...
+
+        return patterns
+
+    @staticmethod
+    def _returning_pattern() -> AlanakaramPattern:
+        """Pattern 1: Sa-X-Sa for each swara."""
         # Pattern 1: Sa Ri Sa, Sa Ga Sa, Sa Ma Sa...
         phrases = []
         for i, swara in enumerate(['Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni']):
@@ -399,7 +424,7 @@ class AlanakaramPatternGenerator:
                 difficulty_weight=0.2
             ))
 
-        patterns.append(AlanakaramPattern(
+        return AlanakaramPattern(
             id=1,
             name="Simple Returning Pattern",
             type=AlanakaramType.SIMPLE,
@@ -422,8 +447,11 @@ class AlanakaramPatternGenerator:
             },
             cultural_context="Foundation exercise for swara relationships",
             traditional_usage=["Basic training", "Warm-up exercises"]
-        ))
+        )
 
+    @staticmethod
+    def _extended_returning_pattern() -> AlanakaramPattern:
+        """Pattern 2: three-note groups returning to Sa."""
         # Pattern 2: Sa Ri Ga Ri Sa, Sa Ga Ma Ga Sa...
         phrases = []
         swara_groups = [
@@ -445,7 +473,7 @@ class AlanakaramPatternGenerator:
                 difficulty_weight=0.3
             ))
 
-        patterns.append(AlanakaramPattern(
+        return AlanakaramPattern(
             id=2,
             name="Extended Returning Patterns",
             type=AlanakaramType.SIMPLE,
@@ -468,9 +496,11 @@ class AlanakaramPatternGenerator:
             },
             cultural_context="Traditional phrase development exercise",
             traditional_usage=["Melodic training", "Phrase connection practice"]
-        ))
+        )
 
-        # Continue with patterns 3-7...
+    @staticmethod
+    def _ascending_scale_pattern() -> AlanakaramPattern:
+        """Pattern 3: full ascending scale to upper Sa."""
         # Pattern 3: Ascending sequences
         phrases = [MelodicPhrase(
             swaras=['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni', 'Sa'],
@@ -482,7 +512,7 @@ class AlanakaramPatternGenerator:
             difficulty_weight=0.4
         )]
 
-        patterns.append(AlanakaramPattern(
+        return AlanakaramPattern(
             id=3,
             name="Ascending Scale Pattern",
             type=AlanakaramType.SIMPLE,
@@ -505,11 +535,7 @@ class AlanakaramPatternGenerator:
             },
             cultural_context="Fundamental scale training",
             traditional_usage=["Voice training", "Scale practice"]
-        ))
-
-        # Add more simple patterns (4-7) following similar structure...
-
-        return patterns
+        )
 
     def _generate_complex_patterns(self) -> List[AlanakaramPattern]:
         """Generate complex Alankaram patterns (8-21)"""

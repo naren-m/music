@@ -292,44 +292,7 @@ class CarnaticAudioEngine:
             if peak_val < self.config.autocorr_peak_threshold:
                 return 0.0, 0.0
         else:
-            # Sort peaks by autocorrelation value (strongest first)
-            peaks.sort(key=lambda x: x[1], reverse=True)
-
-            # Find the best fundamental frequency
-            # Strategy: The fundamental frequency produces the FIRST strong peak in autocorrelation
-            # (after the initial lag-0 peak). Longer periods (subharmonics) will also have peaks
-            # but they should be weaker than the fundamental.
-            #
-            # Key insight: peaks are sorted by strength. The strongest peak that's not
-            # obviously a subharmonic artifact should be the fundamental.
-            best_peak = None
-
-            for period, value in peaks:
-                # Skip very low frequencies (likely room resonance/noise)
-                freq = self.config.sample_rate / period
-                if freq < 100:  # Below typical vocal range
-                    continue
-
-                # Check if this might be a SUBHARMONIC (octave below the real fundamental)
-                # If there's a strong peak at period/2 (octave up), prefer that
-                is_subharmonic = False
-                half_period = int(period / 2)
-                if half_period >= min_period and half_period < len(autocorr):
-                    half_val = autocorr[half_period]
-                    # If the octave-up has a STRONGER peak, this is likely a subharmonic
-                    # Use strict threshold: must be actually stronger
-                    if half_val > value * 0.95:
-                        is_subharmonic = True
-                        logger.debug(f"Period {period} ({freq:.1f}Hz) is subharmonic - "
-                                   f"stronger peak at {half_period} ({self.config.sample_rate/half_period:.1f}Hz)")
-
-                if not is_subharmonic:
-                    best_peak = (period, value)
-                    logger.debug(f"Selected fundamental at period {period} ({freq:.1f}Hz)")
-                    break
-                elif best_peak is None:
-                    # Fallback: use strongest peak even if it might be subharmonic
-                    best_peak = (period, value)
+            best_peak = self._select_fundamental_peak(peaks, autocorr, min_period)
 
             if best_peak is None:
                 return 0.0, 0.0
@@ -339,6 +302,57 @@ class CarnaticAudioEngine:
             logger.debug(f"Selected period {peak_idx} -> {self.config.sample_rate/peak_idx:.1f}Hz "
                         f"(confidence: {peak_val:.2f})")
 
+        true_idx = self._parabolic_peak_index(autocorr, peak_idx)
+
+        frequency = self.config.sample_rate / true_idx
+
+        return frequency, float(peak_val)
+
+    def _select_fundamental_peak(self, peaks, autocorr: np.ndarray, min_period: int):
+        """Strongest non-subharmonic peak at 100 Hz or above, or None. Sorts peaks in place."""
+        # Sort peaks by autocorrelation value (strongest first)
+        peaks.sort(key=lambda x: x[1], reverse=True)
+
+        # Find the best fundamental frequency
+        # Strategy: The fundamental frequency produces the FIRST strong peak in autocorrelation
+        # (after the initial lag-0 peak). Longer periods (subharmonics) will also have peaks
+        # but they should be weaker than the fundamental.
+        #
+        # Key insight: peaks are sorted by strength. The strongest peak that's not
+        # obviously a subharmonic artifact should be the fundamental.
+        best_peak = None
+
+        for period, value in peaks:
+            # Skip very low frequencies (likely room resonance/noise)
+            freq = self.config.sample_rate / period
+            if freq < 100:  # Below typical vocal range
+                continue
+
+            # Check if this might be a SUBHARMONIC (octave below the real fundamental)
+            # If there's a strong peak at period/2 (octave up), prefer that
+            is_subharmonic = False
+            half_period = int(period / 2)
+            if half_period >= min_period and half_period < len(autocorr):
+                half_val = autocorr[half_period]
+                # If the octave-up has a STRONGER peak, this is likely a subharmonic
+                # Use strict threshold: must be actually stronger
+                if half_val > value * 0.95:
+                    is_subharmonic = True
+                    logger.debug(f"Period {period} ({freq:.1f}Hz) is subharmonic - "
+                               f"stronger peak at {half_period} ({self.config.sample_rate/half_period:.1f}Hz)")
+
+            if not is_subharmonic:
+                best_peak = (period, value)
+                logger.debug(f"Selected fundamental at period {period} ({freq:.1f}Hz)")
+                break
+            elif best_peak is None:
+                # Fallback: use strongest peak even if it might be subharmonic
+                best_peak = (period, value)
+        return best_peak
+
+    @staticmethod
+    def _parabolic_peak_index(autocorr: np.ndarray, peak_idx) -> float:
+        """Refine peak_idx with parabolic interpolation over its neighbours."""
         # Parabolic interpolation for better precision
         if 0 < peak_idx < len(autocorr) - 1:
             alpha = autocorr[peak_idx - 1]
@@ -352,8 +366,5 @@ class CarnaticAudioEngine:
                 true_idx = peak_idx
         else:
             true_idx = peak_idx
-
-        frequency = self.config.sample_rate / true_idx
-
-        return frequency, float(peak_val)
+        return true_idx
 

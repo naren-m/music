@@ -479,7 +479,19 @@ def get_coaching_feedback(analysis: Dict, target_shruti_name: str) -> Dict[str, 
 
 def register_audio_events(socketio):
     """Register real-time audio detection WebSocket events."""
+    _register_connection_events(socketio)
+    _register_target_events(socketio)
+    _register_practice_session_events(socketio)
+    _register_session_mode_start_events(socketio)
+    _register_session_mode_next_events(socketio)
+    _register_session_mode_end_events(socketio)
+    _register_detection_events(socketio)
+    _register_audio_chunk_events(socketio)
+    _register_stats_events(socketio)
 
+
+def _register_connection_events(socketio):
+    """Register connect, disconnect and base-frequency events."""
     @socketio.on('connect')
     def handle_connect(auth):
         """Handle client connection and initialize detection session."""
@@ -498,10 +510,10 @@ def register_audio_events(socketio):
 
         # Create managed session
         session = session_manager.create_session(session_id, user_id)
-        
+
         # Initialize tracker in context
         session.current_context['tracker'] = DetectionTracker(base_sa=base_sa)
-        
+
         # Update engine config if needed
         session.audio_engine.set_base_frequency(base_sa)
 
@@ -524,7 +536,7 @@ def register_audio_events(socketio):
             stats = session.current_context['tracker'].get_statistics()
             logger.info(f"Session {session_id} stats: {stats}")
             # In production, save session data to database here
-        
+
         session_manager.remove_session(session_id)
         leave_room('audio_detection')
 
@@ -553,7 +565,7 @@ def register_audio_events(socketio):
             if tracker:
                 tracker.base_sa = frequency
             session.audio_engine.set_base_frequency(frequency)
-            
+
             logger.info(f"Session {session_id} set base frequency to {frequency}Hz")
 
             emit('base_frequency_set', {
@@ -564,6 +576,9 @@ def register_audio_events(socketio):
         else:
             emit('error', {'type': 'no_session', 'message': 'Session expired or not found'})
 
+
+def _register_target_events(socketio):
+    """Register target-shruti and single-exercise start events."""
     @socketio.on('set_target_shruti')
     def handle_set_target_shruti(data):
         """Set the target shruti for practice."""
@@ -630,6 +645,9 @@ def register_audio_events(socketio):
         else:
             emit('error', {'type': 'no_session', 'message': 'Session expired or not found'})
 
+
+def _register_practice_session_events(socketio):
+    """Register the pattern practice-session start event."""
     @socketio.on('start_practice_session')
     def handle_start_practice_session(data):
         """
@@ -685,6 +703,9 @@ def register_audio_events(socketio):
             'message': f'Play the first note: {exercise.get_expected_note()}'
         })
 
+
+def _register_session_mode_start_events(socketio):
+    """Register session-mode start and retry events."""
     # =========================================================================
     # SESSION MODE: Practice multiple exercises in sequence
     # =========================================================================
@@ -781,6 +802,9 @@ def register_audio_events(socketio):
             'message': f'Retrying {practice_session.get_current_exercise_name()}. Play: {first_note}'
         })
 
+
+def _register_session_mode_next_events(socketio):
+    """Register the session-mode next-exercise event."""
     @socketio.on('session_next_exercise')
     def handle_session_next():
         """
@@ -850,6 +874,9 @@ def register_audio_events(socketio):
                 'message': f"🎉 Session completed! Overall accuracy: {summary['session_accuracy']}%"
             })
 
+
+def _register_session_mode_end_events(socketio):
+    """Register session-mode end and progress events."""
     @socketio.on('session_end')
     def handle_session_end():
         """
@@ -907,6 +934,9 @@ def register_audio_events(socketio):
             'current_exercise_total': len(practice_session.current_sequence.pattern_sequence) if practice_session.current_sequence else 0
         })
 
+
+def _register_detection_events(socketio):
+    """Register the client-side detection result event."""
     @socketio.on('detection_result')
     def handle_detection_result(data):
         """
@@ -991,7 +1021,10 @@ def register_audio_events(socketio):
             logger.debug(f"Detection from {session_id}: {detected_frequency}Hz (Accuracy: {analysis['accuracy_score']:.2f})")
 
         emit('detection_feedback', result)
-        
+
+
+def _register_audio_chunk_events(socketio):
+    """Register the raw audio chunk event."""
     @socketio.on('audio_chunk')
     def handle_audio_chunk(data):
         """
@@ -1036,47 +1069,9 @@ def register_audio_events(socketio):
                            f"context_keys={list(session.current_context.keys())}")
 
                 if exercise and not exercise.completed:
-                    # Validate the detected note against expected sequence
-                    # Convert confidence to accuracy score (0-1)
-                    accuracy_score = min(1.0, confidence) if abs(cent_deviation) < 50 else 0.5
-
-                    expected_note = exercise.get_expected_note()
-                    logger.info(f"Validating: detected={detected_shruti}, expected={expected_note}, "
-                               f"accuracy={accuracy_score:.2f}, deviation={cent_deviation:.1f}¢")
-
-                    validation = exercise.validate_note(detected_shruti, accuracy_score)
-                    response['validation'] = validation
-                    response['expected_note'] = exercise.get_expected_note()
-
-                    logger.info(f"Validation result: is_correct={validation.get('is_correct')}, "
-                               f"note_matches={validation.get('note_matches')}, "
-                               f"position={validation.get('position')}/{validation.get('total_notes')}")
-
-                    # If note was correct, tell frontend what's next
-                    if validation.get('is_correct'):
-                        response['next_note'] = exercise.get_expected_note()
-                        response['feedback_type'] = 'correct'
-                    else:
-                        response['feedback_type'] = 'incorrect'
-
-                    # Include progress
-                    response['progress'] = validation.get('progress', {})
-
-                    # Emit exercise-specific feedback
-                    emit('practice_feedback', response)
-
-                    # Check if exercise just completed during session mode
-                    if validation.get('completed'):
-                        practice_session = session.current_context.get('practice_session')
-                        if practice_session:
-                            # Mark that the current exercise in session is completed
-                            practice_session.current_sequence = exercise  # Sync the sequence
-                            exercise_name = practice_session.get_current_exercise_name()
-                            logger.info(f"Exercise completed in session: {exercise_name}")
-                            emit('exercise_completed_in_session', {
-                                'exercise_name': exercise_name,
-                                'final_score': validation.get('final_score', {}),
-                            })
+                    _validate_chunk_against_exercise(
+                        session, exercise, response, detected_shruti, confidence, cent_deviation
+                    )
                 else:
                     # Free practice mode - just emit detection
                     emit('shruti_detected', response)
@@ -1095,6 +1090,54 @@ def register_audio_events(socketio):
             logger.error(f"Error processing audio chunk: {e}")
             # Don't crash on bad audio data
 
+
+def _validate_chunk_against_exercise(session, exercise, response, detected_shruti, confidence, cent_deviation):
+    """Validate a detected note against the active exercise and emit practice feedback."""
+    # Validate the detected note against expected sequence
+    # Convert confidence to accuracy score (0-1)
+    accuracy_score = min(1.0, confidence) if abs(cent_deviation) < 50 else 0.5
+
+    expected_note = exercise.get_expected_note()
+    logger.info(f"Validating: detected={detected_shruti}, expected={expected_note}, "
+               f"accuracy={accuracy_score:.2f}, deviation={cent_deviation:.1f}¢")
+
+    validation = exercise.validate_note(detected_shruti, accuracy_score)
+    response['validation'] = validation
+    response['expected_note'] = exercise.get_expected_note()
+
+    logger.info(f"Validation result: is_correct={validation.get('is_correct')}, "
+               f"note_matches={validation.get('note_matches')}, "
+               f"position={validation.get('position')}/{validation.get('total_notes')}")
+
+    # If note was correct, tell frontend what's next
+    if validation.get('is_correct'):
+        response['next_note'] = exercise.get_expected_note()
+        response['feedback_type'] = 'correct'
+    else:
+        response['feedback_type'] = 'incorrect'
+
+    # Include progress
+    response['progress'] = validation.get('progress', {})
+
+    # Emit exercise-specific feedback
+    emit('practice_feedback', response)
+
+    # Check if exercise just completed during session mode
+    if validation.get('completed'):
+        practice_session = session.current_context.get('practice_session')
+        if practice_session:
+            # Mark that the current exercise in session is completed
+            practice_session.current_sequence = exercise  # Sync the sequence
+            exercise_name = practice_session.get_current_exercise_name()
+            logger.info(f"Exercise completed in session: {exercise_name}")
+            emit('exercise_completed_in_session', {
+                'exercise_name': exercise_name,
+                'final_score': validation.get('final_score', {}),
+            })
+
+
+def _register_stats_events(socketio):
+    """Register end-exercise, stats, shruti-list and ping events."""
     @socketio.on('end_exercise')
     def handle_end_exercise(data=None):
         """End the current exercise and return comprehensive results."""
@@ -1146,7 +1189,7 @@ def register_audio_events(socketio):
         """Get the complete list of 22 shrutis with their properties."""
         session_id = request.sid
         session = session_manager.get_session(session_id)
-        
+
         base_sa = 261.63
         if session and 'tracker' in session.current_context:
             base_sa = session.current_context['tracker'].base_sa
