@@ -3,6 +3,7 @@ Swara Recognition and Training Module
 Implements progressive exercises for mastering the 7 basic swaras and their variations
 """
 
+import logging
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Callable
 from enum import Enum
@@ -13,6 +14,8 @@ from datetime import datetime, timedelta
 
 from core.models.shruti import ShrutiSystem, Shruti
 from core.models.user import UserProfile, PracticeSession, SkillLevel
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class ShrutiDetectionResult:
@@ -529,7 +532,7 @@ class SwaraTrainer:
             try:
                 callback(data)
             except Exception as e:
-                print(f"Callback error for {event}: {e}")
+                logger.exception("Callback error for %s: %s", event, e)
 
 
 class SwaraProgressTracker:

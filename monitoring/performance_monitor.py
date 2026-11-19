@@ -400,9 +400,9 @@ if __name__ == '__main__':
 
     # Get performance summary
     summary = monitor.get_performance_summary()
-    print("Performance Summary:")
-    print(json.dumps(summary, indent=2, default=str))
+    sys.stdout.write("Performance Summary:\n")
+    sys.stdout.write(json.dumps(summary, indent=2, default=str) + "\n")
 
     # Get system health
     health = monitor.get_system_health()
-    print(f"\nSystem Health: CPU {health.cpu_usage}%, Memory {health.memory_usage}%")
+    sys.stdout.write(f"\nSystem Health: CPU {health.cpu_usage}%, Memory {health.memory_usage}%\n")

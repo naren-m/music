@@ -668,7 +668,7 @@ class JantaPatternGenerator:
                 analyses.append(analysis)
 
         except Exception as e:
-            print(f"Error analyzing transition quality: {e}")
+            logger.exception("Error analyzing transition quality: %s", e)
 
         return analyses
 

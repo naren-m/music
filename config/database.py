@@ -50,11 +50,11 @@ class DatabaseConfig:
         # Development fallbacks with warnings
         if not self.postgresql_user:
             self.postgresql_user = 'carnatic_user'
-            print("⚠️  WARNING: Using default POSTGRES_USER - set environment variable for production")
+            logger.warning("Using default POSTGRES_USER - set environment variable for production")
 
         if not self.postgresql_password:
             self.postgresql_password = 'carnatic_pass'
-            print("⚠️  WARNING: Using default POSTGRES_PASSWORD - set environment variable for production")
+            logger.warning("Using default POSTGRES_PASSWORD - set environment variable for production")
 
     # Redis Configuration
     redis_host: str = os.getenv('REDIS_HOST', 'localhost')

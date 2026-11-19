@@ -6,6 +6,7 @@ Main Flask application with modular blueprints, security, and WebSocket support
 import os
 import secrets
 import logging
+import sys
 from typing import Tuple
 
 from flask import Flask
@@ -264,17 +265,17 @@ def register_cli_commands(app: Flask) -> None:
         try:
             from migrations.init_db import main
             main()
-            print("Database initialized successfully")
+            sys.stdout.write("Database initialized successfully\n")
         except Exception as e:
-            print(f"Database initialization failed: {e}")
+            sys.stdout.write(f"Database initialization failed: {e}\n")
 
     @app.cli.command()
     def security_check():
         """Run basic security checks."""
-        print("Running security checks...")
+        sys.stdout.write("Running security checks...\n")
         secret_key = app.config.get('SECRET_KEY', '')
         if len(secret_key) < 32:
-            print("❌ SECRET_KEY should be at least 32 characters")
+            sys.stdout.write("❌ SECRET_KEY should be at least 32 characters\n")
         else:
-            print("✅ SECRET_KEY length is adequate")
-        print("Security check completed")
+            sys.stdout.write("✅ SECRET_KEY length is adequate\n")
+        sys.stdout.write("Security check completed\n")

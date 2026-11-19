@@ -5,6 +5,7 @@ Comprehensive analytics system providing detailed insights into learning
 progress, performance trends, and personalized recommendations.
 """
 
+import logging
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta, timezone
@@ -19,6 +20,8 @@ import math
 from config.database import get_db_session
 from core.models.user import UserProfile
 from config.database import User, Progress, Exercise, Recording, Achievement
+
+logger = logging.getLogger(__name__)
 
 class AnalyticsPeriod(Enum):
     DAILY = "daily"
@@ -135,7 +138,7 @@ class AdvancedAnalytics:
             return dashboard_data
 
         except Exception as e:
-            print(f"Error generating dashboard for user {user_id}: {e}")
+            logger.exception("Error generating dashboard for user %s: %s", user_id, e)
             return self._generate_empty_dashboard(user_id, period)
 
     async def _analyze_performance_metrics(self, user_id: int, period: AnalyticsPeriod) -> List[PerformanceMetric]:
@@ -205,7 +208,7 @@ class AdvancedAnalytics:
                 return metrics
 
         except Exception as e:
-            print(f"Error analyzing performance metrics: {e}")
+            logger.exception("Error analyzing performance metrics: %s", e)
             return []
 
     async def _generate_learning_insights(self, user_id: int, period: AnalyticsPeriod) -> List[LearningInsight]:
@@ -322,7 +325,7 @@ class AdvancedAnalytics:
                 return sorted(insights, key=lambda x: x.priority)
 
         except Exception as e:
-            print(f"Error generating learning insights: {e}")
+            logger.exception("Error generating learning insights: %s", e)
             return []
 
     async def _analyze_practice_patterns(self, user_id: int, period: AnalyticsPeriod) -> PracticePattern:
@@ -397,7 +400,7 @@ class AdvancedAnalytics:
                 )
 
         except Exception as e:
-            print(f"Error analyzing practice patterns: {e}")
+            logger.exception("Error analyzing practice patterns: %s", e)
             return PracticePattern("Unknown", "Unknown", [], 0, 0.0, [])
 
     async def _analyze_swara_performance(self, user_id: int, period: AnalyticsPeriod) -> List[SwararAnalysis]:
@@ -473,7 +476,7 @@ class AdvancedAnalytics:
                 return sorted(analyses, key=lambda x: x.difficulty_score, reverse=True)
 
         except Exception as e:
-            print(f"Error analyzing swara performance: {e}")
+            logger.exception("Error analyzing swara performance: %s", e)
             return []
 
     async def _generate_progress_predictions(self, user_id: int) -> List[ProgressPrediction]:
@@ -503,7 +506,7 @@ class AdvancedAnalytics:
                 return predictions
 
         except Exception as e:
-            print(f"Error generating progress predictions: {e}")
+            logger.exception("Error generating progress predictions: %s", e)
             return []
 
     def _predict_swara_mastery(self, progress_data: List[Progress]) -> List[ProgressPrediction]:
@@ -854,7 +857,7 @@ class AdvancedAnalytics:
                 }
 
         except Exception as e:
-            print(f"Error analyzing streaks: {e}")
+            logger.exception("Error analyzing streaks: %s", e)
             return {"current_streak": 0, "longest_streak": 0, "streak_insights": [], "streak_history": []}
 
     async def _analyze_accuracy_trends(self, user_id: int, period: AnalyticsPeriod) -> Dict:
@@ -945,7 +948,7 @@ class AdvancedAnalytics:
                 }
 
         except Exception as e:
-            print(f"Error analyzing accuracy trends: {e}")
+            logger.exception("Error analyzing accuracy trends: %s", e)
             return {"trend_data": [], "trend_direction": "error", "average_accuracy": 0}
 
     async def _analyze_time_distribution(self, user_id: int, period: AnalyticsPeriod) -> Dict:
@@ -1049,7 +1052,7 @@ class AdvancedAnalytics:
                 }
 
         except Exception as e:
-            print(f"Error analyzing time distribution: {e}")
+            logger.exception("Error analyzing time distribution: %s", e)
             return {"hourly_distribution": {}, "daily_distribution": {}, "peak_hours": [], "peak_days": []}
 
     async def _analyze_difficulty_progression(self, user_id: int, period: AnalyticsPeriod) -> Dict:
@@ -1172,7 +1175,7 @@ class AdvancedAnalytics:
                 }
 
         except Exception as e:
-            print(f"Error analyzing difficulty progression: {e}")
+            logger.exception("Error analyzing difficulty progression: %s", e)
             return {"current_level": 1, "progression_rate": 0}
 
     async def _generate_comparative_analysis(self, user_id: int, period: AnalyticsPeriod) -> Dict:
@@ -1269,7 +1272,7 @@ class AdvancedAnalytics:
                 }
 
         except Exception as e:
-            print(f"Error generating comparative analysis: {e}")
+            logger.exception("Error generating comparative analysis: %s", e)
             return {"peer_comparison": {}, "ranking": None, "percentile": None}
 
     async def _generate_personalized_recommendations(self, user_id: int) -> List[str]:
@@ -1365,7 +1368,7 @@ class AdvancedAnalytics:
                 return recommendations[:6]  # Limit to 6 recommendations
 
         except Exception as e:
-            print(f"Error generating recommendations: {e}")
+            logger.exception("Error generating recommendations: %s", e)
             return [
                 "Continue regular practice",
                 "Focus on challenging swaras",
