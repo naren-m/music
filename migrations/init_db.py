@@ -59,7 +59,7 @@ def create_database_if_not_exists():
 
         if not cursor.fetchone():
             # Use psycopg2.sql for safe identifier composition
-            cursor.execute(
+            cursor.execute(  # smell: ignore[SML012] CREATE DATABASE takes no bound params; name is regex-validated and quoted by sql.Identifier
                 sql.SQL("CREATE DATABASE {}").format(
                     sql.Identifier(validated_db_name)
                 )

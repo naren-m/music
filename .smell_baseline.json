@@ -30,8 +30,7 @@
   "SML004": 1
  },
  "migrations/init_db.py": {
-  "SML004": 1,
-  "SML012": 1
+  "SML004": 1
  },
  "modules/exercises/alankaram/patterns.py": {
   "SML004": 2
