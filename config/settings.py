@@ -36,8 +36,7 @@ class Config:
         # Generate temporary key for development
         _secret_key = secrets.token_urlsafe(32)
         logger.warning(
-            "Generated temporary SECRET_KEY for development; "
-            "set SECRET_KEY environment variable for production deployment"
+            "Generated temporary SECRET_KEY for development; " "set SECRET_KEY environment variable for production deployment"
         )
 
     SECRET_KEY = _secret_key
@@ -46,26 +45,20 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     if not SQLALCHEMY_DATABASE_URI:
         if os.environ.get("FLASK_ENV") == "production":
-            raise RuntimeError(
-                "DATABASE_URL environment variable must be set in production"
-            )
+            raise RuntimeError("DATABASE_URL environment variable must be set in production")
         # Development fallback
         SQLALCHEMY_DATABASE_URI = "sqlite:///carnatic_learning.db"
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Session - Security hardened
-    PERMANENT_SESSION_LIFETIME = timedelta(
-        hours=int(os.environ.get("SESSION_TIMEOUT_HOURS", 24))
-    )
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=int(os.environ.get("SESSION_TIMEOUT_HOURS", 24)))
     SESSION_COOKIE_SECURE = os.environ.get("SECURE_COOKIES", "false").lower() == "true"
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
 
     # CORS - Environment configurable
-    _cors_origins = os.environ.get(
-        "CORS_ORIGINS", "http://localhost:3000,http://localhost:5000"
-    )
+    _cors_origins = os.environ.get("CORS_ORIGINS", "http://localhost:3000,http://localhost:5000")
     CORS_ORIGINS = [origin.strip() for origin in _cors_origins.split(",")]
 
     # Audio processing - Environment configurable
@@ -88,9 +81,7 @@ class Config:
         redis_password = os.environ.get("REDIS_PASSWORD")
 
         if redis_password:
-            REDIS_URL = (
-                f"redis://:{redis_password}@{redis_host}:{redis_port}/{redis_db}"
-            )
+            REDIS_URL = f"redis://:{redis_password}@{redis_host}:{redis_port}/{redis_db}"
         else:
             REDIS_URL = f"redis://{redis_host}:{redis_port}/{redis_db}"
 
@@ -98,9 +89,7 @@ class Config:
     _jwt_secret_key = os.environ.get("JWT_SECRET_KEY")
     if not _jwt_secret_key:
         if os.environ.get("FLASK_ENV") == "production":
-            raise RuntimeError(
-                "JWT_SECRET_KEY environment variable must be set in production"
-            )
+            raise RuntimeError("JWT_SECRET_KEY environment variable must be set in production")
         _jwt_secret_key = SECRET_KEY  # Development fallback
 
     JWT_SECRET_KEY = _jwt_secret_key
@@ -191,11 +180,7 @@ class ProductionConfig(Config):
     LOG_LEVEL = "INFO"
 
     # Performance
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_size": 10,
-        "pool_recycle": 3600,
-        "pool_pre_ping": True,
-    }
+    SQLALCHEMY_ENGINE_OPTIONS = {"pool_size": 10, "pool_recycle": 3600, "pool_pre_ping": True}
 
     # Rate limiting
     RATELIMIT_ENABLED = True

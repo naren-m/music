@@ -8,11 +8,7 @@ from datetime import datetime
 
 from flask import Blueprint, jsonify, request, session
 
-from api.rate_limiting import (
-    auth_rate_limit,
-    guest_creation_rate_limit,
-    standard_rate_limit,
-)
+from api.rate_limiting import auth_rate_limit, guest_creation_rate_limit, standard_rate_limit
 
 from .middleware import (
     AuthenticationError,
@@ -44,38 +40,23 @@ def create_guest_session():
         user_id = str(uuid.uuid4())
 
         # Create secure session
-        session_data = create_secure_session(
-            user_id=user_id, user_type="guest", duration_hours=24
-        )
+        session_data = create_secure_session(user_id=user_id, user_type="guest", duration_hours=24)
 
         logger.info(f"Guest session created: {user_id} from {request.remote_addr}")
 
         return jsonify(session_data), 201
 
     except AuthenticationError as e:
-        logger.warning(
-            f"Guest session creation failed: {e.message} from {request.remote_addr}"
-        )
+        logger.warning(f"Guest session creation failed: {e.message} from {request.remote_addr}")
         return jsonify({"error": e.message, "code": "AUTH_FAILED"}), e.status_code
 
     except RateLimitError as e:
-        logger.warning(
-            f"Rate limit exceeded for guest session from {request.remote_addr}"
-        )
+        logger.warning(f"Rate limit exceeded for guest session from {request.remote_addr}")
         return jsonify({"error": e.message, "code": "RATE_LIMIT"}), e.status_code
 
     except Exception as e:
         logger.error(f"Unexpected error in guest session creation: {str(e)}")
-        return (
-            jsonify(
-                {
-                    "error": "Session creation failed",
-                    "message": "Please try again",
-                    "code": "CREATION_ERROR",
-                }
-            ),
-            500,
-        )
+        return jsonify({"error": "Session creation failed", "message": "Please try again", "code": "CREATION_ERROR"}), 500
 
 
 @auth_bp.route("/session", methods=["GET"])
@@ -86,10 +67,7 @@ def get_session_info():
         user_info = get_current_user()
 
         if not user_info:
-            return (
-                jsonify({"authenticated": False, "message": "No valid session found"}),
-                401,
-            )
+            return jsonify({"authenticated": False, "message": "No valid session found"}), 401
 
         # Return session information
         return jsonify(
@@ -115,25 +93,13 @@ def verify_session():
         user_info = get_current_user()
 
         if not user_info:
-            return (
-                jsonify({"authenticated": False, "message": "No valid session found"}),
-                401,
-            )
+            return jsonify({"authenticated": False, "message": "No valid session found"}), 401
 
-        return jsonify(
-            {
-                "authenticated": True,
-                "user_id": user_info["user_id"],
-                "user_type": user_info["user_type"],
-            }
-        )
+        return jsonify({"authenticated": True, "user_id": user_info["user_id"], "user_type": user_info["user_type"]})
 
     except Exception as e:
         logger.error(f"Session verify error: {str(e)}")
-        return (
-            jsonify({"authenticated": False, "error": "Session verification failed"}),
-            500,
-        )
+        return jsonify({"authenticated": False, "error": "Session verification failed"}), 500
 
 
 @auth_bp.route("/logout", methods=["POST"])

@@ -186,14 +186,7 @@ class TalaTrainingSystem:
             name="Adi",
             category=TalaCategory.SULADI,
             structure=[
-                BeatPattern(
-                    BeatType.LAGHU,
-                    4,
-                    "Clap + 3 finger counts",
-                    "Ta Ki Ta Ka",
-                    "| 2 3 4",
-                    5,
-                ),
+                BeatPattern(BeatType.LAGHU, 4, "Clap + 3 finger counts", "Ta Ki Ta Ka", "| 2 3 4", 5),
                 BeatPattern(BeatType.DRUTHAM, 2, "Clap + clap", "Ta Ka", "| |", 4),
                 BeatPattern(BeatType.DRUTHAM, 2, "Clap + clap", "Ta Ka", "| |", 4),
             ],
@@ -209,31 +202,17 @@ class TalaTrainingSystem:
             learning_order=1,
             prerequisite_talas=[],
             common_usage=["Kritis", "Varnams", "Most compositions"],
-            famous_compositions=[
-                {
-                    "title": "Vatapi Ganapatim",
-                    "composer": "Dikshitar",
-                    "raga": "Hamsadhvani",
-                }
-            ],
+            famous_compositions=[{"title": "Vatapi Ganapatim", "composer": "Dikshitar", "raga": "Hamsadhvani"}],
             regional_variations=["Standard across South India"],
             hand_pattern_description="Right hand: Clap on 1, count 2-3-4 on fingers, clap on 5, clap on 6, clap on 7, clap on 8",
-            common_mistakes=[
-                "Rushing through finger counts",
-                "Uneven beat spacing",
-                "Poor clap clarity",
-            ],
+            common_mistakes=["Rushing through finger counts", "Uneven beat spacing", "Poor clap clarity"],
             practice_tips=[
                 "Start very slowly with metronome",
                 "Practice hand pattern without singing",
                 "Count aloud initially",
                 "Maintain consistent clap volume",
             ],
-            mastery_indicators=[
-                "Steady tempo maintenance",
-                "Clear hand gestures",
-                "Ability to maintain while singing",
-            ],
+            mastery_indicators=["Steady tempo maintenance", "Clear hand gestures", "Ability to maintain while singing"],
             description="Most fundamental and commonly used tala in Carnatic music",
             historical_background="Ancient tala mentioned in classical treatises, foundation for most compositions",
         )
@@ -245,14 +224,7 @@ class TalaTrainingSystem:
             category=TalaCategory.SULADI,
             structure=[
                 BeatPattern(BeatType.DRUTHAM, 2, "Clap + clap", "Ta Ka", "| |", 5),
-                BeatPattern(
-                    BeatType.LAGHU,
-                    4,
-                    "Clap + 3 finger counts",
-                    "Ta Ki Ta Ka",
-                    "| 2 3 4",
-                    4,
-                ),
+                BeatPattern(BeatType.LAGHU, 4, "Clap + 3 finger counts", "Ta Ki Ta Ka", "| 2 3 4", 4),
             ],
             total_beats=6,
             total_counts=6,
@@ -266,9 +238,7 @@ class TalaTrainingSystem:
             learning_order=3,
             prerequisite_talas=["Adi"],
             common_usage=["Light classical", "Semi-classical", "Film songs"],
-            famous_compositions=[
-                {"title": "Jaya Jaya", "composer": "Traditional", "raga": "Kambhoji"}
-            ],
+            famous_compositions=[{"title": "Jaya Jaya", "composer": "Traditional", "raga": "Kambhoji"}],
             regional_variations=["Popular in film music"],
             hand_pattern_description="Right hand: Clap on 1, clap on 2, clap on 3, count 4-5-6 on fingers",
             common_mistakes=[
@@ -281,11 +251,7 @@ class TalaTrainingSystem:
                 "Practice drutham-laghu transition",
                 "Use with familiar songs initially",
             ],
-            mastery_indicators=[
-                "Smooth drutham-laghu transition",
-                "Proper beat emphasis",
-                "Comfortable at various tempos",
-            ],
+            mastery_indicators=["Smooth drutham-laghu transition", "Proper beat emphasis", "Comfortable at various tempos"],
             description="Six-beat tala starting with drutham, popular in lighter forms",
             historical_background="Classical tala adapted for modern compositions and film music",
         )
@@ -300,9 +266,7 @@ class TalaTrainingSystem:
             category=TalaCategory.CHAPU,
             structure=[
                 BeatPattern(BeatType.LAGHU, 2, "Clap + finger", "Ta Ki", "| 2", 5),
-                BeatPattern(
-                    BeatType.LAGHU, 3, "Clap + 2 fingers", "Ta Ka Dhi", "| 2 3", 4
-                ),
+                BeatPattern(BeatType.LAGHU, 3, "Clap + 2 fingers", "Ta Ka Dhi", "| 2 3", 4),
             ],
             total_beats=5,
             total_counts=5,
@@ -316,26 +280,16 @@ class TalaTrainingSystem:
             learning_order=5,
             prerequisite_talas=["Adi", "Rupaka"],
             common_usage=["Film songs", "Light music", "Devotional songs"],
-            famous_compositions=[
-                {"title": "Jagadananda Karaka", "composer": "Tyagaraja", "raga": "Nata"}
-            ],
+            famous_compositions=[{"title": "Jagadananda Karaka", "composer": "Tyagaraja", "raga": "Nata"}],
             regional_variations=["Common in Tamil film music"],
             hand_pattern_description="Right hand: Clap-finger (2 beats), clap-finger-finger (3 beats)",
-            common_mistakes=[
-                "Equal emphasis on all beats",
-                "Difficulty with 2+3 grouping",
-                "Tempo acceleration in groups",
-            ],
+            common_mistakes=["Equal emphasis on all beats", "Difficulty with 2+3 grouping", "Tempo acceleration in groups"],
             practice_tips=[
                 "Practice 2+3 grouping separately",
                 "Use 'Ta-Ki Ta-Ka-Dhi' syllables",
                 "Emphasize first beat of each group",
             ],
-            mastery_indicators=[
-                "Natural 2+3 feel",
-                "Consistent tempo across groups",
-                "Comfortable with asymmetric pattern",
-            ],
+            mastery_indicators=["Natural 2+3 feel", "Consistent tempo across groups", "Comfortable with asymmetric pattern"],
             description="Five-beat irregular tala with 2+3 grouping",
             historical_background="Popular chapu tala used extensively in modern compositions",
         )
@@ -346,12 +300,8 @@ class TalaTrainingSystem:
             name="Misra Chapu",
             category=TalaCategory.CHAPU,
             structure=[
-                BeatPattern(
-                    BeatType.LAGHU, 3, "Clap + 2 fingers", "Ta Ki Ta", "| 2 3", 5
-                ),
-                BeatPattern(
-                    BeatType.LAGHU, 4, "Clap + 3 fingers", "Ta Ka Dhi Mi", "| 2 3 4", 4
-                ),
+                BeatPattern(BeatType.LAGHU, 3, "Clap + 2 fingers", "Ta Ki Ta", "| 2 3", 5),
+                BeatPattern(BeatType.LAGHU, 4, "Clap + 3 fingers", "Ta Ka Dhi Mi", "| 2 3 4", 4),
             ],
             total_beats=7,
             total_counts=7,
@@ -364,32 +314,18 @@ class TalaTrainingSystem:
             difficulty_level=5,
             learning_order=7,
             prerequisite_talas=["Adi", "Rupaka", "Khanda Chapu"],
-            common_usage=[
-                "Complex compositions",
-                "Advanced pieces",
-                "Experimental music",
-            ],
-            famous_compositions=[
-                {"title": "Marugelara", "composer": "Tyagaraja", "raga": "Jayantasri"}
-            ],
+            common_usage=["Complex compositions", "Advanced pieces", "Experimental music"],
+            famous_compositions=[{"title": "Marugelara", "composer": "Tyagaraja", "raga": "Jayantasri"}],
             regional_variations=["Less common in folk traditions"],
             hand_pattern_description="Right hand: Clap-finger-finger (3 beats), clap-finger-finger-finger (4 beats)",
-            common_mistakes=[
-                "Losing track of 3+4 grouping",
-                "Uneven emphasis patterns",
-                "Tempo inconsistency",
-            ],
+            common_mistakes=["Losing track of 3+4 grouping", "Uneven emphasis patterns", "Tempo inconsistency"],
             practice_tips=[
                 "Practice very slowly initially",
                 "Use strong metronome reference",
                 "Count 3+4 grouping aloud",
                 "Practice with simple melodies first",
             ],
-            mastery_indicators=[
-                "Effortless 3+4 grouping",
-                "Steady tempo maintenance",
-                "Natural phrase feeling",
-            ],
+            mastery_indicators=["Effortless 3+4 grouping", "Steady tempo maintenance", "Natural phrase feeling"],
             description="Seven-beat complex tala with 3+4 asymmetric grouping",
             historical_background="Advanced tala for sophisticated musical expression",
         )
@@ -419,26 +355,13 @@ class TalaTrainingSystem:
                         "name": "Second Speed",
                         "nadai": 2,
                         "subdivisions_per_beat": 2,
-                        "syllables": [
-                            "Ta Ka",
-                            "Di Mi",
-                            "Ta Ka",
-                            "Jha Nu",
-                            "Ta Ka",
-                            "Ta Ka",
-                            "Ta Ka",
-                            "Ta Ka",
-                        ],
+                        "syllables": ["Ta Ka", "Di Mi", "Ta Ka", "Jha Nu", "Ta Ka", "Ta Ka", "Ta Ka", "Ta Ka"],
                     },
                 ],
                 tempo_progression=[80, 100, 120, 140],
                 duration_minutes=12,
                 difficulty_rating=0.7,
-                learning_objectives=[
-                    "Master nadai concept",
-                    "Develop speed control",
-                    "Practice tempo transitions",
-                ],
+                learning_objectives=["Master nadai concept", "Develop speed control", "Practice tempo transitions"],
                 prerequisites=["Basic Adi Tala Clapping"],
                 timing_tolerance=25.0,
                 success_threshold=0.85,
@@ -475,16 +398,7 @@ class TalaTrainingSystem:
                     {
                         "name": "Basic Pattern",
                         "beats": [1, 2, 3, 4, 5, 6, 7, 8],
-                        "actions": [
-                            "clap",
-                            "2",
-                            "3",
-                            "4",
-                            "clap",
-                            "clap",
-                            "clap",
-                            "clap",
-                        ],
+                        "actions": ["clap", "2", "3", "4", "clap", "clap", "clap", "clap"],
                         "emphasis": [5, 1, 1, 1, 4, 4, 4, 4],
                     }
                 ],
@@ -568,11 +482,7 @@ class TalaTrainingSystem:
         return exercises
 
     async def start_tala_practice_session(
-        self,
-        user_id: int,
-        tala_name: str,
-        exercise_id: Optional[int] = None,
-        tempo: int = 80,
+        self, user_id: int, tala_name: str, exercise_id: Optional[int] = None, tempo: int = 80
     ) -> Dict[str, Any]:
         """Start interactive tala practice session"""
 
@@ -582,9 +492,7 @@ class TalaTrainingSystem:
 
         exercise = None
         if exercise_id:
-            exercise = next(
-                (ex for ex in self.rhythmic_exercises if ex.id == exercise_id), None
-            )
+            exercise = next((ex for ex in self.rhythmic_exercises if ex.id == exercise_id), None)
 
         session = {
             "session_id": f"tala_{user_id}_{datetime.now().timestamp()}",
@@ -625,15 +533,10 @@ class TalaTrainingSystem:
             "instructions": exercise.instructions if exercise else tala.practice_tips,
         }
 
-    def record_beat_input(
-        self, session_id: str, user_id: int, timestamp: datetime, beat_number: int
-    ) -> Dict[str, Any]:
+    def record_beat_input(self, session_id: str, user_id: int, timestamp: datetime, beat_number: int) -> Dict[str, Any]:
         """Record user's beat input and provide feedback"""
 
-        if (
-            user_id not in self.user_progress
-            or "current_session" not in self.user_progress[user_id]
-        ):
+        if user_id not in self.user_progress or "current_session" not in self.user_progress[user_id]:
             return {"error": "No active session"}
 
         session = self.user_progress[user_id]["current_session"]
@@ -643,9 +546,7 @@ class TalaTrainingSystem:
         milliseconds_per_beat = (60 / beats_per_minute) * 1000
 
         session_start = session["start_time"]
-        expected_timestamp = session_start + timedelta(
-            milliseconds=beat_number * milliseconds_per_beat
-        )
+        expected_timestamp = session_start + timedelta(milliseconds=beat_number * milliseconds_per_beat)
 
         # Calculate timing deviation
         actual_timestamp = timestamp
@@ -653,12 +554,7 @@ class TalaTrainingSystem:
 
         # Store the input
         session["user_input_timestamps"].append(
-            {
-                "beat": beat_number,
-                "expected": expected_timestamp,
-                "actual": actual_timestamp,
-                "deviation_ms": deviation_ms,
-            }
+            {"beat": beat_number, "expected": expected_timestamp, "actual": actual_timestamp, "deviation_ms": deviation_ms}
         )
 
         # Provide immediate feedback
@@ -691,15 +587,10 @@ class TalaTrainingSystem:
         else:
             return "Good timing!"
 
-    async def analyze_rhythm_performance(
-        self, session_id: str, user_id: int
-    ) -> RhythmAnalysis:
+    async def analyze_rhythm_performance(self, session_id: str, user_id: int) -> RhythmAnalysis:
         """Analyze user's rhythm performance after session"""
 
-        if (
-            user_id not in self.user_progress
-            or "current_session" not in self.user_progress[user_id]
-        ):
+        if user_id not in self.user_progress or "current_session" not in self.user_progress[user_id]:
             return None
 
         session = self.user_progress[user_id]["current_session"]
@@ -730,20 +621,14 @@ class TalaTrainingSystem:
 
         # Calculate overall metrics
         overall_accuracy = np.mean(beat_accuracies)
-        tempo_consistency = 1.0 - (
-            np.std(timing_deviations) / 100.0
-        )  # Normalize std dev
+        tempo_consistency = 1.0 - (np.std(timing_deviations) / 100.0)  # Normalize std dev
         tempo_consistency = max(0.0, min(1.0, tempo_consistency))
 
         # Pattern recognition (simplified)
-        pattern_recognition = (
-            overall_accuracy  # In production, would analyze pattern adherence
-        )
+        pattern_recognition = overall_accuracy  # In production, would analyze pattern adherence
 
         # Synchronization quality
-        synchronization_quality = 1.0 - (
-            np.mean([abs(d) for d in timing_deviations]) / 100.0
-        )
+        synchronization_quality = 1.0 - (np.mean([abs(d) for d in timing_deviations]) / 100.0)
         synchronization_quality = max(0.0, min(1.0, synchronization_quality))
 
         # Generate feedback
@@ -766,11 +651,7 @@ class TalaTrainingSystem:
             recommendations.append("Focus on maintaining steady tempo")
 
         # Calculate overall score and grade
-        score = (
-            overall_accuracy * 0.4
-            + tempo_consistency * 0.3
-            + synchronization_quality * 0.3
-        )
+        score = overall_accuracy * 0.4 + tempo_consistency * 0.3 + synchronization_quality * 0.3
 
         if score >= 0.9:
             grade = "A"
@@ -801,9 +682,7 @@ class TalaTrainingSystem:
             grade=grade,
         )
 
-    def get_tala_learning_path(
-        self, user_level: str = "beginner"
-    ) -> List[Dict[str, Any]]:
+    def get_tala_learning_path(self, user_level: str = "beginner") -> List[Dict[str, Any]]:
         """Generate tala learning path based on user level"""
 
         if user_level == "beginner":
@@ -811,15 +690,7 @@ class TalaTrainingSystem:
         elif user_level == "intermediate":
             sequence = ["Adi", "Rupaka", "Khanda Chapu", "Jhampa"]
         else:  # advanced
-            sequence = [
-                "Adi",
-                "Rupaka",
-                "Khanda Chapu",
-                "Misra Chapu",
-                "Jhampa",
-                "Triputa",
-                "Eka",
-            ]
+            sequence = ["Adi", "Rupaka", "Khanda Chapu", "Misra Chapu", "Jhampa", "Triputa", "Eka"]
 
         learning_path = []
 
@@ -939,13 +810,9 @@ async def start_practice_session_api(
     user_id: int, tala_name: str, exercise_id: Optional[int] = None, tempo: int = 80
 ) -> Dict[str, Any]:
     """Start tala practice session"""
-    return await tala_system.start_tala_practice_session(
-        user_id, tala_name, exercise_id, tempo
-    )
+    return await tala_system.start_tala_practice_session(user_id, tala_name, exercise_id, tempo)
 
 
-async def analyze_performance_api(
-    session_id: str, user_id: int
-) -> Optional[RhythmAnalysis]:
+async def analyze_performance_api(session_id: str, user_id: int) -> Optional[RhythmAnalysis]:
     """Analyze rhythm performance"""
     return await tala_system.analyze_rhythm_performance(session_id, user_id)

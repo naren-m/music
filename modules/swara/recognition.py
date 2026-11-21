@@ -103,12 +103,7 @@ class SwaraFeatureExtractor:
         try:
             # Fundamental frequency
             f0, voiced_flag, voiced_probs = librosa.pyin(
-                audio,
-                fmin=80,
-                fmax=800,
-                sr=sr,
-                frame_length=self.config.frame_size,
-                hop_length=self.config.hop_length,
+                audio, fmin=80, fmax=800, sr=sr, frame_length=self.config.frame_size, hop_length=self.config.hop_length
             )
 
             # Remove unvoiced segments
@@ -182,11 +177,7 @@ class SwaraFeatureExtractor:
         try:
             # MFCC coefficients
             mfccs = librosa.feature.mfcc(
-                y=audio,
-                sr=sr,
-                n_mfcc=self.config.n_mfcc,
-                n_fft=self.config.frame_size,
-                hop_length=self.config.hop_length,
+                y=audio, sr=sr, n_mfcc=self.config.n_mfcc, n_fft=self.config.frame_size, hop_length=self.config.hop_length
             )
 
             # Statistical measures of MFCCs
@@ -254,9 +245,7 @@ class SwaraFeatureExtractor:
             features.extend([np.mean(rms), np.std(rms)])
 
             # Onset detection
-            onset_frames = librosa.onset.onset_detect(
-                y=audio, sr=sr, hop_length=self.config.hop_length
-            )
+            onset_frames = librosa.onset.onset_detect(y=audio, sr=sr, hop_length=self.config.hop_length)
 
             if len(onset_frames) > 1:
                 onset_times = librosa.frames_to_time(onset_frames, sr=sr)
@@ -288,12 +277,7 @@ class SwaraFeatureExtractor:
         try:
             # Gamaka detection (pitch oscillations)
             f0, _, _ = librosa.pyin(
-                audio,
-                fmin=80,
-                fmax=800,
-                sr=sr,
-                frame_length=self.config.frame_size,
-                hop_length=self.config.hop_length,
+                audio, fmin=80, fmax=800, sr=sr, frame_length=self.config.frame_size, hop_length=self.config.hop_length
             )
 
             # Remove NaN values
@@ -303,17 +287,9 @@ class SwaraFeatureExtractor:
                 # Pitch oscillation features
                 pitch_diff = np.diff(f0_clean)
                 oscillation_magnitude = np.std(pitch_diff)
-                oscillation_frequency = len(signal.find_peaks(pitch_diff)[0]) / (
-                    len(f0_clean) / sr * self.config.hop_length
-                )
+                oscillation_frequency = len(signal.find_peaks(pitch_diff)[0]) / (len(f0_clean) / sr * self.config.hop_length)
 
-                features.extend(
-                    [
-                        oscillation_magnitude,
-                        oscillation_frequency,
-                        np.mean(np.abs(pitch_diff)),
-                    ]
-                )
+                features.extend([oscillation_magnitude, oscillation_frequency, np.mean(np.abs(pitch_diff))])
 
                 # Microtonal deviation from Western semitones
                 if len(f0_clean) > 0:
@@ -423,10 +399,7 @@ class SwaraClassifier:
             from sklearn.model_selection import train_test_split
 
             X_train_split, X_val_split, y_train_split, y_val_split = train_test_split(
-                X_train,
-                y_train,
-                test_size=self.config.validation_split,
-                stratify=y_train,
+                X_train, y_train, test_size=self.config.validation_split, stratify=y_train
             )
 
             # Scale features
@@ -439,12 +412,8 @@ class SwaraClassifier:
 
             # Training callbacks
             callbacks = [
-                tf.keras.callbacks.EarlyStopping(
-                    monitor="val_accuracy", patience=10, restore_best_weights=True
-                ),
-                tf.keras.callbacks.ReduceLROnPlateau(
-                    monitor="val_loss", factor=0.5, patience=5
-                ),
+                tf.keras.callbacks.EarlyStopping(monitor="val_accuracy", patience=10, restore_best_weights=True),
+                tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=5),
             ]
 
             # Train model
@@ -551,9 +520,7 @@ class SwaraRecognitionEngine:
         self.recent_predictions = []
         self.stability_buffer = []
 
-    def analyze_swara(
-        self, ml_result: Dict[str, Any], pitch_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def analyze_swara(self, ml_result: Dict[str, Any], pitch_data: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze swara with temporal stability"""
         try:
             # Combine results
@@ -604,11 +571,7 @@ class SwaraRecognitionEngine:
 
         except Exception as e:
             logger.warning("swara analysis failed", exc_info=True)
-            return {
-                "success": False,
-                "error": str(e),
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            }
+            return {"success": False, "error": str(e), "timestamp": datetime.now(timezone.utc).isoformat()}
 
     def _analyze_temporal_stability(self, ml_result: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze temporal stability of predictions"""
@@ -617,52 +580,32 @@ class SwaraRecognitionEngine:
 
         # Add to recent predictions
         self.recent_predictions.append(
-            {
-                "swara": predicted_swara,
-                "confidence": confidence,
-                "timestamp": datetime.now(timezone.utc),
-            }
+            {"swara": predicted_swara, "confidence": confidence, "timestamp": datetime.now(timezone.utc)}
         )
 
         # Keep only recent predictions
         cutoff_time = datetime.now(timezone.utc).timestamp() - 5  # 5 seconds
-        self.recent_predictions = [
-            p
-            for p in self.recent_predictions
-            if p["timestamp"].timestamp() > cutoff_time
-        ]
+        self.recent_predictions = [p for p in self.recent_predictions if p["timestamp"].timestamp() > cutoff_time]
 
         if len(self.recent_predictions) < 2:
-            return {
-                "temporal_stability": 0.0,
-                "consistent_swara": None,
-                "stability_confidence": 0.0,
-            }
+            return {"temporal_stability": 0.0, "consistent_swara": None, "stability_confidence": 0.0}
 
         # Analyze consistency
-        recent_swaras = [
-            p["swara"] for p in self.recent_predictions[-self.config.context_frames :]
-        ]
+        recent_swaras = [p["swara"] for p in self.recent_predictions[-self.config.context_frames :]]
         most_common_swara = max(set(recent_swaras), key=recent_swaras.count)
         consistency_ratio = recent_swaras.count(most_common_swara) / len(recent_swaras)
 
         # Calculate average confidence for the consistent swara
         consistent_confidences = [
-            p["confidence"]
-            for p in self.recent_predictions[-self.config.context_frames :]
-            if p["swara"] == most_common_swara
+            p["confidence"] for p in self.recent_predictions[-self.config.context_frames :] if p["swara"] == most_common_swara
         ]
-        avg_confidence = (
-            np.mean(consistent_confidences) if consistent_confidences else 0.0
-        )
+        avg_confidence = np.mean(consistent_confidences) if consistent_confidences else 0.0
 
         stability_score = consistency_ratio * avg_confidence
 
         return {
             "temporal_stability": stability_score,
-            "consistent_swara": most_common_swara
-            if stability_score > self.config.stability_threshold
-            else None,
+            "consistent_swara": most_common_swara if stability_score > self.config.stability_threshold else None,
             "stability_confidence": avg_confidence,
             "consistency_ratio": consistency_ratio,
             "recent_predictions_count": len(recent_swaras),

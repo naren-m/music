@@ -16,15 +16,7 @@ from sqlalchemy import and_, desc, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 
-from config.database import (
-    Achievement,
-    Exercise,
-    FriendRequest,
-    Group,
-    Progress,
-    User,
-    get_db_session,
-)
+from config.database import Achievement, Exercise, FriendRequest, Group, Progress, User, get_db_session
 
 social_bp = Blueprint("social", __name__, url_prefix="/api/v1/social")
 
@@ -107,10 +99,7 @@ def search_users():
                     and_(
                         User.id != current_user_id,
                         User.is_active == True,
-                        or_(
-                            func.lower(User.username).like(search_pattern),
-                            func.lower(User.full_name).like(search_pattern),
-                        ),
+                        or_(func.lower(User.username).like(search_pattern), func.lower(User.full_name).like(search_pattern)),
                     )
                 )
                 .offset(offset)
@@ -125,14 +114,8 @@ def search_users():
                     db.query(FriendRequest)
                     .filter(
                         or_(
-                            and_(
-                                FriendRequest.sender_id == current_user_id,
-                                FriendRequest.receiver_id == user.id,
-                            ),
-                            and_(
-                                FriendRequest.sender_id == user.id,
-                                FriendRequest.receiver_id == current_user_id,
-                            ),
+                            and_(FriendRequest.sender_id == current_user_id, FriendRequest.receiver_id == user.id),
+                            and_(FriendRequest.sender_id == user.id, FriendRequest.receiver_id == current_user_id),
                         )
                     )
                     .first()
@@ -154,21 +137,11 @@ def search_users():
                         "username": user.username,
                         "full_name": user.full_name,
                         "friendship_status": friendship_status,
-                        "created_at": user.created_at.isoformat()
-                        if user.created_at
-                        else None,
+                        "created_at": user.created_at.isoformat() if user.created_at else None,
                     }
                 )
 
-            return jsonify(
-                {
-                    "query": query,
-                    "results": results,
-                    "count": len(results),
-                    "offset": offset,
-                    "limit": limit,
-                }
-            )
+            return jsonify({"query": query, "results": results, "count": len(results), "offset": offset, "limit": limit})
 
     except Exception as e:
         current_app.logger.error(f"Error searching users: {e}")
@@ -180,10 +153,7 @@ def _accepted_friend_ids(db, user_id: int) -> list:
     friendships = (
         db.query(FriendRequest)
         .filter(
-            or_(
-                FriendRequest.sender_id == user_id, FriendRequest.receiver_id == user_id
-            ),
-            FriendRequest.status == "accepted",
+            or_(FriendRequest.sender_id == user_id, FriendRequest.receiver_id == user_id), FriendRequest.status == "accepted"
         )
         .all()
     )
@@ -216,14 +186,8 @@ def get_user_profile(user_id: int):
                 db.query(FriendRequest)
                 .filter(
                     or_(
-                        and_(
-                            FriendRequest.sender_id == current_user_id,
-                            FriendRequest.receiver_id == user_id,
-                        ),
-                        and_(
-                            FriendRequest.sender_id == user_id,
-                            FriendRequest.receiver_id == current_user_id,
-                        ),
+                        and_(FriendRequest.sender_id == current_user_id, FriendRequest.receiver_id == user_id),
+                        and_(FriendRequest.sender_id == user_id, FriendRequest.receiver_id == current_user_id),
                     ),
                     FriendRequest.status == "accepted",
                 )
@@ -232,34 +196,16 @@ def get_user_profile(user_id: int):
             is_friend = friendship is not None
 
             # Get user's practice stats
-            total_sessions = (
-                db.query(func.count(Exercise.id))
-                .filter(Exercise.user_id == user_id)
-                .scalar()
-                or 0
-            )
+            total_sessions = db.query(func.count(Exercise.id)).filter(Exercise.user_id == user_id).scalar() or 0
 
             total_practice_time = (
-                db.query(func.sum(Exercise.duration_minutes))
-                .filter(Exercise.user_id == user_id)
-                .scalar()
-                or 0
+                db.query(func.sum(Exercise.duration_minutes)).filter(Exercise.user_id == user_id).scalar() or 0
             )
 
-            avg_accuracy = (
-                db.query(func.avg(Exercise.accuracy_score))
-                .filter(Exercise.user_id == user_id)
-                .scalar()
-                or 0.0
-            )
+            avg_accuracy = db.query(func.avg(Exercise.accuracy_score)).filter(Exercise.user_id == user_id).scalar() or 0.0
 
             # Get achievement count
-            achievement_count = (
-                db.query(func.count(Achievement.id))
-                .filter(Achievement.user_id == user_id)
-                .scalar()
-                or 0
-            )
+            achievement_count = db.query(func.count(Achievement.id)).filter(Achievement.user_id == user_id).scalar() or 0
 
             # Get recent achievements (public)
             recent_achievements = (
@@ -281,9 +227,7 @@ def get_user_profile(user_id: int):
                     "username": user.username,
                     "full_name": user.full_name,
                     "is_friend": is_friend,
-                    "member_since": user.created_at.isoformat()
-                    if user.created_at
-                    else None,
+                    "member_since": user.created_at.isoformat() if user.created_at else None,
                     "stats": {
                         "total_sessions": total_sessions,
                         "total_practice_minutes": round(total_practice_time, 1),
@@ -291,11 +235,7 @@ def get_user_profile(user_id: int):
                         "achievement_count": achievement_count,
                     },
                     "recent_achievements": [
-                        {
-                            "name": ach.name,
-                            "icon": ach.icon,
-                            "earned_date": ach.earned_date.isoformat(),
-                        }
+                        {"name": ach.name, "icon": ach.icon, "earned_date": ach.earned_date.isoformat()}
                         for ach in recent_achievements
                     ],
                     "mutual_friends_count": len(mutual_friends),
@@ -332,9 +272,7 @@ def _practice_activities(db, relevant_user_ids, limit) -> list:
                     "type": ActivityType.PRACTICE_SESSION,
                     "user_id": user.id,
                     "username": user.username,
-                    "timestamp": exercise.started_at.isoformat()
-                    if exercise.started_at
-                    else None,
+                    "timestamp": exercise.started_at.isoformat() if exercise.started_at else None,
                     "data": {
                         "module": exercise.module,
                         "duration_minutes": exercise.duration_minutes,
@@ -366,11 +304,7 @@ def _achievement_activities(db, relevant_user_ids, limit) -> list:
                     "user_id": user.id,
                     "username": user.username,
                     "timestamp": ach.earned_date.isoformat(),
-                    "data": {
-                        "achievement_name": ach.name,
-                        "icon": ach.icon,
-                        "points": ach.points,
-                    },
+                    "data": {"achievement_name": ach.name, "icon": ach.icon, "points": ach.points},
                 }
             )
     return activities
@@ -383,10 +317,7 @@ def _friendship_activities(db, current_user_id) -> list:
     recent_friendships = (
         db.query(FriendRequest)
         .filter(
-            or_(
-                FriendRequest.sender_id == current_user_id,
-                FriendRequest.receiver_id == current_user_id,
-            ),
+            or_(FriendRequest.sender_id == current_user_id, FriendRequest.receiver_id == current_user_id),
             FriendRequest.status == "accepted",
             FriendRequest.responded_at != None,
         )
@@ -396,9 +327,7 @@ def _friendship_activities(db, current_user_id) -> list:
     )
 
     for fr in recent_friendships:
-        other_user_id = (
-            fr.receiver_id if fr.sender_id == current_user_id else fr.sender_id
-        )
+        other_user_id = fr.receiver_id if fr.sender_id == current_user_id else fr.sender_id
         other_user = db.query(User).filter_by(id=other_user_id).first()
         if other_user:
             activities.append(
@@ -406,13 +335,8 @@ def _friendship_activities(db, current_user_id) -> list:
                     "type": ActivityType.FRIEND_ADDED,
                     "user_id": current_user_id,
                     "username": "You",
-                    "timestamp": fr.responded_at.isoformat()
-                    if fr.responded_at
-                    else None,
-                    "data": {
-                        "friend_id": other_user.id,
-                        "friend_username": other_user.username,
-                    },
+                    "timestamp": fr.responded_at.isoformat() if fr.responded_at else None,
+                    "data": {"friend_id": other_user.id, "friend_username": other_user.username},
                 }
             )
     return activities
@@ -443,9 +367,7 @@ def get_activity_feed():
                 relevant_user_ids.append(current_user_id)
 
             if not relevant_user_ids:
-                return jsonify(
-                    {"activities": [], "count": 0, "offset": offset, "limit": limit}
-                )
+                return jsonify({"activities": [], "count": 0, "offset": offset, "limit": limit})
 
             activities = []
             activities.extend(_practice_activities(db, relevant_user_ids, limit))
@@ -453,22 +375,13 @@ def get_activity_feed():
             activities.extend(_friendship_activities(db, current_user_id))
 
             # Sort all activities by timestamp
-            activities.sort(
-                key=lambda x: x["timestamp"] if x["timestamp"] else "1970-01-01",
-                reverse=True,
-            )
+            activities.sort(key=lambda x: x["timestamp"] if x["timestamp"] else "1970-01-01", reverse=True)
 
             # Apply pagination
             paginated = activities[offset : offset + limit]
 
             return jsonify(
-                {
-                    "activities": paginated,
-                    "count": len(paginated),
-                    "total": len(activities),
-                    "offset": offset,
-                    "limit": limit,
-                }
+                {"activities": paginated, "count": len(paginated), "total": len(activities), "offset": offset, "limit": limit}
             )
 
     except Exception as e:
@@ -497,12 +410,7 @@ def _accuracy_rankings(db, user_filter, time_filter, limit, current_user_id) -> 
         query = query.filter(Exercise.started_at >= time_filter)
 
     # Require minimum sessions for ranking
-    results = (
-        query.having(func.count(Exercise.id) >= 5)
-        .order_by(desc("avg_accuracy"))
-        .limit(limit)
-        .all()
-    )
+    results = query.having(func.count(Exercise.id) >= 5).order_by(desc("avg_accuracy")).limit(limit).all()
 
     for rank, (user_id, avg_acc, sessions) in enumerate(results, 1):
         user = db.query(User).filter_by(id=user_id).first()
@@ -520,9 +428,7 @@ def _accuracy_rankings(db, user_filter, time_filter, limit, current_user_id) -> 
     return rankings
 
 
-def _practice_time_rankings(
-    db, user_filter, time_filter, limit, current_user_id
-) -> list:
+def _practice_time_rankings(db, user_filter, time_filter, limit, current_user_id) -> list:
     """Rank users by total practice minutes."""
     rankings = []
     # Rank by total practice time
@@ -599,12 +505,7 @@ def _streak_rankings(db, user_filter, limit, current_user_id) -> list:
 
     streak_data = []
     for user in all_users:
-        exercises = (
-            db.query(Exercise)
-            .filter(Exercise.user_id == user.id)
-            .order_by(desc(Exercise.started_at))
-            .all()
-        )
+        exercises = db.query(Exercise).filter(Exercise.user_id == user.id).order_by(desc(Exercise.started_at)).all()
 
         if not exercises:
             continue
@@ -625,11 +526,7 @@ def _streak_rankings(db, user_filter, limit, current_user_id) -> list:
 
         if current_streak > 0:
             streak_data.append(
-                {
-                    "user": user,
-                    "streak": current_streak,
-                    "last_practice": max(practice_dates) if practice_dates else None,
-                }
+                {"user": user, "streak": current_streak, "last_practice": max(practice_dates) if practice_dates else None}
             )
 
     streak_data.sort(key=lambda x: x["streak"], reverse=True)
@@ -641,9 +538,7 @@ def _streak_rankings(db, user_filter, limit, current_user_id) -> list:
                 "user_id": item["user"].id,
                 "username": item["user"].username,
                 "value": item["streak"],
-                "last_practice": item["last_practice"].isoformat()
-                if item["last_practice"]
-                else None,
+                "last_practice": item["last_practice"].isoformat() if item["last_practice"] else None,
                 "is_current_user": item["user"].id == current_user_id,
             }
         )
@@ -674,9 +569,7 @@ def get_leaderboard():
             # Determine user filter based on scope
             user_filter = None
             if scope == "friends":
-                user_filter = [current_user_id] + _accepted_friend_ids(
-                    db, current_user_id
-                )
+                user_filter = [current_user_id] + _accepted_friend_ids(db, current_user_id)
 
             # Time filter for weekly scope
             time_filter = None
@@ -686,19 +579,13 @@ def get_leaderboard():
             rankings = []
 
             if leaderboard_type == "accuracy":
-                rankings = _accuracy_rankings(
-                    db, user_filter, time_filter, limit, current_user_id
-                )
+                rankings = _accuracy_rankings(db, user_filter, time_filter, limit, current_user_id)
 
             elif leaderboard_type == "practice_time":
-                rankings = _practice_time_rankings(
-                    db, user_filter, time_filter, limit, current_user_id
-                )
+                rankings = _practice_time_rankings(db, user_filter, time_filter, limit, current_user_id)
 
             elif leaderboard_type == "achievements":
-                rankings = _achievement_rankings(
-                    db, user_filter, time_filter, limit, current_user_id
-                )
+                rankings = _achievement_rankings(db, user_filter, time_filter, limit, current_user_id)
 
             elif leaderboard_type == "streak":
                 rankings = _streak_rankings(db, user_filter, limit, current_user_id)
@@ -737,10 +624,7 @@ def get_challenges():
 
     user_challenges = []
     for challenge_id, challenge in _active_challenges.items():
-        if (
-            current_user_id in challenge.participants
-            or challenge.creator_id == current_user_id
-        ):
+        if current_user_id in challenge.participants or challenge.creator_id == current_user_id:
             user_challenges.append(
                 {
                     "challenge_id": challenge.challenge_id,
@@ -827,10 +711,7 @@ def get_challenge_details(challenge_id: str):
     if not challenge:
         return jsonify({"error": "Challenge not found"}), 404
 
-    if (
-        current_user_id not in challenge.participants
-        and challenge.creator_id != current_user_id
-    ):
+    if current_user_id not in challenge.participants and challenge.creator_id != current_user_id:
         return jsonify({"error": "Not authorized to view this challenge"}), 403
 
     try:
@@ -845,8 +726,7 @@ def get_challenge_details(challenge_id: str):
                             "user_id": user.id,
                             "username": user.username,
                             "progress": challenge.results.get(participant_id, 0),
-                            "completed": challenge.results.get(participant_id, 0)
-                            >= challenge.target_value,
+                            "completed": challenge.results.get(participant_id, 0) >= challenge.target_value,
                         }
                     )
 
@@ -864,12 +744,7 @@ def get_challenge_details(challenge_id: str):
                     "creator_id": challenge.creator_id,
                     "participants": participants_info,
                     "my_progress": challenge.results.get(current_user_id, 0),
-                    "time_remaining": max(
-                        0,
-                        (
-                            challenge.end_date - datetime.now(timezone.utc)
-                        ).total_seconds(),
-                    ),
+                    "time_remaining": max(0, (challenge.end_date - datetime.now(timezone.utc)).total_seconds()),
                 }
             )
 
@@ -896,9 +771,7 @@ def join_challenge(challenge_id: str):
     challenge.participants.append(current_user_id)
     challenge.results[current_user_id] = 0
 
-    return jsonify(
-        {"message": "Successfully joined challenge", "challenge_id": challenge_id}
-    )
+    return jsonify({"message": "Successfully joined challenge", "challenge_id": challenge_id})
 
 
 @social_bp.route("/challenges/<challenge_id>/progress", methods=["POST"])
@@ -923,9 +796,7 @@ def update_challenge_progress(challenge_id: str):
         return jsonify({"error": "Challenge is not active"}), 400
 
     progress_value = data.get("progress_value", 0)
-    challenge.results[current_user_id] = max(
-        challenge.results.get(current_user_id, 0), progress_value
-    )
+    challenge.results[current_user_id] = max(challenge.results.get(current_user_id, 0), progress_value)
 
     completed = challenge.results[current_user_id] >= challenge.target_value
 
@@ -1017,10 +888,7 @@ def create_group():
             )
 
     except IntegrityError:
-        return (
-            jsonify({"error": "Failed to create group - name may already exist"}),
-            409,
-        )
+        return jsonify({"error": "Failed to create group - name may already exist"}), 409
     except Exception as e:
         current_app.logger.error(f"Error creating group: {e}")
         return jsonify({"error": "Failed to create group"}), 500
@@ -1047,10 +915,7 @@ def update_group(group_id: int):
                 return jsonify({"error": "Group not found"}), 404
 
             if group.created_by != current_user_id:
-                return (
-                    jsonify({"error": "Only the group creator can update settings"}),
-                    403,
-                )
+                return jsonify({"error": "Only the group creator can update settings"}), 403
 
             if "name" in data:
                 name = data["name"].strip()
@@ -1102,10 +967,7 @@ def delete_group(group_id: int):
                 return jsonify({"error": "Group not found"}), 404
 
             if group.created_by != current_user_id:
-                return (
-                    jsonify({"error": "Only the group creator can delete the group"}),
-                    403,
-                )
+                return jsonify({"error": "Only the group creator can delete the group"}), 403
 
             # Soft delete
             group.is_active = False
@@ -1126,9 +988,7 @@ def join_group_by_code(join_code: str):
 
     try:
         with get_db_session() as db:
-            group = (
-                db.query(Group).filter_by(join_code=join_code, is_active=True).first()
-            )
+            group = db.query(Group).filter_by(join_code=join_code, is_active=True).first()
             if not group:
                 return jsonify({"error": "Invalid join code"}), 404
 
@@ -1139,12 +999,7 @@ def join_group_by_code(join_code: str):
             group.member_count += 1
             db.commit()
 
-            return jsonify(
-                {
-                    "message": f"Successfully joined group {group.name}",
-                    "group_id": group.id,
-                }
-            )
+            return jsonify({"message": f"Successfully joined group {group.name}", "group_id": group.id})
 
     except Exception as e:
         current_app.logger.error(f"Error joining group by code: {e}")
@@ -1159,11 +1014,7 @@ def get_my_groups():
     try:
         with get_db_session() as db:
             # Get groups created by user
-            created_groups = (
-                db.query(Group)
-                .filter_by(created_by=current_user_id, is_active=True)
-                .all()
-            )
+            created_groups = db.query(Group).filter_by(created_by=current_user_id, is_active=True).all()
 
             # In production, also query GroupMembership table for joined groups
             # For now, just return created groups
@@ -1316,8 +1167,7 @@ def get_friends():
             friendships = (
                 db.query(FriendRequest)
                 .filter(
-                    (FriendRequest.sender_id == user_id)
-                    | (FriendRequest.receiver_id == user_id),
+                    (FriendRequest.sender_id == user_id) | (FriendRequest.receiver_id == user_id),
                     FriendRequest.status == "accepted",
                 )
                 .all()
@@ -1366,48 +1216,29 @@ def send_friend_request(target_user_id: int):
             existing_request = (
                 db.query(FriendRequest)
                 .filter(
-                    (
-                        (FriendRequest.sender_id == user_id)
-                        & (FriendRequest.receiver_id == target_user_id)
-                    )
-                    | (
-                        (FriendRequest.sender_id == target_user_id)
-                        & (FriendRequest.receiver_id == user_id)
-                    ),
+                    ((FriendRequest.sender_id == user_id) & (FriendRequest.receiver_id == target_user_id))
+                    | ((FriendRequest.sender_id == target_user_id) & (FriendRequest.receiver_id == user_id)),
                 )
                 .first()
             )
 
             if existing_request:
                 if existing_request.status == "pending":
-                    return (
-                        jsonify({"error": "Friend request already sent or received"}),
-                        409,
-                    )
+                    return jsonify({"error": "Friend request already sent or received"}), 409
                 elif existing_request.status == "accepted":
                     return jsonify({"error": "Already friends with this user"}), 409
 
-            new_request = FriendRequest(
-                sender_id=user_id, receiver_id=target_user_id, status="pending"
-            )
+            new_request = FriendRequest(sender_id=user_id, receiver_id=target_user_id, status="pending")
             db.add(new_request)
             db.commit()
 
             return (
-                jsonify(
-                    {
-                        "message": "Friend request sent successfully",
-                        "request_id": new_request.id,
-                        "status": "pending",
-                    }
-                ),
+                jsonify({"message": "Friend request sent successfully", "request_id": new_request.id, "status": "pending"}),
                 201,
             )
 
     except Exception as e:
-        current_app.logger.error(
-            f"Error sending friend request from {user_id} to {target_user_id}: {e}"
-        )
+        current_app.logger.error(f"Error sending friend request from {user_id} to {target_user_id}: {e}")
         return jsonify({"error": "Failed to send friend request"}), 500
 
 
@@ -1418,11 +1249,7 @@ def get_pending_friend_requests():
 
     try:
         with get_db_session() as db:
-            pending_requests = (
-                db.query(FriendRequest)
-                .filter_by(receiver_id=user_id, status="pending")
-                .all()
-            )
+            pending_requests = db.query(FriendRequest).filter_by(receiver_id=user_id, status="pending").all()
 
             requests_data = []
             for fr in pending_requests:
@@ -1439,9 +1266,7 @@ def get_pending_friend_requests():
             return jsonify(requests_data)
 
     except Exception as e:
-        current_app.logger.error(
-            f"Error getting pending friend requests for user {user_id}: {e}"
-        )
+        current_app.logger.error(f"Error getting pending friend requests for user {user_id}: {e}")
         return jsonify({"error": "Failed to retrieve friend requests"}), 500
 
 
@@ -1452,27 +1277,13 @@ def accept_friend_request(request_id: int):
 
     try:
         with get_db_session() as db:
-            friend_request = (
-                db.query(FriendRequest)
-                .filter_by(id=request_id, receiver_id=user_id)
-                .first()
-            )
+            friend_request = db.query(FriendRequest).filter_by(id=request_id, receiver_id=user_id).first()
 
             if not friend_request:
-                return (
-                    jsonify(
-                        {"error": "Friend request not found or not for current user"}
-                    ),
-                    404,
-                )
+                return jsonify({"error": "Friend request not found or not for current user"}), 404
 
             if friend_request.status != "pending":
-                return (
-                    jsonify(
-                        {"error": f"Friend request already {friend_request.status}"}
-                    ),
-                    400,
-                )
+                return jsonify({"error": f"Friend request already {friend_request.status}"}), 400
 
             friend_request.status = "accepted"
             friend_request.responded_at = datetime.now(timezone.utc)
@@ -1482,9 +1293,7 @@ def accept_friend_request(request_id: int):
             return jsonify({"message": "Friend request accepted"}), 200
 
     except Exception as e:
-        current_app.logger.error(
-            f"Error accepting friend request {request_id} for user {user_id}: {e}"
-        )
+        current_app.logger.error(f"Error accepting friend request {request_id} for user {user_id}: {e}")
         return jsonify({"error": "Failed to accept friend request"}), 500
 
 
@@ -1495,27 +1304,13 @@ def decline_friend_request(request_id: int):
 
     try:
         with get_db_session() as db:
-            friend_request = (
-                db.query(FriendRequest)
-                .filter_by(id=request_id, receiver_id=user_id)
-                .first()
-            )
+            friend_request = db.query(FriendRequest).filter_by(id=request_id, receiver_id=user_id).first()
 
             if not friend_request:
-                return (
-                    jsonify(
-                        {"error": "Friend request not found or not for current user"}
-                    ),
-                    404,
-                )
+                return jsonify({"error": "Friend request not found or not for current user"}), 404
 
             if friend_request.status != "pending":
-                return (
-                    jsonify(
-                        {"error": f"Friend request already {friend_request.status}"}
-                    ),
-                    400,
-                )
+                return jsonify({"error": f"Friend request already {friend_request.status}"}), 400
 
             friend_request.status = "declined"
             friend_request.responded_at = datetime.now(timezone.utc)
@@ -1525,9 +1320,7 @@ def decline_friend_request(request_id: int):
             return jsonify({"message": "Friend request declined"}), 200
 
     except Exception as e:
-        current_app.logger.error(
-            f"Error declining friend request {request_id} for user {user_id}: {e}"
-        )
+        current_app.logger.error(f"Error declining friend request {request_id} for user {user_id}: {e}")
         return jsonify({"error": "Failed to decline friend request"}), 500
 
 
@@ -1542,14 +1335,8 @@ def remove_friend(target_user_id: int):
             friend_request = (
                 db.query(FriendRequest)
                 .filter(
-                    (
-                        (FriendRequest.sender_id == user_id)
-                        & (FriendRequest.receiver_id == target_user_id)
-                    )
-                    | (
-                        (FriendRequest.sender_id == target_user_id)
-                        & (FriendRequest.receiver_id == user_id)
-                    ),
+                    ((FriendRequest.sender_id == user_id) & (FriendRequest.receiver_id == target_user_id))
+                    | ((FriendRequest.sender_id == target_user_id) & (FriendRequest.receiver_id == user_id)),
                     FriendRequest.status == "accepted",
                 )
                 .first()
@@ -1565,7 +1352,5 @@ def remove_friend(target_user_id: int):
             return jsonify({"message": "Friend removed successfully"}), 200
 
     except Exception as e:
-        current_app.logger.error(
-            f"Error removing friend {target_user_id} for user {user_id}: {e}"
-        )
+        current_app.logger.error(f"Error removing friend {target_user_id} for user {user_id}: {e}")
         return jsonify({"error": "Failed to remove friend"}), 500

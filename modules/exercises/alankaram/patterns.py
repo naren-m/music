@@ -128,11 +128,7 @@ class AlanakaramPatternGenerator:
             raga_name="Mayamalavagowla",
             arohanam=["Sa", "Ri1", "Ga3", "Ma1", "Pa", "Da1", "Ni3"],
             avarohanam=["Sa", "Ni3", "Da1", "Pa", "Ma1", "Ga3", "Ri1", "Sa"],
-            characteristic_phrases=[
-                ["Sa", "Ri1", "Ga3", "Ma1"],
-                ["Pa", "Da1", "Ni3", "Sa"],
-                ["Ga3", "Ma1", "Pa", "Da1"],
-            ],
+            characteristic_phrases=[["Sa", "Ri1", "Ga3", "Ma1"], ["Pa", "Da1", "Ni3", "Sa"], ["Ga3", "Ma1", "Pa", "Da1"]],
             forbidden_combinations=[
                 ["Ri1", "Ga1"],  # Avoid natural Ga with shuddha Ri
                 ["Da1", "Ni1"],  # Avoid natural Ni with shuddha Da
@@ -155,11 +151,7 @@ class AlanakaramPatternGenerator:
             raga_name="Shankarabharanam",
             arohanam=["Sa", "Ri2", "Ga3", "Ma1", "Pa", "Da2", "Ni3"],
             avarohanam=["Sa", "Ni3", "Da2", "Pa", "Ma1", "Ga3", "Ri2", "Sa"],
-            characteristic_phrases=[
-                ["Sa", "Ri2", "Ga3", "Pa"],
-                ["Ma1", "Pa", "Da2", "Sa"],
-                ["Pa", "Ma1", "Ga3", "Ri2"],
-            ],
+            characteristic_phrases=[["Sa", "Ri2", "Ga3", "Pa"], ["Ma1", "Pa", "Da2", "Sa"], ["Pa", "Ma1", "Ga3", "Ri2"]],
             forbidden_combinations=[],
             ornament_preferences={
                 "Ri2": [OrnanmentationType.KAMPANA],
@@ -179,11 +171,7 @@ class AlanakaramPatternGenerator:
             raga_name="Kalyani",
             arohanam=["Sa", "Ri2", "Ga3", "Ma2", "Pa", "Da2", "Ni3"],
             avarohanam=["Sa", "Ni3", "Da2", "Pa", "Ma2", "Ga3", "Ri2", "Sa"],
-            characteristic_phrases=[
-                ["Sa", "Ri2", "Ga3", "Ma2"],
-                ["Ma2", "Pa", "Da2", "Ni3"],
-                ["Ni3", "Da2", "Pa", "Ma2"],
-            ],
+            characteristic_phrases=[["Sa", "Ri2", "Ga3", "Ma2"], ["Ma2", "Pa", "Da2", "Ni3"], ["Ni3", "Da2", "Pa", "Ma2"]],
             forbidden_combinations=[["Ma1", "Pa"]],  # Avoid natural Ma in Kalyani
             ornament_preferences={
                 "Ma2": [OrnanmentationType.KAMPANA, OrnanmentationType.ANDOLANA],
@@ -209,9 +197,7 @@ class AlanakaramPatternGenerator:
         # Try loading from text files first
         file_patterns = self._load_from_files()
         if file_patterns:
-            logger.info(
-                f"Loaded {len(file_patterns)} Alankaram patterns from text files"
-            )
+            logger.info(f"Loaded {len(file_patterns)} Alankaram patterns from text files")
             return file_patterns
 
         # Fall back to hardcoded patterns
@@ -245,14 +231,10 @@ class AlanakaramPatternGenerator:
         """
         try:
             # Load exercises and config from the Alankarams folder
-            exercises, config = load_exercises_from_folder(
-                "Alankarams", f"{self.raga}.txt"
-            )
+            exercises, config = load_exercises_from_folder("Alankarams", f"{self.raga}.txt")
 
             if not exercises:
-                logger.debug(
-                    f"No exercises found for raga '{self.raga}' in Alankarams folder"
-                )
+                logger.debug(f"No exercises found for raga '{self.raga}' in Alankarams folder")
                 return []
 
             self.config = config
@@ -310,11 +292,7 @@ class AlanakaramPatternGenerator:
 
             # Get practice tips from config
             practice_tips = level_config.get(
-                "practice_tips",
-                [
-                    "Start slowly with drone reference",
-                    "Focus on clean phrase transitions",
-                ],
+                "practice_tips", ["Start slowly with drone reference", "Focus on clean phrase transitions"]
             )
 
             return AlanakaramPattern(
@@ -328,14 +306,8 @@ class AlanakaramPatternGenerator:
                 tala_compatibility=[config.talam if config else "Adi"],
                 tempo_recommendations=tempo_range,
                 learning_objectives=learning_objectives,
-                prerequisites=list(range(1, exercise.level))
-                if exercise.level > 1
-                else [],
-                mastery_indicators={
-                    "pitch_accuracy": 0.85,
-                    "phrase_connection": 0.8,
-                    "tempo_consistency": 0.85,
-                },
+                prerequisites=list(range(1, exercise.level)) if exercise.level > 1 else [],
+                mastery_indicators={"pitch_accuracy": 0.85, "phrase_connection": 0.8, "tempo_consistency": 0.85},
                 cultural_context=f"Traditional {raga_display} alankaram practice",
                 traditional_usage=practice_tips,
             )
@@ -345,9 +317,7 @@ class AlanakaramPatternGenerator:
             return None
 
     @staticmethod
-    def _build_scale_phrases(
-        exercise: ParsedExercise, level_config
-    ) -> List[MelodicPhrase]:
+    def _build_scale_phrases(exercise: ParsedExercise, level_config) -> List[MelodicPhrase]:
         """Arohanam and avarohanam MelodicPhrases for a parsed exercise."""
         # Process arohanam (ascending) phrase
         arohanam_swaras = []
@@ -463,11 +433,7 @@ class AlanakaramPatternGenerator:
                 "Develop returning phrase technique",
             ],
             prerequisites=[],
-            mastery_indicators={
-                "pitch_accuracy": 0.9,
-                "phrase_connection": 0.8,
-                "tempo_consistency": 0.85,
-            },
+            mastery_indicators={"pitch_accuracy": 0.9, "phrase_connection": 0.8, "tempo_consistency": 0.85},
             cultural_context="Foundation exercise for swara relationships",
             traditional_usage=["Basic training", "Warm-up exercises"],
         )
@@ -508,17 +474,9 @@ class AlanakaramPatternGenerator:
             raga_compatibility=["Mayamalavagowla", "Shankarabharanam"],
             tala_compatibility=["Adi", "Rupaka", "Khanda Chapu"],
             tempo_recommendations=(55, 110),
-            learning_objectives=[
-                "Develop three-note phrase control",
-                "Practice melodic curves",
-                "Strengthen Sa connection",
-            ],
+            learning_objectives=["Develop three-note phrase control", "Practice melodic curves", "Strengthen Sa connection"],
             prerequisites=[1],
-            mastery_indicators={
-                "phrase_smoothness": 0.85,
-                "melodic_flow": 0.8,
-                "return_accuracy": 0.9,
-            },
+            mastery_indicators={"phrase_smoothness": 0.85, "melodic_flow": 0.8, "return_accuracy": 0.9},
             cultural_context="Traditional phrase development exercise",
             traditional_usage=["Melodic training", "Phrase connection practice"],
         )
@@ -555,11 +513,7 @@ class AlanakaramPatternGenerator:
                 "Practice octave jump technique",
             ],
             prerequisites=[1, 2],
-            mastery_indicators={
-                "octave_accuracy": 0.9,
-                "breath_control": 0.8,
-                "scale_evenness": 0.85,
-            },
+            mastery_indicators={"octave_accuracy": 0.9, "breath_control": 0.8, "scale_evenness": 0.85},
             cultural_context="Fundamental scale training",
             traditional_usage=["Voice training", "Scale practice"],
         )
@@ -570,10 +524,7 @@ class AlanakaramPatternGenerator:
 
         # Pattern 8: Alternating jump patterns
         phrases = []
-        alternating_groups = [
-            ["Sa", "Ga", "Ri", "Ma", "Ga", "Pa"],
-            ["Ma", "Da", "Pa", "Ni", "Da", "Sa"],
-        ]
+        alternating_groups = [["Sa", "Ga", "Ri", "Ma", "Ga", "Pa"], ["Ma", "Da", "Pa", "Ni", "Da", "Sa"]]
 
         for group in alternating_groups:
             phrases.append(
@@ -581,8 +532,7 @@ class AlanakaramPatternGenerator:
                     swaras=group,
                     octave_shifts=[0] * len(group),
                     duration_ratios=[0.75] * (len(group) - 1) + [1.0],
-                    ornamentations=[None, OrnanmentationType.SPURITA, None]
-                    * (len(group) // 3 + 1),
+                    ornamentations=[None, OrnanmentationType.SPURITA, None] * (len(group) // 3 + 1),
                     emphasis_points=[0, len(group) - 1],
                     phrase_type="alternating_jumps",
                     difficulty_weight=0.6,
@@ -606,11 +556,7 @@ class AlanakaramPatternGenerator:
                     "Practice complex melodic sequences",
                 ],
                 prerequisites=[1, 2, 3],
-                mastery_indicators={
-                    "jump_accuracy": 0.85,
-                    "movement_control": 0.8,
-                    "pattern_consistency": 0.85,
-                },
+                mastery_indicators={"jump_accuracy": 0.85, "movement_control": 0.8, "pattern_consistency": 0.85},
                 cultural_context="Advanced melodic movement training",
                 traditional_usage=["Technical development", "Flexibility training"],
             )
@@ -663,11 +609,7 @@ class AlanakaramPatternGenerator:
                     "Practice devotional expression",
                 ],
                 prerequisites=[1, 2, 3, 8],
-                mastery_indicators={
-                    "raga_authenticity": 0.9,
-                    "ornamentation_quality": 0.8,
-                    "emotional_expression": 0.8,
-                },
+                mastery_indicators={"raga_authenticity": 0.9, "ornamentation_quality": 0.8, "emotional_expression": 0.8},
                 cultural_context="First melakarta raga training",
                 traditional_usage=["Raga introduction", "Devotional practice"],
             )
@@ -684,35 +626,9 @@ class AlanakaramPatternGenerator:
         # Pattern 29: Complex ornamented pattern
         advanced_phrases = [
             MelodicPhrase(
-                swaras=[
-                    "Sa",
-                    "Ri",
-                    "Ga",
-                    "Ma",
-                    "Pa",
-                    "Da",
-                    "Ni",
-                    "Sa",
-                    "Ni",
-                    "Da",
-                    "Pa",
-                    "Ma",
-                ],
+                swaras=["Sa", "Ri", "Ga", "Ma", "Pa", "Da", "Ni", "Sa", "Ni", "Da", "Pa", "Ma"],
                 octave_shifts=[0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-                duration_ratios=[
-                    0.25,
-                    0.5,
-                    0.75,
-                    0.5,
-                    1.0,
-                    0.5,
-                    0.75,
-                    1.5,
-                    0.5,
-                    0.75,
-                    0.5,
-                    1.0,
-                ],
+                duration_ratios=[0.25, 0.5, 0.75, 0.5, 1.0, 0.5, 0.75, 1.5, 0.5, 0.75, 0.5, 1.0],
                 ornamentations=[
                     None,
                     OrnanmentationType.KAMPANA,
@@ -750,11 +666,7 @@ class AlanakaramPatternGenerator:
                     "Practice complex rhythmic variations",
                 ],
                 prerequisites=[8, 22],
-                mastery_indicators={
-                    "ornamentation_mastery": 0.9,
-                    "rhythmic_precision": 0.85,
-                    "artistic_expression": 0.85,
-                },
+                mastery_indicators={"ornamentation_mastery": 0.9, "rhythmic_precision": 0.85, "artistic_expression": 0.85},
                 cultural_context="Professional-level technique development",
                 traditional_usage=["Concert preparation", "Advanced training"],
             )
@@ -769,9 +681,7 @@ class AlanakaramPatternGenerator:
                 return pattern
         return None
 
-    def get_patterns_by_complexity(
-        self, complexity: ComplexityLevel
-    ) -> List[AlanakaramPattern]:
+    def get_patterns_by_complexity(self, complexity: ComplexityLevel) -> List[AlanakaramPattern]:
         """Get patterns by complexity level"""
         return [p for p in self.alankaram_patterns if p.complexity_level == complexity]
 
@@ -779,9 +689,7 @@ class AlanakaramPatternGenerator:
         """Get patterns compatible with specific raga"""
         return [p for p in self.alankaram_patterns if raga_name in p.raga_compatibility]
 
-    def validate_raga_compatibility(
-        self, pattern: AlanakaramPattern, raga_name: str
-    ) -> Tuple[bool, List[str]]:
+    def validate_raga_compatibility(self, pattern: AlanakaramPattern, raga_name: str) -> Tuple[bool, List[str]]:
         """Validate if pattern is compatible with raga and provide recommendations"""
         if raga_name not in self.raga_database:
             return False, ["Raga not found in database"]
@@ -794,9 +702,7 @@ class AlanakaramPatternGenerator:
             for forbidden in raga.forbidden_combinations:
                 for i in range(len(phrase.swaras) - len(forbidden) + 1):
                     if phrase.swaras[i : i + len(forbidden)] == forbidden:
-                        issues.append(
-                            f"Forbidden combination {' '.join(forbidden)} found"
-                        )
+                        issues.append(f"Forbidden combination {' '.join(forbidden)} found")
 
             # Check for swara compatibility
             for swara in phrase.swaras:
@@ -807,10 +713,7 @@ class AlanakaramPatternGenerator:
         return is_compatible, issues
 
     def generate_practice_curriculum(
-        self,
-        target_complexity: ComplexityLevel,
-        focus_ragas: List[str] = None,
-        session_duration: int = 45,
+        self, target_complexity: ComplexityLevel, focus_ragas: List[str] = None, session_duration: int = 45
     ) -> Dict[str, Any]:
         """Generate comprehensive practice curriculum"""
         focus_ragas = focus_ragas or ["Mayamalavagowla", "Shankarabharanam"]
@@ -823,14 +726,8 @@ class AlanakaramPatternGenerator:
         }
 
         # Get progressive pattern sequence
-        all_patterns = sorted(
-            self.alankaram_patterns, key=lambda x: x.complexity_level.value
-        )
-        target_patterns = [
-            p
-            for p in all_patterns
-            if p.complexity_level.value <= target_complexity.value
-        ]
+        all_patterns = sorted(self.alankaram_patterns, key=lambda x: x.complexity_level.value)
+        target_patterns = [p for p in all_patterns if p.complexity_level.value <= target_complexity.value]
 
         # Filter by raga compatibility
         if focus_ragas:
@@ -841,9 +738,7 @@ class AlanakaramPatternGenerator:
             target_patterns = compatible_patterns
 
         # Create learning sessions
-        patterns_per_session = max(
-            1, len(target_patterns) // 8
-        )  # Spread over 8 sessions
+        patterns_per_session = max(1, len(target_patterns) // 8)  # Spread over 8 sessions
 
         for i in range(0, len(target_patterns), patterns_per_session):
             session_patterns = target_patterns[i : i + patterns_per_session]
@@ -851,26 +746,16 @@ class AlanakaramPatternGenerator:
             session = {
                 "session_number": (i // patterns_per_session) + 1,
                 "patterns": [p.id for p in session_patterns],
-                "primary_focus": session_patterns[0].learning_objectives[0]
-                if session_patterns
-                else "",
+                "primary_focus": session_patterns[0].learning_objectives[0] if session_patterns else "",
                 "estimated_duration": session_duration,
-                "prerequisites_check": list(
-                    set().union(*[p.prerequisites for p in session_patterns])
-                ),
-                "success_criteria": {
-                    "pattern_completion": 0.8,
-                    "accuracy_threshold": 0.85,
-                    "expression_quality": 0.75,
-                },
+                "prerequisites_check": list(set().union(*[p.prerequisites for p in session_patterns])),
+                "success_criteria": {"pattern_completion": 0.8, "accuracy_threshold": 0.85, "expression_quality": 0.75},
             }
             curriculum["learning_path"].append(session)
 
         return curriculum
 
-    def analyze_pattern_difficulty(
-        self, pattern: AlanakaramPattern
-    ) -> Dict[str, float]:
+    def analyze_pattern_difficulty(self, pattern: AlanakaramPattern) -> Dict[str, float]:
         """Analyze various difficulty factors of a pattern"""
         analysis = {
             "melodic_complexity": 0.0,
@@ -882,10 +767,7 @@ class AlanakaramPatternGenerator:
         }
 
         total_swaras = sum(len(phrase.swaras) for phrase in pattern.phrases)
-        total_ornaments = sum(
-            len([o for o in phrase.ornamentations if o is not None])
-            for phrase in pattern.phrases
-        )
+        total_ornaments = sum(len([o for o in phrase.ornamentations if o is not None]) for phrase in pattern.phrases)
 
         # Melodic complexity based on unique swaras and patterns
         unique_swaras = set()
@@ -934,9 +816,7 @@ class AlanakaramPatternGenerator:
             "interval_difficulty": 0.25,
         }
 
-        analysis["overall_difficulty"] = sum(
-            analysis[key] * weight for key, weight in weights.items()
-        )
+        analysis["overall_difficulty"] = sum(analysis[key] * weight for key, weight in weights.items())
 
         return analysis
 
@@ -956,9 +836,7 @@ class AlanakaramPatternGenerator:
                         "swaras": phrase.swaras,
                         "octave_shifts": phrase.octave_shifts,
                         "duration_ratios": phrase.duration_ratios,
-                        "ornamentations": [
-                            o.value if o else None for o in phrase.ornamentations
-                        ],
+                        "ornamentations": [o.value if o else None for o in phrase.ornamentations],
                         "emphasis_points": phrase.emphasis_points,
                         "phrase_type": phrase.phrase_type,
                         "difficulty_weight": phrase.difficulty_weight,
@@ -999,9 +877,7 @@ def get_patterns_by_raga(raga_name: str) -> List[AlanakaramPattern]:
     return alankaram_generator.get_patterns_by_raga(raga_name)
 
 
-def validate_pattern_for_raga(
-    pattern_id: int, raga_name: str
-) -> Tuple[bool, List[str]]:
+def validate_pattern_for_raga(pattern_id: int, raga_name: str) -> Tuple[bool, List[str]]:
     """Validate pattern compatibility with raga"""
     pattern = alankaram_generator.get_pattern_by_id(pattern_id)
     if not pattern:
@@ -1009,11 +885,7 @@ def validate_pattern_for_raga(
     return alankaram_generator.validate_raga_compatibility(pattern, raga_name)
 
 
-def generate_alankaram_curriculum(
-    complexity_level: int, focus_ragas: List[str] = None, duration: int = 45
-) -> Dict[str, Any]:
+def generate_alankaram_curriculum(complexity_level: int, focus_ragas: List[str] = None, duration: int = 45) -> Dict[str, Any]:
     """Generate Alankaram practice curriculum"""
     complexity = ComplexityLevel(complexity_level)
-    return alankaram_generator.generate_practice_curriculum(
-        complexity, focus_ragas, duration
-    )
+    return alankaram_generator.generate_practice_curriculum(complexity, focus_ragas, duration)

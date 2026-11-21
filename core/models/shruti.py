@@ -51,20 +51,7 @@ class Shruti:
             midi_note = 69 + 12 * np.log2(frequency / 440)
             midi_note_round = int(round(midi_note))
 
-            note_names = [
-                "C",
-                "C#",
-                "D",
-                "D#",
-                "E",
-                "F",
-                "F#",
-                "G",
-                "G#",
-                "A",
-                "A#",
-                "B",
-            ]
+            note_names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
             octave = (midi_note_round // 12) - 1
             note_idx = midi_note_round % 12
 
@@ -86,101 +73,29 @@ class ShrutiSystem:
             # Shadja grama (Sa family)
             Shruti("Shadja", "Sa", 0, 1.0, ["All ragas"]),
             # Rishaba grama (Ri family)
-            Shruti(
-                "Suddha Rishaba",
-                "R₁",
-                90,
-                256 / 243,
-                ["Mayamalavagowla", "Hanumatodi", "Natabhairavi"],
-            ),
-            Shruti(
-                "Chatussruti Rishaba",
-                "R₂",
-                182,
-                9 / 8,
-                ["Sankarabharanam", "Kharaharapriya", "Mohanam"],
-            ),
-            Shruti(
-                "Shatsruti Rishaba", "R₃", 294, 32 / 27, ["Todi", "Shubhapantuvarali"]
-            ),
+            Shruti("Suddha Rishaba", "R₁", 90, 256 / 243, ["Mayamalavagowla", "Hanumatodi", "Natabhairavi"]),
+            Shruti("Chatussruti Rishaba", "R₂", 182, 9 / 8, ["Sankarabharanam", "Kharaharapriya", "Mohanam"]),
+            Shruti("Shatsruti Rishaba", "R₃", 294, 32 / 27, ["Todi", "Shubhapantuvarali"]),
             # Gandhara grama (Ga family)
             Shruti("Suddha Gandhara", "G₁", 294, 32 / 27, ["Todi", "Bhairavi"]),
-            Shruti(
-                "Sadharana Gandhara",
-                "G₂",
-                316,
-                5 / 4,
-                ["Kharaharapriya", "Natabhairavi"],
-            ),
-            Shruti(
-                "Antara Gandhara",
-                "G₃",
-                386,
-                81 / 64,
-                ["Sankarabharanam", "Kalyani", "Mohanam"],
-            ),
+            Shruti("Sadharana Gandhara", "G₂", 316, 5 / 4, ["Kharaharapriya", "Natabhairavi"]),
+            Shruti("Antara Gandhara", "G₃", 386, 81 / 64, ["Sankarabharanam", "Kalyani", "Mohanam"]),
             # Madhyama grama (Ma family)
-            Shruti(
-                "Suddha Madhyama",
-                "M₁",
-                498,
-                4 / 3,
-                ["Sankarabharanam", "Kharaharapriya", "Most ragas"],
-            ),
-            Shruti(
-                "Prati Madhyama",
-                "M₂",
-                590,
-                45 / 32,
-                ["Kalyani", "Shanmukhapriya", "Yaman"],
-            ),
+            Shruti("Suddha Madhyama", "M₁", 498, 4 / 3, ["Sankarabharanam", "Kharaharapriya", "Most ragas"]),
+            Shruti("Prati Madhyama", "M₂", 590, 45 / 32, ["Kalyani", "Shanmukhapriya", "Yaman"]),
             # Panchama grama (Pa family)
             Shruti("Panchama", "Pa", 702, 3 / 2, ["All ragas except Varali"]),
             # Dhaivata grama (Dha family)
-            Shruti(
-                "Suddha Dhaivata",
-                "D₁",
-                792,
-                128 / 81,
-                ["Mayamalavagowla", "Todi", "Natabhairavi"],
-            ),
-            Shruti(
-                "Chatussruti Dhaivata",
-                "D₂",
-                884,
-                5 / 3,
-                ["Sankarabharanam", "Kharaharapriya", "Mohanam"],
-            ),
-            Shruti(
-                "Shatsruti Dhaivata", "D₃", 996, 16 / 9, ["Kalyani", "Shanmukhapriya"]
-            ),
+            Shruti("Suddha Dhaivata", "D₁", 792, 128 / 81, ["Mayamalavagowla", "Todi", "Natabhairavi"]),
+            Shruti("Chatussruti Dhaivata", "D₂", 884, 5 / 3, ["Sankarabharanam", "Kharaharapriya", "Mohanam"]),
+            Shruti("Shatsruti Dhaivata", "D₃", 996, 16 / 9, ["Kalyani", "Shanmukhapriya"]),
             # Nishada grama (Ni family)
             Shruti("Suddha Nishada", "N₁", 996, 16 / 9, ["Natabhairavi", "Todi"]),
-            Shruti(
-                "Kaisika Nishada", "N₂", 1018, 9 / 5, ["Kharaharapriya", "Dhanyasi"]
-            ),
-            Shruti(
-                "Kakali Nishada",
-                "N₃",
-                1088,
-                15 / 8,
-                ["Sankarabharanam", "Kalyani", "Mohanam"],
-            ),
+            Shruti("Kaisika Nishada", "N₂", 1018, 9 / 5, ["Kharaharapriya", "Dhanyasi"]),
+            Shruti("Kakali Nishada", "N₃", 1088, 15 / 8, ["Sankarabharanam", "Kalyani", "Mohanam"]),
             # Microtonal variations (Pramana shrutis)
-            Shruti(
-                "Komal Rishaba",
-                "R₁⁻",
-                70,
-                25 / 24,
-                ["Bhairavi variations", "Todi phrases"],
-            ),
-            Shruti(
-                "Tivra Gandhara",
-                "G₃⁺",
-                350,
-                125 / 96,
-                ["Todi variations", "Raga Multani"],
-            ),
+            Shruti("Komal Rishaba", "R₁⁻", 70, 25 / 24, ["Bhairavi variations", "Todi phrases"]),
+            Shruti("Tivra Gandhara", "G₃⁺", 350, 125 / 96, ["Todi variations", "Raga Multani"]),
             Shruti("Komal Dhaivata", "D₁⁻", 772, 25 / 16, ["Malkauns", "Bageshri"]),
             Shruti("Komal Nishada", "N₁⁻", 976, 125 / 72, ["Darbari", "Asavari"]),
             Shruti("Tivra Madhyama", "M₂⁺", 610, 45 / 32, ["Raga Yaman", "Purvi"]),
@@ -191,9 +106,7 @@ class ShrutiSystem:
         """Get shruti by name"""
         return self.shruti_lookup.get(name)
 
-    def find_closest_shruti(
-        self, frequency: float, base_sa: float, tolerance_cents: float = 25
-    ) -> Optional[Shruti]:
+    def find_closest_shruti(self, frequency: float, base_sa: float, tolerance_cents: float = 25) -> Optional[Shruti]:
         """Find closest shruti to given frequency within tolerance"""
         best_shruti = None
         min_deviation = float("inf")
@@ -223,18 +136,9 @@ class ShrutiSystem:
 # Raga pattern definitions
 MELAKARTA_RAGAS = {
     1: {"name": "Kanakangi", "arohanam": ["Sa", "R₁", "G₁", "M₁", "Pa", "D₁", "N₁"]},
-    15: {
-        "name": "Mayamalavagowla",
-        "arohanam": ["Sa", "R₁", "G₃", "M₁", "Pa", "D₁", "N₃"],
-    },
-    22: {
-        "name": "Kharaharapriya",
-        "arohanam": ["Sa", "R₂", "G₂", "M₁", "Pa", "D₂", "N₂"],
-    },
-    29: {
-        "name": "Sankarabharanam",
-        "arohanam": ["Sa", "R₂", "G₃", "M₁", "Pa", "D₂", "N₃"],
-    },
+    15: {"name": "Mayamalavagowla", "arohanam": ["Sa", "R₁", "G₃", "M₁", "Pa", "D₁", "N₃"]},
+    22: {"name": "Kharaharapriya", "arohanam": ["Sa", "R₂", "G₂", "M₁", "Pa", "D₂", "N₂"]},
+    29: {"name": "Sankarabharanam", "arohanam": ["Sa", "R₂", "G₃", "M₁", "Pa", "D₂", "N₃"]},
     65: {"name": "Kalyani", "arohanam": ["Sa", "R₂", "G₃", "M₂", "Pa", "D₂", "N₃"]},
     # Add more melakarta ragas as needed
 }
@@ -281,9 +185,7 @@ class RagaAnalyzer:
 
         return raga_scores
 
-    def _calculate_raga_match_score(
-        self, sequence: List[str], raga_data: Dict
-    ) -> float:
+    def _calculate_raga_match_score(self, sequence: List[str], raga_data: Dict) -> float:
         """Calculate how well a sequence matches a raga pattern"""
         raga_notes = set(raga_data["arohanam"])
         if "avarohanam" in raga_data:
@@ -329,14 +231,10 @@ def calculate_shruti_frequency(shruti_index: int, base_sa: float) -> float:
     """
     if 0 <= shruti_index < len(SHRUTI_SYSTEM):
         return SHRUTI_SYSTEM[shruti_index].calculate_frequency(base_sa)
-    raise IndexError(
-        f"Shruti index {shruti_index} out of range (0-{len(SHRUTI_SYSTEM)-1})"
-    )
+    raise IndexError(f"Shruti index {shruti_index} out of range (0-{len(SHRUTI_SYSTEM)-1})")
 
 
-def find_closest_shruti(
-    frequency: float, base_sa: float, tolerance_cents: float = 50
-) -> Dict:
+def find_closest_shruti(frequency: float, base_sa: float, tolerance_cents: float = 50) -> Dict:
     """
     Find the closest shruti to a given frequency.
 
@@ -348,12 +246,7 @@ def find_closest_shruti(
     Returns:
         Dictionary with shruti_index, shruti_name, deviation_cents, and frequency
     """
-    best_match = {
-        "shruti_index": -1,
-        "shruti_name": None,
-        "deviation_cents": float("inf"),
-        "frequency": 0.0,
-    }
+    best_match = {"shruti_index": -1, "shruti_name": None, "deviation_cents": float("inf"), "frequency": 0.0}
 
     for idx, shruti in enumerate(SHRUTI_SYSTEM):
         deviation = shruti.cent_deviation(frequency, base_sa)
@@ -368,9 +261,7 @@ def find_closest_shruti(
     return best_match
 
 
-def analyze_pitch_deviation(
-    detected_freq: float, base_sa: float, target_shruti_index: int = 0
-) -> Dict:
+def analyze_pitch_deviation(detected_freq: float, base_sa: float, target_shruti_index: int = 0) -> Dict:
     """
     Analyze how a detected pitch deviates from the target shruti.
 
@@ -406,9 +297,7 @@ def analyze_pitch_deviation(
     else:
         accuracy_score = max(0.0, 0.55 - ((abs_deviation - 50) / 200))
 
-    direction = (
-        "sharp" if deviation_cents > 0 else "flat" if deviation_cents < 0 else "perfect"
-    )
+    direction = "sharp" if deviation_cents > 0 else "flat" if deviation_cents < 0 else "perfect"
 
     return {
         "deviation_cents": deviation_cents,

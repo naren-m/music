@@ -36,9 +36,7 @@ class TestAuthenticationAPI:
         # Authenticate as guest first
         self.test_guest_login(client)
 
-        response = client.get(
-            "/api/auth/session", headers={"User-Agent": "Mozilla/5.0 (Test Client)"}
-        )
+        response = client.get("/api/auth/session", headers={"User-Agent": "Mozilla/5.0 (Test Client)"})
         assert response.status_code == 200
         data = json.loads(response.data)
         assert data["authenticated"] is True
@@ -50,9 +48,7 @@ class TestAuthenticationAPI:
         # Authenticate first
         self.test_guest_login(client)
 
-        response = client.get(
-            "/api/auth/verify", headers={"User-Agent": "Mozilla/5.0 (Test Client)"}
-        )
+        response = client.get("/api/auth/verify", headers={"User-Agent": "Mozilla/5.0 (Test Client)"})
         assert response.status_code == 200
         data = json.loads(response.data)
         assert data["authenticated"] is True
@@ -62,9 +58,7 @@ class TestAuthenticationAPI:
         # Authenticate first
         self.test_guest_login(client)
 
-        response = client.post(
-            "/api/auth/logout", headers={"User-Agent": "Mozilla/5.0 (Test Client)"}
-        )
+        response = client.post("/api/auth/logout", headers={"User-Agent": "Mozilla/5.0 (Test Client)"})
         assert response.status_code == 200
         data = json.loads(response.data)
         assert data["logged_out"] is True
@@ -84,20 +78,14 @@ class TestLearningAPI:
             "learning_goals": ["beginner"],
         }
 
-        response = client.post(
-            "/api/v1/learning/profile",
-            data=json.dumps(profile_data),
-            content_type="application/json",
-        )
+        response = client.post("/api/v1/learning/profile", data=json.dumps(profile_data), content_type="application/json")
         assert response.status_code == 201
         return client
 
     def _start_exercise(self, client):
         exercise_data = {"exercise_type": "single_swara"}
         response = client.post(
-            "/api/v1/learning/exercises/swara/start",
-            data=json.dumps(exercise_data),
-            content_type="application/json",
+            "/api/v1/learning/exercises/swara/start", data=json.dumps(exercise_data), content_type="application/json"
         )
         return response
 
@@ -151,11 +139,7 @@ class TestAudioAPI:
         """Test REST-based shruti detection endpoint."""
         shruti_data = {"frequency": 261.63, "base_sa": 261.63}  # Sa (C4)
 
-        response = client.post(
-            "/api/v1/learning/detect/shruti",
-            data=json.dumps(shruti_data),
-            content_type="application/json",
-        )
+        response = client.post("/api/v1/learning/detect/shruti", data=json.dumps(shruti_data), content_type="application/json")
 
         assert response.status_code == 200
         data = json.loads(response.data)
@@ -171,9 +155,7 @@ class TestAudioAPI:
         }
 
         response = client.post(
-            "/api/v1/learning/detect/shruti",
-            data=json.dumps(invalid_data),
-            content_type="application/json",
+            "/api/v1/learning/detect/shruti", data=json.dumps(invalid_data), content_type="application/json"
         )
 
         assert response.status_code == 400
@@ -194,9 +176,7 @@ class TestWebSocketIntegration:
         received = socketio_client.get_received()
         assert len(received) > 0
         assert received[0]["name"] == "connected"
-        assert (
-            "Connected to real-time audio service." in received[0]["args"][0]["message"]
-        )
+        assert "Connected to real-time audio service." in received[0]["args"][0]["message"]
 
     def test_start_exercise_event(self, socketio_client):
         """Test start exercise WebSocket event."""
@@ -225,9 +205,7 @@ class TestWebSocketIntegration:
         received = socketio_client.get_received()
 
         # Should receive shruti_detected
-        shruti_result = next(
-            (msg for msg in received if msg["name"] == "shruti_detected"), None
-        )
+        shruti_result = next((msg for msg in received if msg["name"] == "shruti_detected"), None)
         assert shruti_result is not None
         assert "frequency" in shruti_result["args"][0]
         assert shruti_result["args"][0]["shruti_name"] == "Shadja"
@@ -261,11 +239,7 @@ class TestErrorHandlingAPI:
             content_type="application/json",
         )
 
-        response = client.post(
-            "/api/v1/learning/exercises/swara/start",
-            data="invalid json",
-            content_type="application/json",
-        )
+        response = client.post("/api/v1/learning/exercises/swara/start", data="invalid json", content_type="application/json")
 
         assert response.status_code == 400
 
@@ -282,9 +256,7 @@ class TestAPIPerformance:
         def make_request():
             start_time = time.time()
             response = client.post(
-                "/api/v1/learning/detect/shruti",
-                data=json.dumps({"frequency": 261.63}),
-                content_type="application/json",
+                "/api/v1/learning/detect/shruti", data=json.dumps({"frequency": 261.63}), content_type="application/json"
             )
             end_time = time.time()
             return response.status_code, end_time - start_time
@@ -292,9 +264,7 @@ class TestAPIPerformance:
         # Make 10 concurrent requests
         with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
             futures = [executor.submit(make_request) for _ in range(10)]
-            results = [
-                future.result() for future in concurrent.futures.as_completed(futures)
-            ]
+            results = [future.result() for future in concurrent.futures.as_completed(futures)]
 
         # All requests should succeed
         status_codes = [result[0] for result in results]
@@ -315,9 +285,7 @@ class TestAPIPerformance:
         # Process multiple audio requests
         for _ in range(50):
             client.post(
-                "/api/v1/learning/detect/shruti",
-                data=json.dumps({"frequency": 261.63}),
-                content_type="application/json",
+                "/api/v1/learning/detect/shruti", data=json.dumps({"frequency": 261.63}), content_type="application/json"
             )
 
         final_memory = process.memory_info().rss

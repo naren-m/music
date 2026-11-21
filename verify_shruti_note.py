@@ -3,14 +3,7 @@ from core.models.shruti import Shruti
 
 def test_note_calculation():
     # Test cases: Frequency -> Expected Note
-    test_cases = [
-        (261.63, "C4"),  # Middle C
-        (440.0, "A4"),  # Concert A
-        (466.16, "A#4"),
-        (523.25, "C5"),
-        (0, ""),
-        (-100, ""),
-    ]
+    test_cases = [(261.63, "C4"), (440.0, "A4"), (466.16, "A#4"), (523.25, "C5"), (0, ""), (-100, "")]  # Middle C  # Concert A
 
     print("Testing Frequency to Note Calculation:")
     print("-" * 40)
@@ -33,9 +26,7 @@ def test_note_calculation():
     s_pa = Shruti("Pa", "Pa", 702, 1.5, [])  # Pa (Perfect Fifth) ~ G4
     note_name_pa = s_pa.get_western_note_name(261.63)
     # C4 * 1.5 = ~392.44 Hz -> G4
-    print(
-        f"Shruti Pa (Ratio 1.5) -> {note_name_pa} {'✅' if note_name_pa == 'G4' else '❌'}"
-    )
+    print(f"Shruti Pa (Ratio 1.5) -> {note_name_pa} {'✅' if note_name_pa == 'G4' else '❌'}")
 
 
 if __name__ == "__main__":

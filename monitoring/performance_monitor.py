@@ -79,20 +79,11 @@ class PerformanceMonitor:
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[
-                logging.FileHandler("logs/performance.log"),
-                logging.StreamHandler(),
-            ],
+            handlers=[logging.FileHandler("logs/performance.log"), logging.StreamHandler()],
         )
         self.logger = logging.getLogger("PerformanceMonitor")
 
-    def record_response_time(
-        self,
-        endpoint: str,
-        response_time: float,
-        status_code: int,
-        user_id: Optional[str] = None,
-    ):
+    def record_response_time(self, endpoint: str, response_time: float, status_code: int, user_id: Optional[str] = None):
         """Record API response time"""
         with self.lock:
             metric = PerformanceMetric(
@@ -115,29 +106,17 @@ class PerformanceMonitor:
                 self._create_alert(
                     "response_time_slow",
                     f"Slow response on {endpoint}: {response_time}ms",
-                    "warning"
-                    if response_time < self.thresholds["response_time_critical"]
-                    else "critical",
+                    "warning" if response_time < self.thresholds["response_time_critical"] else "critical",
                 )
 
-    def record_error(
-        self,
-        endpoint: str,
-        error_type: str,
-        error_message: str,
-        user_id: Optional[str] = None,
-    ):
+    def record_error(self, endpoint: str, error_type: str, error_message: str, user_id: Optional[str] = None):
         """Record application error"""
         with self.lock:
             metric = PerformanceMetric(
                 timestamp=datetime.now(),
                 metric_type="error",
                 value=1,
-                metadata={
-                    "endpoint": endpoint,
-                    "error_type": error_type,
-                    "error_message": error_message,
-                },
+                metadata={"endpoint": endpoint, "error_type": error_type, "error_message": error_message},
                 user_id=user_id,
             )
 
@@ -147,11 +126,7 @@ class PerformanceMonitor:
             self.logger.error(f"Error on {endpoint}: {error_type} - {error_message}")
 
     def record_user_activity(
-        self,
-        user_id: str,
-        activity_type: str,
-        exercise_type: Optional[str] = None,
-        performance_score: Optional[float] = None,
+        self, user_id: str, activity_type: str, exercise_type: Optional[str] = None, performance_score: Optional[float] = None
     ):
         """Record user activity and performance"""
         with self.lock:
@@ -179,9 +154,7 @@ class PerformanceMonitor:
                     # Update average score
                     current_avg = self.user_sessions[user_id]["average_score"]
                     completed = self.user_sessions[user_id]["exercises_completed"]
-                    new_avg = (
-                        (current_avg * (completed - 1)) + performance_score
-                    ) / completed
+                    new_avg = ((current_avg * (completed - 1)) + performance_score) / completed
                     self.user_sessions[user_id]["average_score"] = new_avg
 
     def get_system_health(self) -> SystemHealth:
@@ -199,28 +172,18 @@ class PerformanceMonitor:
         for endpoint_times in self.response_times.values():
             recent_response_times.extend(endpoint_times[-10:])  # Last 10 per endpoint
 
-        avg_response_time = (
-            sum(recent_response_times) / len(recent_response_times)
-            if recent_response_times
-            else 0
-        )
+        avg_response_time = sum(recent_response_times) / len(recent_response_times) if recent_response_times else 0
 
         # Calculate error rate (last hour)
         hour_ago = datetime.now() - timedelta(hours=1)
         recent_errors = sum(
-            1
-            for metric in self.metrics_history
-            if metric.timestamp > hour_ago and metric.metric_type == "error"
+            1 for metric in self.metrics_history if metric.timestamp > hour_ago and metric.metric_type == "error"
         )
         recent_requests = sum(
-            1
-            for metric in self.metrics_history
-            if metric.timestamp > hour_ago and metric.metric_type == "response_time"
+            1 for metric in self.metrics_history if metric.timestamp > hour_ago and metric.metric_type == "response_time"
         )
 
-        error_rate = (
-            (recent_errors / recent_requests * 100) if recent_requests > 0 else 0
-        )
+        error_rate = (recent_errors / recent_requests * 100) if recent_requests > 0 else 0
 
         health = SystemHealth(
             timestamp=datetime.now(),
@@ -240,43 +203,20 @@ class PerformanceMonitor:
     def _check_system_health_alerts(self, health: SystemHealth):
         """Check system health against thresholds and create alerts"""
         if health.cpu_usage > self.thresholds["cpu_usage_warning"]:
-            severity = (
-                "critical"
-                if health.cpu_usage > self.thresholds["cpu_usage_critical"]
-                else "warning"
-            )
-            self._create_alert(
-                "high_cpu_usage", f"CPU usage: {health.cpu_usage}%", severity
-            )
+            severity = "critical" if health.cpu_usage > self.thresholds["cpu_usage_critical"] else "warning"
+            self._create_alert("high_cpu_usage", f"CPU usage: {health.cpu_usage}%", severity)
 
         if health.memory_usage > self.thresholds["memory_usage_warning"]:
-            severity = (
-                "critical"
-                if health.memory_usage > self.thresholds["memory_usage_critical"]
-                else "warning"
-            )
-            self._create_alert(
-                "high_memory_usage", f"Memory usage: {health.memory_usage}%", severity
-            )
+            severity = "critical" if health.memory_usage > self.thresholds["memory_usage_critical"] else "warning"
+            self._create_alert("high_memory_usage", f"Memory usage: {health.memory_usage}%", severity)
 
         if health.error_rate > self.thresholds["error_rate_warning"]:
-            severity = (
-                "critical"
-                if health.error_rate > self.thresholds["error_rate_critical"]
-                else "warning"
-            )
-            self._create_alert(
-                "high_error_rate", f"Error rate: {health.error_rate}%", severity
-            )
+            severity = "critical" if health.error_rate > self.thresholds["error_rate_critical"] else "warning"
+            self._create_alert("high_error_rate", f"Error rate: {health.error_rate}%", severity)
 
     def _create_alert(self, alert_type: str, message: str, severity: str):
         """Create system alert"""
-        alert = {
-            "timestamp": datetime.now(),
-            "type": alert_type,
-            "message": message,
-            "severity": severity,
-        }
+        alert = {"timestamp": datetime.now(), "type": alert_type, "message": message, "severity": severity}
 
         self.system_alerts.append(alert)
 
@@ -296,21 +236,15 @@ class PerformanceMonitor:
         recent_metrics = [m for m in self.metrics_history if m.timestamp > cutoff_time]
 
         # Response time statistics
-        response_times = [
-            m.value for m in recent_metrics if m.metric_type == "response_time"
-        ]
-        avg_response_time = (
-            sum(response_times) / len(response_times) if response_times else 0
-        )
+        response_times = [m.value for m in recent_metrics if m.metric_type == "response_time"]
+        avg_response_time = sum(response_times) / len(response_times) if response_times else 0
 
         # Error statistics
         errors = [m for m in recent_metrics if m.metric_type == "error"]
         error_rate = len(errors) / len(recent_metrics) * 100 if recent_metrics else 0
 
         # Endpoint statistics
-        endpoint_stats = defaultdict(
-            lambda: {"count": 0, "avg_response_time": 0, "errors": 0}
-        )
+        endpoint_stats = defaultdict(lambda: {"count": 0, "avg_response_time": 0, "errors": 0})
         for metric in recent_metrics:
             endpoint = metric.metadata.get("endpoint", "unknown")
             if metric.metric_type == "response_time":
@@ -326,21 +260,12 @@ class PerformanceMonitor:
 
         # User activity statistics
         active_users = len(
-            [
-                s
-                for s in self.user_sessions.values()
-                if (datetime.now() - s["start_time"]).seconds < 3600
-            ]
+            [s for s in self.user_sessions.values() if (datetime.now() - s["start_time"]).seconds < 3600]
         )  # Active in last hour
 
-        total_exercises = sum(
-            s["exercises_completed"] for s in self.user_sessions.values()
-        )
+        total_exercises = sum(s["exercises_completed"] for s in self.user_sessions.values())
         avg_user_score = (
-            sum(s["average_score"] for s in self.user_sessions.values())
-            / len(self.user_sessions)
-            if self.user_sessions
-            else 0
+            sum(s["average_score"] for s in self.user_sessions.values()) / len(self.user_sessions) if self.user_sessions else 0
         )
 
         return {
@@ -352,11 +277,7 @@ class PerformanceMonitor:
             "total_exercises_completed": total_exercises,
             "average_user_score": round(avg_user_score, 2),
             "endpoint_statistics": dict(endpoint_stats),
-            "recent_alerts": [
-                alert
-                for alert in self.system_alerts
-                if alert["timestamp"] > cutoff_time
-            ],
+            "recent_alerts": [alert for alert in self.system_alerts if alert["timestamp"] > cutoff_time],
         }
 
     def get_real_time_metrics(self) -> Dict[str, Any]:
@@ -375,11 +296,7 @@ class PerformanceMonitor:
             "system_health": asdict(system_health),
             "recent_response_times": recent_response_times,
             "active_users": len(
-                [
-                    s
-                    for s in self.user_sessions.values()
-                    if (datetime.now() - s["start_time"]).seconds < 300
-                ]
+                [s for s in self.user_sessions.values() if (datetime.now() - s["start_time"]).seconds < 300]
             ),  # Active in last 5 min
             "recent_alerts": self.system_alerts[-5:] if self.system_alerts else [],
         }
@@ -417,8 +334,7 @@ class PerformanceMonitor:
             # Clean up metrics history
             original_size = len(self.metrics_history)
             self.metrics_history = deque(
-                [m for m in self.metrics_history if m.timestamp > cutoff_time],
-                maxlen=self.max_history_size,
+                [m for m in self.metrics_history if m.timestamp > cutoff_time], maxlen=self.max_history_size
             )
 
             # Clean up user sessions
@@ -429,11 +345,7 @@ class PerformanceMonitor:
             self.user_sessions = active_sessions
 
             # Clean up alerts
-            self.system_alerts = [
-                alert
-                for alert in self.system_alerts
-                if alert["timestamp"] > cutoff_time
-            ]
+            self.system_alerts = [alert for alert in self.system_alerts if alert["timestamp"] > cutoff_time]
 
             cleaned_count = original_size - len(self.metrics_history)
             if cleaned_count > 0:
@@ -453,18 +365,14 @@ def monitor_request(endpoint: str):
             start_time = time.time()
             try:
                 result = func(*args, **kwargs)
-                response_time = (
-                    time.time() - start_time
-                ) * 1000  # Convert to milliseconds
+                response_time = (time.time() - start_time) * 1000  # Convert to milliseconds
 
                 # Determine status code from result
                 status_code = 200
                 if hasattr(result, "status_code"):
                     status_code = result.status_code
 
-                performance_monitor.record_response_time(
-                    endpoint, response_time, status_code
-                )
+                performance_monitor.record_response_time(endpoint, response_time, status_code)
                 return result
 
             except Exception as e:
@@ -485,9 +393,7 @@ if __name__ == "__main__":
     # Simulate some metrics
     monitor.record_response_time("/api/health", 45.2, 200)
     monitor.record_response_time("/api/exercises/sarali", 123.4, 200)
-    monitor.record_error(
-        "/api/exercises/invalid", "ValueError", "Invalid exercise type"
-    )
+    monitor.record_error("/api/exercises/invalid", "ValueError", "Invalid exercise type")
 
     # Get performance summary
     summary = monitor.get_performance_summary()
@@ -496,6 +402,4 @@ if __name__ == "__main__":
 
     # Get system health
     health = monitor.get_system_health()
-    sys.stdout.write(
-        f"\nSystem Health: CPU {health.cpu_usage}%, Memory {health.memory_usage}%\n"
-    )
+    sys.stdout.write(f"\nSystem Health: CPU {health.cpu_usage}%, Memory {health.memory_usage}%\n")

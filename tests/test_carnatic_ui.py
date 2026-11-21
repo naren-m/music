@@ -41,9 +41,7 @@ class TestCarnaticUI:
         await page.goto(CARNATIC_URL)
 
         # Check page title
-        await expect(page).to_have_title(
-            "🎵 Carnatic Music Learning - Real-time Shruti Detection"
-        )
+        await expect(page).to_have_title("🎵 Carnatic Music Learning - Real-time Shruti Detection")
 
         # Check main header is visible
         await expect(page.locator("h1")).to_contain_text("🎵 Carnatic Music Learning")
@@ -55,9 +53,7 @@ class TestCarnaticUI:
 
         # Validate UI elements are properly styled
         status_section = page.locator(".status-section")
-        await expect(status_section).to_have_css(
-            "background-color", "rgb(248, 249, 250)"
-        )
+        await expect(status_section).to_have_css("background-color", "rgb(248, 249, 250)")
 
         # Check for responsive design indicators
         await page.set_viewport_size({"width": 768, "height": 1024})
@@ -86,11 +82,7 @@ class TestCarnaticUI:
 
             # Verify status indicator updates
             status_text = await api_status.inner_text()
-            assert status_text in [
-                "🟢 API Connected",
-                "🔴 API Disconnected",
-                "🟡 Checking...",
-            ]
+            assert status_text in ["🟢 API Connected", "🔴 API Disconnected", "🟡 Checking..."]
 
         # Check that API status is displayed in the status section
         status_section = page.locator(".status-section")
@@ -116,12 +108,7 @@ class TestCarnaticUI:
             print(f"WebSocket status: {status_text}")
 
             # WebSocket status should be one of the expected states
-            expected_states = [
-                "🔴 Disconnected",
-                "🟢 Connected",
-                "🟡 Connecting",
-                "🟠 Reconnecting",
-            ]
+            expected_states = ["🔴 Disconnected", "🟢 Connected", "🟡 Connecting", "🟠 Reconnecting"]
             assert any(state in status_text for state in expected_states)
 
         # Check console for WebSocket-related messages
@@ -131,11 +118,7 @@ class TestCarnaticUI:
         await page.wait_for_timeout(3000)
 
         # Look for WebSocket initialization in console
-        ws_messages = [
-            msg
-            for msg in console_messages
-            if "websocket" in msg.lower() or "socket" in msg.lower()
-        ]
+        ws_messages = [msg for msg in console_messages if "websocket" in msg.lower() or "socket" in msg.lower()]
         print(f"WebSocket console messages: {ws_messages}")
 
         print("✅ WebSocket connection handling validated")
@@ -170,9 +153,7 @@ class TestCarnaticUI:
                     text = await indicator.inner_text()
                     print(f"Status indicator {selector}[{i}]: {text}")
 
-        assert (
-            len(found_indicators) > 0
-        ), "At least one status indicator should be present"
+        assert len(found_indicators) > 0, "At least one status indicator should be present"
 
         # Test error state simulation
         await page.evaluate(
@@ -219,9 +200,7 @@ class TestCarnaticUI:
             await expect(page.locator("h1")).to_be_visible()
 
             # Check sections adapt to screen size
-            sections = page.locator(
-                ".status-section, .controls-section, .output-section"
-            )
+            sections = page.locator(".status-section, .controls-section, .output-section")
             section_count = await sections.count()
             for i in range(section_count):
                 await expect(sections.nth(i)).to_be_visible()
@@ -330,14 +309,7 @@ class TestCarnaticUI:
         print(f"Found audio controls: {found_audio_controls}")
 
         # Check for audio visualization elements
-        viz_elements = [
-            "canvas",
-            "#frequency-display",
-            "#note-display",
-            ".visualization",
-            ".frequency-viz",
-            "#output",
-        ]
+        viz_elements = ["canvas", "#frequency-display", "#note-display", ".visualization", ".frequency-viz", "#output"]
 
         found_viz_elements = []
         for selector in viz_elements:
@@ -413,9 +385,7 @@ class TestCarnaticUI:
 
         # Step 6: Check final state
         page_title = await page.title()
-        assert (
-            "Carnatic" in page_title
-        ), f"Page title should contain 'Carnatic', got: {page_title}"
+        assert "Carnatic" in page_title, f"Page title should contain 'Carnatic', got: {page_title}"
 
         print("✅ Comprehensive integration test completed successfully")
 
@@ -428,19 +398,14 @@ class TestCarnaticUI:
         load_time = time.time() - start_time
 
         print(f"Page load time: {load_time:.2f} seconds")
-        assert (
-            load_time < 10
-        ), f"Page should load within 10 seconds, took {load_time:.2f}s"
+        assert load_time < 10, f"Page should load within 10 seconds, took {load_time:.2f}s"
 
         # Check resource loading
         await page.wait_for_timeout(2000)
 
         # Validate no JavaScript errors
         console_errors = []
-        page.on(
-            "console",
-            lambda msg: console_errors.append(msg) if msg.type == "error" else None,
-        )
+        page.on("console", lambda msg: console_errors.append(msg) if msg.type == "error" else None)
 
         await page.wait_for_timeout(3000)
 

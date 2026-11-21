@@ -58,18 +58,14 @@ def create_user_profile():
         full_name=data.get("full_name", "Anonymous User"),
         created_at=datetime.utcnow(),
         overall_skill_level=SkillLevel(data.get("skill_level", "beginner")),
-        learning_goals=[
-            LearningGoal(goal) for goal in data.get("learning_goals", ["beginner"])
-        ],
+        learning_goals=[LearningGoal(goal) for goal in data.get("learning_goals", ["beginner"])],
     )
 
     # Set preferences
     if "preferences" in data:
         prefs = data["preferences"]
         user_profile.preferences.language = prefs.get("language", "en")
-        user_profile.preferences.base_sa_frequency = prefs.get(
-            "base_sa_frequency", 261.63
-        )
+        user_profile.preferences.base_sa_frequency = prefs.get("base_sa_frequency", 261.63)
         user_profile.preferences.preferred_tempo = prefs.get("preferred_tempo", 120)
 
     users_store[user_id] = user_profile
@@ -162,10 +158,7 @@ def stop_swara_exercise():
                     "feedback": result.feedback,
                     "recommendations": result.recommendations,
                     "achieved_milestones": result.achieved_milestones,
-                    "duration_minutes": (
-                        result.end_time - result.start_time
-                    ).total_seconds()
-                    / 60,
+                    "duration_minutes": (result.end_time - result.start_time).total_seconds() / 60,
                 }
             }
         )
@@ -292,9 +285,7 @@ def set_sa_frequency():
     # Update audio engine
     # audio_engine.set_base_sa_frequency(frequency)
 
-    return jsonify(
-        {"message": "Sa frequency updated successfully", "frequency": frequency}
-    )
+    return jsonify({"message": "Sa frequency updated successfully", "frequency": frequency})
 
 
 def create_practice_session_from_result(result, user_id: str):
@@ -320,12 +311,7 @@ def create_practice_session_from_result(result, user_id: str):
 # Swara Detection API (REST endpoints for non-WebSocket clients)
 # ============================================================================
 
-from core.models.shruti import (
-    SHRUTI_SYSTEM,
-    analyze_pitch_deviation,
-    calculate_shruti_frequency,
-    find_closest_shruti,
-)
+from core.models.shruti import SHRUTI_SYSTEM, analyze_pitch_deviation, calculate_shruti_frequency, find_closest_shruti
 
 
 @learning_bp.route("/detect/shruti", methods=["POST"])
@@ -464,26 +450,13 @@ def detect_shruti_batch():
     # Calculate summary statistics
     summary = {
         "total_detections": len(results),
-        "average_accuracy": round(sum(accuracy_scores) / len(accuracy_scores), 4)
-        if accuracy_scores
-        else 0,
-        "average_deviation_cents": round(sum(deviations) / len(deviations), 2)
-        if deviations
-        else 0,
+        "average_accuracy": round(sum(accuracy_scores) / len(accuracy_scores), 4) if accuracy_scores else 0,
+        "average_deviation_cents": round(sum(deviations) / len(deviations), 2) if deviations else 0,
         "shruti_distribution": shruti_counts,
-        "most_common_shruti": max(shruti_counts, key=shruti_counts.get)
-        if shruti_counts
-        else None,
+        "most_common_shruti": max(shruti_counts, key=shruti_counts.get) if shruti_counts else None,
     }
 
-    return jsonify(
-        {
-            "base_sa": base_sa,
-            "target_shruti_index": target_index,
-            "results": results,
-            "summary": summary,
-        }
-    )
+    return jsonify({"base_sa": base_sa, "target_shruti_index": target_index, "results": results, "summary": summary})
 
 
 @learning_bp.route("/shruti/all", methods=["GET"])
@@ -520,9 +493,7 @@ def get_all_shrutis():
             }
         )
 
-    return jsonify(
-        {"base_sa": base_sa, "shruti_count": len(shrutis), "shrutis": shrutis}
-    )
+    return jsonify({"base_sa": base_sa, "shruti_count": len(shrutis), "shrutis": shrutis})
 
 
 @learning_bp.route("/exercises/history", methods=["GET"])
@@ -579,13 +550,7 @@ def get_exercise_history():
         )
 
     return jsonify(
-        {
-            "total": total,
-            "limit": limit,
-            "offset": offset,
-            "sessions": sessions,
-            "has_more": offset + limit < total,
-        }
+        {"total": total, "limit": limit, "offset": offset, "sessions": sessions, "has_more": offset + limit < total}
     )
 
 
@@ -625,9 +590,7 @@ def get_exercise_session(session_id: str):
             "module": target_session.module,
             "exercise_type": target_session.exercise_type,
             "start_time": target_session.start_time.isoformat(),
-            "end_time": target_session.end_time.isoformat()
-            if target_session.end_time
-            else None,
+            "end_time": target_session.end_time.isoformat() if target_session.end_time else None,
             "duration_minutes": round(target_session.duration_minutes, 2),
             "accuracy_score": round(target_session.accuracy_score, 4),
             "consistency_score": round(target_session.consistency_score, 4),
@@ -767,12 +730,7 @@ def create_sarali_practice_session():
     practice_sequence = sarali_generator.generate_practice_sequence(level, duration)
 
     if not practice_sequence:
-        return (
-            jsonify(
-                {"error": f"Could not generate practice session for level {level}"}
-            ),
-            500,
-        )
+        return jsonify({"error": f"Could not generate practice session for level {level}"}), 500
 
     # Convert to JSON-serializable format
     result = []
@@ -804,6 +762,4 @@ def create_sarali_practice_session():
             }
         )
 
-    return jsonify(
-        {"target_level": level, "total_duration": duration, "sequence": result}
-    )
+    return jsonify({"target_level": level, "total_duration": duration, "sequence": result})

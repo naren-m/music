@@ -132,19 +132,13 @@ class RagaDatabase:
         variants = {
             "Sa": [SwaraVariant("Sa", 1.0, 1, "C", "Stable, foundational")],
             "Ri": [
-                SwaraVariant(
-                    "Ri1", 256 / 243, 2, "Db", "Melancholic, devotional"
-                ),  # Shuddha Ri
+                SwaraVariant("Ri1", 256 / 243, 2, "Db", "Melancholic, devotional"),  # Shuddha Ri
                 SwaraVariant("Ri2", 9 / 8, 4, "D", "Bright, joyful"),  # Chathushruti Ri
-                SwaraVariant(
-                    "Ri3", 32 / 27, 5, "D#", "Intense, passionate"
-                ),  # Shatshruti Ri
+                SwaraVariant("Ri3", 32 / 27, 5, "D#", "Intense, passionate"),  # Shatshruti Ri
             ],
             "Ga": [
                 SwaraVariant("Ga1", 32 / 27, 5, "Eb", "Solemn, serious"),  # Shuddha Ga
-                SwaraVariant(
-                    "Ga2", 81 / 64, 7, "E-", "Moderate, balanced"
-                ),  # Saadhaarana Ga
+                SwaraVariant("Ga2", 81 / 64, 7, "E-", "Moderate, balanced"),  # Saadhaarana Ga
                 SwaraVariant("Ga3", 5 / 4, 8, "E", "Happy, uplifting"),  # Antara Ga
             ],
             "Ma": [
@@ -153,21 +147,13 @@ class RagaDatabase:
             ],
             "Pa": [SwaraVariant("Pa", 3 / 2, 12, "G", "Strong, consonant")],
             "Da": [
-                SwaraVariant(
-                    "Da1", 128 / 81, 13, "Ab", "Dark, mysterious"
-                ),  # Shuddha Da
-                SwaraVariant(
-                    "Da2", 27 / 16, 15, "A", "Clear, bright"
-                ),  # Chathushruti Da
-                SwaraVariant(
-                    "Da3", 16 / 9, 16, "A#", "Sharp, piercing"
-                ),  # Shatshruti Da
+                SwaraVariant("Da1", 128 / 81, 13, "Ab", "Dark, mysterious"),  # Shuddha Da
+                SwaraVariant("Da2", 27 / 16, 15, "A", "Clear, bright"),  # Chathushruti Da
+                SwaraVariant("Da3", 16 / 9, 16, "A#", "Sharp, piercing"),  # Shatshruti Da
             ],
             "Ni": [
                 SwaraVariant("Ni1", 16 / 9, 16, "Bb", "Soft, gentle"),  # Shuddha Ni
-                SwaraVariant(
-                    "Ni2", 9 / 5, 18, "B-", "Moderate intensity"
-                ),  # Kaisika Ni
+                SwaraVariant("Ni2", 9 / 5, 18, "B-", "Moderate intensity"),  # Kaisika Ni
                 SwaraVariant("Ni3", 15 / 8, 19, "B", "Sharp, leading"),  # Kaakali Ni
             ],
         }
@@ -227,17 +213,11 @@ class RagaDatabase:
             deity_association="Ganesha",
             common_talas=["Adi", "Rupaka"],
             typical_tempo_range=(60, 120),
-            ornament_preferences={
-                "Sa": ["kampana"],
-                "Pa": ["andolana"],
-                "Ma1": ["spurita"],
-            },
+            ornament_preferences={"Sa": ["kampana"], "Pa": ["andolana"], "Ma1": ["spurita"]},
             difficulty_rating=0.3,
             learning_order=1,
             prerequisite_ragas=[],
-            famous_compositions=[
-                {"title": "Raghuvara", "composer": "Tyagaraja", "type": "Kriti"}
-            ],
+            famous_compositions=[{"title": "Raghuvara", "composer": "Tyagaraja", "type": "Kriti"}],
             audio_examples=[],
             notation_examples=[],
             description="First Melakarta raga, foundational for learning scale relationships",
@@ -300,25 +280,13 @@ class RagaDatabase:
             deity_association="Multiple deities",
             common_talas=["Adi", "Rupaka", "Khanda Chapu"],
             typical_tempo_range=(50, 140),
-            ornament_preferences={
-                "Ga3": ["kampana", "andolana"],
-                "Ni3": ["spurita"],
-                "Pa": ["kampana"],
-            },
+            ornament_preferences={"Ga3": ["kampana", "andolana"], "Ni3": ["spurita"], "Pa": ["kampana"]},
             difficulty_rating=0.4,
             learning_order=2,
             prerequisite_ragas=["Kanakangi"],
             famous_compositions=[
-                {
-                    "title": "Vatapi Ganapatim",
-                    "composer": "Muthuswami Dikshitar",
-                    "type": "Kriti",
-                },
-                {
-                    "title": "Endaro Mahanubhavulu",
-                    "composer": "Tyagaraja",
-                    "type": "Kriti",
-                },
+                {"title": "Vatapi Ganapatim", "composer": "Muthuswami Dikshitar", "type": "Kriti"},
+                {"title": "Endaro Mahanubhavulu", "composer": "Tyagaraja", "type": "Kriti"},
             ],
             audio_examples=[],
             notation_examples=[],
@@ -371,21 +339,13 @@ class RagaDatabase:
             deity_association="Shankara",
             common_talas=["Adi", "Rupaka", "Khanda Chapu"],
             typical_tempo_range=(60, 160),
-            ornament_preferences={
-                "Sa": ["kampana"],
-                "Pa": ["kampana"],
-                "Ga3": ["andolana"],
-            },
+            ornament_preferences={"Sa": ["kampana"], "Pa": ["kampana"], "Ga3": ["andolana"]},
             difficulty_rating=0.5,
             learning_order=3,
             prerequisite_ragas=["Mayamalavagowla"],
             famous_compositions=[
                 {"title": "Marugelara", "composer": "Tyagaraja", "type": "Kriti"},
-                {
-                    "title": "Shankari Shankuru",
-                    "composer": "Dikshitar",
-                    "type": "Kriti",
-                },
+                {"title": "Shankari Shankuru", "composer": "Dikshitar", "type": "Kriti"},
             ],
             audio_examples=[],
             notation_examples=[],
@@ -441,9 +401,7 @@ class RagaDatabase:
             difficulty_rating=0.2,
             learning_order=1,
             prerequisite_ragas=[],
-            famous_compositions=[
-                {"title": "Nannu Palimpa", "composer": "Tyagaraja", "type": "Kriti"}
-            ],
+            famous_compositions=[{"title": "Nannu Palimpa", "composer": "Tyagaraja", "type": "Kriti"}],
             audio_examples=[],
             notation_examples=[],
             description="Pentatonic raga, excellent for beginners",
@@ -495,24 +453,16 @@ class RagaDatabase:
         """Get raga by name"""
         return self.all_ragas.get(name)
 
-    def get_ragas_by_difficulty(
-        self, min_difficulty: float, max_difficulty: float
-    ) -> List[RagaDefinition]:
+    def get_ragas_by_difficulty(self, min_difficulty: float, max_difficulty: float) -> List[RagaDefinition]:
         """Get ragas within difficulty range"""
-        return [
-            raga
-            for raga in self.all_ragas.values()
-            if min_difficulty <= raga.difficulty_rating <= max_difficulty
-        ]
+        return [raga for raga in self.all_ragas.values() if min_difficulty <= raga.difficulty_rating <= max_difficulty]
 
     def get_ragas_by_swara_count(self, count: int) -> List[RagaDefinition]:
         """Get ragas with specific number of swaras"""
         raga_names = self.raga_by_swara_count.get(count, [])
         return [self.all_ragas[name] for name in raga_names]
 
-    def get_recommended_learning_sequence(
-        self, user_level: str = "beginner"
-    ) -> List[RagaDefinition]:
+    def get_recommended_learning_sequence(self, user_level: str = "beginner") -> List[RagaDefinition]:
         """Get recommended learning sequence based on user level"""
         if user_level == "beginner":
             raga_names = ["Mohanam", "Mayamalavagowla", "Shankarabharanam"]
@@ -523,9 +473,7 @@ class RagaDatabase:
 
         return [self.all_ragas[name] for name in raga_names if name in self.all_ragas]
 
-    def search_ragas(
-        self, query: str, filters: Dict[str, Any] = None
-    ) -> List[RagaDefinition]:
+    def search_ragas(self, query: str, filters: Dict[str, Any] = None) -> List[RagaDefinition]:
         """Advanced raga search with filters"""
         results = []
         query_lower = query.lower()
@@ -536,41 +484,27 @@ class RagaDatabase:
             matches_text = (
                 query_lower in raga.name.lower()
                 or query_lower in raga.description.lower()
-                or any(
-                    query_lower in phrase.description.lower()
-                    for phrase in raga.important_phrases
-                )
+                or any(query_lower in phrase.description.lower() for phrase in raga.important_phrases)
             )
 
             if not matches_text:
                 continue
 
             # Apply filters
-            if (
-                "difficulty_min" in filters
-                and raga.difficulty_rating < filters["difficulty_min"]
-            ):
+            if "difficulty_min" in filters and raga.difficulty_rating < filters["difficulty_min"]:
                 continue
-            if (
-                "difficulty_max" in filters
-                and raga.difficulty_rating > filters["difficulty_max"]
-            ):
+            if "difficulty_max" in filters and raga.difficulty_rating > filters["difficulty_max"]:
                 continue
             if "category" in filters and raga.category != filters["category"]:
                 continue
-            if (
-                "time_association" in filters
-                and raga.time_association != filters["time_association"]
-            ):
+            if "time_association" in filters and raga.time_association != filters["time_association"]:
                 continue
 
             results.append(raga)
 
         return sorted(results, key=lambda r: r.difficulty_rating)
 
-    def analyze_raga_similarity(
-        self, raga1_name: str, raga2_name: str
-    ) -> Dict[str, Any]:
+    def analyze_raga_similarity(self, raga1_name: str, raga2_name: str) -> Dict[str, Any]:
         """Analyze similarity between two ragas"""
         raga1 = self.get_raga_by_name(raga1_name)
         raga2 = self.get_raga_by_name(raga2_name)
@@ -585,17 +519,13 @@ class RagaDatabase:
             "similarity_score": 0.0,
             "emotional_similarity": raga1.rasa == raga2.rasa,
             "time_similarity": raga1.time_association == raga2.time_association,
-            "difficulty_difference": abs(
-                raga1.difficulty_rating - raga2.difficulty_rating
-            ),
+            "difficulty_difference": abs(raga1.difficulty_rating - raga2.difficulty_rating),
         }
 
         # Calculate similarity score
         total_unique_swaras = len(set(raga1.arohanam) | set(raga2.arohanam))
         common_count = len(analysis["common_swaras"])
-        analysis["similarity_score"] = (
-            common_count / total_unique_swaras if total_unique_swaras > 0 else 0.0
-        )
+        analysis["similarity_score"] = common_count / total_unique_swaras if total_unique_swaras > 0 else 0.0
 
         return analysis
 
@@ -683,9 +613,7 @@ def get_raga(name: str) -> Optional[RagaDefinition]:
     return raga_database.get_raga_by_name(name)
 
 
-def search_ragas_api(
-    query: str, filters: Dict[str, Any] = None
-) -> List[RagaDefinition]:
+def search_ragas_api(query: str, filters: Dict[str, Any] = None) -> List[RagaDefinition]:
     """Search ragas with filters"""
     return raga_database.search_ragas(query, filters)
 

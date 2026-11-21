@@ -103,9 +103,7 @@ class PracticeSession:
         """End the practice session"""
         if self.end_time is None:
             self.end_time = datetime.utcnow()
-            self.duration_minutes = (
-                self.end_time - self.start_time
-            ).total_seconds() / 60
+            self.duration_minutes = (self.end_time - self.start_time).total_seconds() / 60
 
 
 @dataclass
@@ -135,9 +133,7 @@ class ModuleProgress:
             self.average_accuracy = session.accuracy_score
         else:
             # Weighted average with more weight to recent sessions
-            self.average_accuracy = (self.average_accuracy * 0.8) + (
-                session.accuracy_score * 0.2
-            )
+            self.average_accuracy = (self.average_accuracy * 0.8) + (session.accuracy_score * 0.2)
 
 
 @dataclass
@@ -194,8 +190,7 @@ class UserProfile:
     def is_premium(self) -> bool:
         """Check if user has premium subscription"""
         return self.subscription_tier != SubscriptionTier.FREE and (
-            self.subscription_expires is None
-            or self.subscription_expires > datetime.utcnow()
+            self.subscription_expires is None or self.subscription_expires > datetime.utcnow()
         )
 
     def add_practice_session(self, session: PracticeSession) -> None:
@@ -206,9 +201,7 @@ class UserProfile:
 
         # Update module progress
         if session.module not in self.module_progress:
-            self.module_progress[session.module] = ModuleProgress(
-                session.module, SkillLevel.BEGINNER
-            )
+            self.module_progress[session.module] = ModuleProgress(session.module, SkillLevel.BEGINNER)
 
         self.module_progress[session.module].update_progress(session)
         self._update_streak()
@@ -236,11 +229,7 @@ class UserProfile:
     def get_weekly_practice_time(self) -> float:
         """Get practice time for current week"""
         week_ago = datetime.utcnow() - timedelta(days=7)
-        weekly_time = sum(
-            session.duration_minutes
-            for session in self.practice_history
-            if session.start_time >= week_ago
-        )
+        weekly_time = sum(session.duration_minutes for session in self.practice_history if session.start_time >= week_ago)
         return weekly_time
 
     def get_skill_distribution(self) -> Dict[str, float]:
@@ -248,15 +237,10 @@ class UserProfile:
         if not self.module_progress:
             return {}
 
-        total_completion = sum(
-            p.completion_percentage for p in self.module_progress.values()
-        )
+        total_completion = sum(p.completion_percentage for p in self.module_progress.values())
         module_count = len(self.module_progress)
 
-        return {
-            module: progress.completion_percentage
-            for module, progress in self.module_progress.items()
-        }
+        return {module: progress.completion_percentage for module, progress in self.module_progress.items()}
 
     def get_learning_recommendations(self) -> List[Dict[str, Any]]:
         """Generate personalized learning recommendations"""
@@ -264,9 +248,7 @@ class UserProfile:
 
         # Find weakest module for improvement
         if self.module_progress:
-            weakest_module = min(
-                self.module_progress.items(), key=lambda x: x[1].completion_percentage
-            )
+            weakest_module = min(self.module_progress.items(), key=lambda x: x[1].completion_percentage)
 
             recommendations.append(
                 {
@@ -280,22 +262,14 @@ class UserProfile:
         # Practice streak recommendation
         if self.practice_streak == 0:
             recommendations.append(
-                {
-                    "type": "practice_reminder",
-                    "message": "Start a new practice streak today!",
-                    "priority": "medium",
-                }
+                {"type": "practice_reminder", "message": "Start a new practice streak today!", "priority": "medium"}
             )
 
         # Time-based recommendations
         weekly_time = self.get_weekly_practice_time()
         if weekly_time < 60:  # Less than 1 hour per week
             recommendations.append(
-                {
-                    "type": "practice_time",
-                    "message": "Try to practice at least 10 minutes daily",
-                    "priority": "medium",
-                }
+                {"type": "practice_time", "message": "Try to practice at least 10 minutes daily", "priority": "medium"}
             )
 
         return recommendations
@@ -309,9 +283,7 @@ class UserProfile:
             "full_name": self.full_name,
             "created_at": self.created_at.isoformat(),
             "subscription_tier": self.subscription_tier.value,
-            "subscription_expires": self.subscription_expires.isoformat()
-            if self.subscription_expires
-            else None,
+            "subscription_expires": self.subscription_expires.isoformat() if self.subscription_expires else None,
             "preferences": {
                 "language": self.preferences.language,
                 "base_sa_frequency": self.preferences.base_sa_frequency,

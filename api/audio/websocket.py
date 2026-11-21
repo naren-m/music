@@ -15,12 +15,7 @@ from flask_socketio import emit, join_room, leave_room
 
 # Import core managers and models
 from core.managers.session_manager import session_manager
-from core.models.shruti import (
-    SHRUTI_SYSTEM,
-    ShrutiSystem,
-    analyze_pitch_deviation,
-    find_closest_shruti,
-)
+from core.models.shruti import SHRUTI_SYSTEM, ShrutiSystem, analyze_pitch_deviation, find_closest_shruti
 
 logger = logging.getLogger(__name__)
 
@@ -182,11 +177,7 @@ class PracticeSession:
     def get_current_exercise_name(self) -> str:
         """Get the name of the current exercise."""
         exercise = self.get_current_exercise()
-        return (
-            exercise.get("name", f"Exercise {self.current_exercise_index + 1}")
-            if exercise
-            else ""
-        )
+        return exercise.get("name", f"Exercise {self.current_exercise_index + 1}") if exercise else ""
 
     def is_current_exercise_completed(self) -> bool:
         """Check if the current exercise is completed."""
@@ -204,13 +195,9 @@ class PracticeSession:
             correct_notes=self.current_sequence.correct_notes,
             incorrect_notes=self.current_sequence.incorrect_notes,
             accuracy_percentage=self._calc_accuracy(
-                self.current_sequence.correct_notes,
-                self.current_sequence.incorrect_notes,
+                self.current_sequence.correct_notes, self.current_sequence.incorrect_notes
             ),
-            grade=self._calc_grade(
-                self.current_sequence.correct_notes,
-                self.current_sequence.incorrect_notes,
-            ),
+            grade=self._calc_grade(self.current_sequence.correct_notes, self.current_sequence.incorrect_notes),
         )
 
         # Update cumulative stats
@@ -269,12 +256,8 @@ class PracticeSession:
             "total_notes_played": self.total_notes_played,
             "total_correct_notes": self.total_correct_notes,
             "total_incorrect_notes": self.total_incorrect_notes,
-            "session_accuracy": self._calc_accuracy(
-                self.total_correct_notes, self.total_incorrect_notes
-            ),
-            "session_grade": self._calc_grade(
-                self.total_correct_notes, self.total_incorrect_notes
-            ),
+            "session_accuracy": self._calc_accuracy(self.total_correct_notes, self.total_incorrect_notes),
+            "session_grade": self._calc_grade(self.total_correct_notes, self.total_incorrect_notes),
             "session_duration_seconds": round(session_duration, 1),
             "exercise_results": [
                 {
@@ -315,9 +298,7 @@ class ExerciseSequence:
     """
 
     def __init__(self, pattern_sequence: List[str], tolerance_cents: float = 50.0):
-        self.pattern_sequence = (
-            pattern_sequence  # e.g., ['Sa', 'Ri', 'Ga', 'Ma', 'Pa', ...]
-        )
+        self.pattern_sequence = pattern_sequence  # e.g., ['Sa', 'Ri', 'Ga', 'Ma', 'Pa', ...]
         self.current_position = 0
         self.tolerance_cents = tolerance_cents
         self.correct_notes = 0
@@ -338,20 +319,13 @@ class ExerciseSequence:
             return SWARA_TO_SHRUTI_INDEX.get(expected, 0)
         return None
 
-    def validate_note(
-        self, detected_shruti_name: str, accuracy_score: float
-    ) -> Dict[str, Any]:
+    def validate_note(self, detected_shruti_name: str, accuracy_score: float) -> Dict[str, Any]:
         """
         Validate a detected note against the expected sequence.
         Returns validation result with feedback.
         """
         if self.completed:
-            return {
-                "valid": False,
-                "message": "Exercise completed",
-                "completed": True,
-                "position": self.current_position,
-            }
+            return {"valid": False, "message": "Exercise completed", "completed": True, "position": self.current_position}
 
         expected_note = self.get_expected_note()
         if not expected_note:
@@ -382,12 +356,7 @@ class ExerciseSequence:
 
         # Record attempt
         self.note_history.append(
-            {
-                "expected": expected_note,
-                "detected": detected_shruti_name,
-                "correct": is_correct,
-                "accuracy": accuracy_score,
-            }
+            {"expected": expected_note, "detected": detected_shruti_name, "correct": is_correct, "accuracy": accuracy_score}
         )
 
         if is_correct:
@@ -406,24 +375,18 @@ class ExerciseSequence:
             self.incorrect_notes += 1
             if note_matches:
                 # Right note but pitch accuracy too low
-                result[
-                    "message"
-                ] = f"Good note ({expected_note}), but improve pitch accuracy"
+                result["message"] = f"Good note ({expected_note}), but improve pitch accuracy"
                 result["feedback_type"] = "pitch_accuracy"
             else:
                 # Wrong note entirely
-                result[
-                    "message"
-                ] = f"Expected {expected_note}, heard {detected_shruti_name}"
+                result["message"] = f"Expected {expected_note}, heard {detected_shruti_name}"
                 result["feedback_type"] = "wrong_note"
             result["completed"] = False
 
         result["progress"] = {
             "current": self.current_position,
             "total": len(self.pattern_sequence),
-            "percentage": round(
-                (self.current_position / len(self.pattern_sequence)) * 100, 1
-            ),
+            "percentage": round((self.current_position / len(self.pattern_sequence)) * 100, 1),
             "correct": self.correct_notes,
             "incorrect": self.incorrect_notes,
         }
@@ -433,9 +396,7 @@ class ExerciseSequence:
     def _calculate_final_score(self) -> Dict[str, Any]:
         """Calculate final exercise score."""
         total_attempts = self.correct_notes + self.incorrect_notes
-        accuracy = (
-            (self.correct_notes / total_attempts * 100) if total_attempts > 0 else 0
-        )
+        accuracy = (self.correct_notes / total_attempts * 100) if total_attempts > 0 else 0
         return {
             "total_notes": len(self.pattern_sequence),
             "correct": self.correct_notes,
@@ -502,21 +463,11 @@ class DetectionTracker:
     def get_statistics(self) -> Dict[str, Any]:
         """Get session statistics."""
         # Calculate averages safely
-        avg_accuracy = (
-            sum(self.accuracy_scores) / len(self.accuracy_scores)
-            if self.accuracy_scores
-            else 0.0
-        )
+        avg_accuracy = sum(self.accuracy_scores) / len(self.accuracy_scores) if self.accuracy_scores else 0.0
         avg_deviation = (
-            sum(abs(d) for d in self.deviation_history) / len(self.deviation_history)
-            if self.deviation_history
-            else 0.0
+            sum(abs(d) for d in self.deviation_history) / len(self.deviation_history) if self.deviation_history else 0.0
         )
-        accuracy_rate = (
-            (self.correct_detections / self.total_detections * 100)
-            if self.total_detections > 0
-            else 0.0
-        )
+        accuracy_rate = (self.correct_detections / self.total_detections * 100) if self.total_detections > 0 else 0.0
 
         return {
             "total_detections": self.total_detections,
@@ -524,9 +475,7 @@ class DetectionTracker:
             "accuracy_rate": round(accuracy_rate, 2),
             "average_accuracy_score": round(avg_accuracy, 4),
             "average_deviation_cents": round(avg_deviation, 2),
-            "unique_notes_detected": list(
-                set(self.notes_detected)
-            ),  # Convert to set to deduplicate
+            "unique_notes_detected": list(set(self.notes_detected)),  # Convert to set to deduplicate
             "duration_seconds": (datetime.utcnow() - self.start_time).total_seconds(),
         }
 
@@ -568,9 +517,7 @@ def get_coaching_feedback(analysis: Dict, target_shruti_name: str) -> Dict[str, 
         feedback["suggestion"] = "Maintain this precision."
     elif accuracy >= 0.85:
         feedback["message"] = f"Good {target_shruti_name}!"
-        feedback[
-            "suggestion"
-        ] = f"Slightly {direction} by {abs(deviation):.1f} cents. Minor adjustment needed."
+        feedback["suggestion"] = f"Slightly {direction} by {abs(deviation):.1f} cents. Minor adjustment needed."
     elif accuracy >= 0.70:
         feedback["message"] = f"Fair attempt at {target_shruti_name}."
         feedback["suggestion"] = f"Adjust pitch ({direction}). Listen to the drone."
@@ -663,10 +610,7 @@ def _register_connection_events(socketio):
         if not (100 <= frequency <= 500):
             emit(
                 "error",
-                {
-                    "type": "invalid_frequency",
-                    "message": f"Base frequency must be between 100Hz and 500Hz, got {frequency}Hz",
-                },
+                {"type": "invalid_frequency", "message": f"Base frequency must be between 100Hz and 500Hz, got {frequency}Hz"},
             )
             return
 
@@ -681,17 +625,10 @@ def _register_connection_events(socketio):
 
             emit(
                 "base_frequency_set",
-                {
-                    "frequency": frequency,
-                    "status": "success",
-                    "message": f"Base Sa set to {frequency:.2f}Hz",
-                },
+                {"frequency": frequency, "status": "success", "message": f"Base Sa set to {frequency:.2f}Hz"},
             )
         else:
-            emit(
-                "error",
-                {"type": "no_session", "message": "Session expired or not found"},
-            )
+            emit("error", {"type": "no_session", "message": "Session expired or not found"})
 
 
 def _register_target_events(socketio):
@@ -713,13 +650,7 @@ def _register_target_events(socketio):
 
         # Validate shruti index
         if not (0 <= shruti_index < len(SHRUTI_SYSTEM)):
-            emit(
-                "error",
-                {
-                    "type": "invalid_shruti",
-                    "message": f"Shruti index must be between 0 and {len(SHRUTI_SYSTEM)-1}",
-                },
-            )
+            emit("error", {"type": "invalid_shruti", "message": f"Shruti index must be between 0 and {len(SHRUTI_SYSTEM)-1}"})
             return
 
         target_shruti = SHRUTI_SYSTEM[shruti_index]
@@ -736,9 +667,7 @@ def _register_target_events(socketio):
                     {
                         "shruti_index": shruti_index,
                         "shruti_name": target_shruti.name,
-                        "western_note": target_shruti.get_western_note_name(
-                            tracker.base_sa
-                        ),
+                        "western_note": target_shruti.get_western_note_name(tracker.base_sa),
                         "western_equiv": target_shruti.western_equiv,
                         "target_frequency": round(target_freq, 2),
                         "cent_value": target_shruti.cent_value,
@@ -746,10 +675,7 @@ def _register_target_events(socketio):
                     },
                 )
         else:
-            emit(
-                "error",
-                {"type": "no_session", "message": "Session expired or not found"},
-            )
+            emit("error", {"type": "no_session", "message": "Session expired or not found"})
 
     @socketio.on("start_exercise")
     def handle_start_exercise(data):
@@ -775,10 +701,7 @@ def _register_target_events(socketio):
                     },
                 )
         else:
-            emit(
-                "error",
-                {"type": "no_session", "message": "Session expired or not found"},
-            )
+            emit("error", {"type": "no_session", "message": "Session expired or not found"})
 
 
 def _register_practice_session_events(socketio):
@@ -808,21 +731,12 @@ def _register_practice_session_events(socketio):
             full_sequence.extend(avarohanam)
 
         if not full_sequence:
-            emit(
-                "error",
-                {
-                    "type": "invalid_pattern",
-                    "message": "Pattern must have at least one note",
-                },
-            )
+            emit("error", {"type": "invalid_pattern", "message": "Pattern must have at least one note"})
             return
 
         session = session_manager.get_session(session_id)
         if not session:
-            emit(
-                "error",
-                {"type": "no_session", "message": "Session expired or not found"},
-            )
+            emit("error", {"type": "no_session", "message": "Session expired or not found"})
             return
 
         tracker = session.current_context.get("tracker")
@@ -834,9 +748,7 @@ def _register_practice_session_events(socketio):
         exercise = ExerciseSequence(full_sequence)
         session.current_context["exercise_sequence"] = exercise
 
-        logger.info(
-            f"Practice session started: {pattern_name} with {len(full_sequence)} notes (session_id={session_id})"
-        )
+        logger.info(f"Practice session started: {pattern_name} with {len(full_sequence)} notes (session_id={session_id})")
 
         emit(
             "practice_session_started",
@@ -874,21 +786,12 @@ def _register_session_mode_start_events(socketio):
         exercises = data.get("exercises", [])
 
         if not exercises:
-            emit(
-                "error",
-                {
-                    "type": "invalid_session",
-                    "message": "Session must have at least one exercise",
-                },
-            )
+            emit("error", {"type": "invalid_session", "message": "Session must have at least one exercise"})
             return
 
         session = session_manager.get_session(session_id)
         if not session:
-            emit(
-                "error",
-                {"type": "no_session", "message": "Session expired or not found"},
-            )
+            emit("error", {"type": "no_session", "message": "Session expired or not found"})
             return
 
         # Create and store the practice session
@@ -897,23 +800,15 @@ def _register_session_mode_start_events(socketio):
 
         # Also set up the exercise sequence for validation
         if practice_session.current_sequence:
-            session.current_context[
-                "exercise_sequence"
-            ] = practice_session.current_sequence
+            session.current_context["exercise_sequence"] = practice_session.current_sequence
 
         tracker = session.current_context.get("tracker")
         if tracker:
             tracker.reset()
-            tracker.exercise_type = (
-                f"Session: {practice_session.get_current_exercise_name()}"
-            )
+            tracker.exercise_type = f"Session: {practice_session.get_current_exercise_name()}"
 
         current_exercise = practice_session.get_current_exercise()
-        first_note = (
-            practice_session.current_sequence.get_expected_note()
-            if practice_session.current_sequence
-            else None
-        )
+        first_note = practice_session.current_sequence.get_expected_note() if practice_session.current_sequence else None
 
         logger.info(f"Session mode started with {len(exercises)} exercises")
 
@@ -940,17 +835,12 @@ def _register_session_mode_start_events(socketio):
         session = session_manager.get_session(session_id)
 
         if not session:
-            emit(
-                "error",
-                {"type": "no_session", "message": "Session expired or not found"},
-            )
+            emit("error", {"type": "no_session", "message": "Session expired or not found"})
             return
 
         practice_session = session.current_context.get("practice_session")
         if not practice_session:
-            emit(
-                "error", {"type": "no_session", "message": "No active practice session"}
-            )
+            emit("error", {"type": "no_session", "message": "No active practice session"})
             return
 
         # Retry the exercise
@@ -959,15 +849,9 @@ def _register_session_mode_start_events(socketio):
         # Update the exercise sequence reference
         session.current_context["exercise_sequence"] = practice_session.current_sequence
 
-        first_note = (
-            practice_session.current_sequence.get_expected_note()
-            if practice_session.current_sequence
-            else None
-        )
+        first_note = practice_session.current_sequence.get_expected_note() if practice_session.current_sequence else None
 
-        logger.info(
-            f"Retrying exercise: {practice_session.get_current_exercise_name()}"
-        )
+        logger.info(f"Retrying exercise: {practice_session.get_current_exercise_name()}")
 
         emit(
             "session_exercise_retried",
@@ -995,17 +879,12 @@ def _register_session_mode_next_events(socketio):
         session = session_manager.get_session(session_id)
 
         if not session:
-            emit(
-                "error",
-                {"type": "no_session", "message": "Session expired or not found"},
-            )
+            emit("error", {"type": "no_session", "message": "Session expired or not found"})
             return
 
         practice_session = session.current_context.get("practice_session")
         if not practice_session:
-            emit(
-                "error", {"type": "no_session", "message": "No active practice session"}
-            )
+            emit("error", {"type": "no_session", "message": "No active practice session"})
             return
 
         # Record the current exercise result if completed
@@ -1018,28 +897,18 @@ def _register_session_mode_next_events(socketio):
 
         if has_next:
             # Update the exercise sequence reference
-            session.current_context[
-                "exercise_sequence"
-            ] = practice_session.current_sequence
+            session.current_context["exercise_sequence"] = practice_session.current_sequence
 
             # Reset tracker for new exercise
             tracker = session.current_context.get("tracker")
             if tracker:
                 tracker.reset()
-                tracker.exercise_type = (
-                    f"Session: {practice_session.get_current_exercise_name()}"
-                )
+                tracker.exercise_type = f"Session: {practice_session.get_current_exercise_name()}"
 
             current_exercise = practice_session.get_current_exercise()
-            first_note = (
-                practice_session.current_sequence.get_expected_note()
-                if practice_session.current_sequence
-                else None
-            )
+            first_note = practice_session.current_sequence.get_expected_note() if practice_session.current_sequence else None
 
-            logger.info(
-                f"Advanced to exercise: {practice_session.get_current_exercise_name()}"
-            )
+            logger.info(f"Advanced to exercise: {practice_session.get_current_exercise_name()}")
 
             emit(
                 "session_exercise_advanced",
@@ -1070,10 +939,7 @@ def _register_session_mode_next_events(socketio):
 
             emit(
                 "session_completed",
-                {
-                    "summary": summary,
-                    "message": f"🎉 Session completed! Overall accuracy: {summary['session_accuracy']}%",
-                },
+                {"summary": summary, "message": f"🎉 Session completed! Overall accuracy: {summary['session_accuracy']}%"},
             )
 
 
@@ -1090,17 +956,12 @@ def _register_session_mode_end_events(socketio):
         session = session_manager.get_session(session_id)
 
         if not session:
-            emit(
-                "error",
-                {"type": "no_session", "message": "Session expired or not found"},
-            )
+            emit("error", {"type": "no_session", "message": "Session expired or not found"})
             return
 
         practice_session = session.current_context.get("practice_session")
         if not practice_session:
-            emit(
-                "error", {"type": "no_session", "message": "No active practice session"}
-            )
+            emit("error", {"type": "no_session", "message": "No active practice session"})
             return
 
         # Record current exercise if it was completed
@@ -1109,9 +970,7 @@ def _register_session_mode_end_events(socketio):
 
         # Get summary
         summary = practice_session.get_session_summary()
-        logger.info(
-            f"Session ended early. Completed {summary['exercises_completed']} exercises."
-        )
+        logger.info(f"Session ended early. Completed {summary['exercises_completed']} exercises.")
 
         # Clear the session data
         session.current_context.pop("practice_session", None)
@@ -1132,10 +991,7 @@ def _register_session_mode_end_events(socketio):
         session = session_manager.get_session(session_id)
 
         if not session:
-            emit(
-                "error",
-                {"type": "no_session", "message": "Session expired or not found"},
-            )
+            emit("error", {"type": "no_session", "message": "Session expired or not found"})
             return
 
         practice_session = session.current_context.get("practice_session")
@@ -1151,9 +1007,7 @@ def _register_session_mode_end_events(socketio):
                 "current_exercise_progress": practice_session.current_sequence.current_position
                 if practice_session.current_sequence
                 else 0,
-                "current_exercise_total": len(
-                    practice_session.current_sequence.pattern_sequence
-                )
+                "current_exercise_total": len(practice_session.current_sequence.pattern_sequence)
                 if practice_session.current_sequence
                 else 0,
             },
@@ -1195,9 +1049,7 @@ def _register_detection_events(socketio):
         closest_match = find_closest_shruti(detected_frequency, base_sa)
 
         # Analyze pitch deviation from target
-        analysis = analyze_pitch_deviation(
-            detected_frequency, base_sa, target_shruti_index
-        )
+        analysis = analyze_pitch_deviation(detected_frequency, base_sa, target_shruti_index)
 
         # Generate coaching feedback
         target_shruti = SHRUTI_SYSTEM[target_shruti_index]
@@ -1235,18 +1087,13 @@ def _register_detection_events(socketio):
         result["session_stats"] = {
             "total_detections": tracker.total_detections,
             "accuracy_rate": round(
-                (tracker.correct_detections / tracker.total_detections * 100)
-                if tracker.total_detections > 0
-                else 0,
-                2,
+                (tracker.correct_detections / tracker.total_detections * 100) if tracker.total_detections > 0 else 0, 2
             ),
         }
 
         # Only log occasional debug to reduce noise
         if tracker.total_detections % 50 == 0:
-            logger.debug(
-                f"Detection from {session_id}: {detected_frequency}Hz (Accuracy: {analysis['accuracy_score']:.2f})"
-            )
+            logger.debug(f"Detection from {session_id}: {detected_frequency}Hz (Accuracy: {analysis['accuracy_score']:.2f})")
 
         emit("detection_feedback", result)
 
@@ -1301,14 +1148,7 @@ def _register_audio_chunk_events(socketio):
                 )
 
                 if exercise and not exercise.completed:
-                    _validate_chunk_against_exercise(
-                        session,
-                        exercise,
-                        response,
-                        detected_shruti,
-                        confidence,
-                        cent_deviation,
-                    )
+                    _validate_chunk_against_exercise(session, exercise, response, detected_shruti, confidence, cent_deviation)
                 else:
                     # Free practice mode - just emit detection
                     emit("shruti_detected", response)
@@ -1330,9 +1170,7 @@ def _register_audio_chunk_events(socketio):
             # Don't crash on bad audio data
 
 
-def _validate_chunk_against_exercise(
-    session, exercise, response, detected_shruti, confidence, cent_deviation
-):
+def _validate_chunk_against_exercise(session, exercise, response, detected_shruti, confidence, cent_deviation):
     """Validate a detected note against the active exercise and emit practice feedback."""
     # Validate the detected note against expected sequence
     # Convert confidence to accuracy score (0-1)
@@ -1500,27 +1338,17 @@ def _get_recommendations(stats: Dict, exercise_type: str) -> List[str]:
     avg_deviation = stats["average_deviation_cents"]
 
     if accuracy_rate < 70:
-        recommendations.append(
-            "Practice with the tanpura drone to improve pitch accuracy."
-        )
+        recommendations.append("Practice with the tanpura drone to improve pitch accuracy.")
         recommendations.append("Try slower, sustained notes to build muscle memory.")
     elif accuracy_rate < 85:
-        recommendations.append(
-            "Good progress! Focus on consistency across all shrutis."
-        )
-        recommendations.append(
-            "Try practicing specific problematic notes in isolation."
-        )
+        recommendations.append("Good progress! Focus on consistency across all shrutis.")
+        recommendations.append("Try practicing specific problematic notes in isolation.")
     else:
-        recommendations.append(
-            "Excellent accuracy! Try increasing tempo or complexity."
-        )
+        recommendations.append("Excellent accuracy! Try increasing tempo or complexity.")
         recommendations.append("Consider practicing gamakas (ornaments) at this level.")
 
     if avg_deviation > 20:
-        recommendations.append(
-            "Your pitch tends to drift. Focus on steady breath support."
-        )
+        recommendations.append("Your pitch tends to drift. Focus on steady breath support.")
     elif avg_deviation > 10:
         recommendations.append("Minor pitch variations detected. Practice long tones.")
 

@@ -107,11 +107,7 @@ def parse_exercise_file(file_path: Path) -> List[ParsedExercise]:
             continue
 
         # Filter out comment lines
-        lines = [
-            line.strip()
-            for line in block.split("\n")
-            if line.strip() and not line.strip().startswith("#")
-        ]
+        lines = [line.strip() for line in block.split("\n") if line.strip() and not line.strip().startswith("#")]
 
         if len(lines) >= 2:
             # First line is arohanam, second is avarohanam
@@ -119,19 +115,13 @@ def parse_exercise_file(file_path: Path) -> List[ParsedExercise]:
             avarohanam = parse_swara_sequence(lines[1])
 
             if arohanam and avarohanam:
-                exercises.append(
-                    ParsedExercise(
-                        level=level, arohanam=arohanam, avarohanam=avarohanam
-                    )
-                )
+                exercises.append(ParsedExercise(level=level, arohanam=arohanam, avarohanam=avarohanam))
                 level += 1
         elif len(lines) == 1:
             # Single line - use same for both arohanam and avarohanam
             sequence = parse_swara_sequence(lines[0])
             if sequence:
-                exercises.append(
-                    ParsedExercise(level=level, arohanam=sequence, avarohanam=sequence)
-                )
+                exercises.append(ParsedExercise(level=level, arohanam=sequence, avarohanam=sequence))
                 level += 1
 
     return exercises

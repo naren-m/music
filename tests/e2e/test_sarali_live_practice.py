@@ -125,9 +125,7 @@ def test_sarali_live_practice_with_synthetic_audio():
             # Wait for the session-started confirmation from the server
             start = time.time()
             while "Practice session started" not in logs_text():
-                assert (
-                    time.time() - start < 15
-                ), "Timed out waiting for 'Practice session started'"
+                assert time.time() - start < 15, "Timed out waiting for 'Practice session started'"
                 time.sleep(0.5)
 
             def cycles_count():
@@ -152,20 +150,12 @@ def test_sarali_live_practice_with_synthetic_audio():
                 page.evaluate("(f) => { window.__osc.frequency.value = f; }", freq)
                 time.sleep(SECONDS_PER_NOTE)
                 catch_up_deadline = time.time() + 6
-                while (
-                    progress_count() < i + 1
-                    and cycles_count() < 1
-                    and time.time() < catch_up_deadline
-                ):
+                while progress_count() < i + 1 and cycles_count() < 1 and time.time() < catch_up_deadline:
                     time.sleep(0.3)
 
             # Let the pipeline finish confirming the final note(s) / cycle completion
             final_deadline = time.time() + 10
-            while (
-                cycles_count() < 1
-                and progress_count() < len(NOTE_SEQUENCE)
-                and time.time() < final_deadline
-            ):
+            while cycles_count() < 1 and progress_count() < len(NOTE_SEQUENCE) and time.time() < final_deadline:
                 time.sleep(0.5)
 
             final_logs = logs_text()
@@ -176,8 +166,6 @@ def test_sarali_live_practice_with_synthetic_audio():
             assert "Antara Gandhara" in final_logs
 
             cycles_text = page.locator("text=Cycles").locator("..").inner_text()
-            assert ("100.0%" in page_text) or (
-                "1" in cycles_text
-            ), f"page_text tail: {page_text[-600:]!r}"
+            assert ("100.0%" in page_text) or ("1" in cycles_text), f"page_text tail: {page_text[-600:]!r}"
         finally:
             browser.close()

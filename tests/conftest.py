@@ -39,9 +39,7 @@ def flask_app():
     # create_app returns (app, socketio); the SocketIO instance also registers
     # itself in app.extensions['socketio'], so tests can retrieve it from there.
     app, _socketio = create_app("testing")
-    app.config.update(
-        {"TESTING": True, "WTF_CSRF_ENABLED": False, "SECRET_KEY": "test-secret-key"}
-    )
+    app.config.update({"TESTING": True, "WTF_CSRF_ENABLED": False, "SECRET_KEY": "test-secret-key"})
     return app
 
 
@@ -162,11 +160,7 @@ async def measure_page_load_time(page, url: str) -> float:
 @pytest.fixture(scope="session")
 def browser_context_args(browser_context_args):
     """Configure browser context for audio testing."""
-    return {
-        **browser_context_args,
-        "permissions": ["microphone"],
-        "viewport": {"width": 1280, "height": 720},
-    }
+    return {**browser_context_args, "permissions": ["microphone"], "viewport": {"width": 1280, "height": 720}}
 
 
 # Performance testing helpers

@@ -48,21 +48,15 @@ class SessionManager:
 
         # Shared thread pool for all sessions to prevent thread explosion
         # Instead of each AudioEngine having its own pool
-        self._shared_executor = ThreadPoolExecutor(
-            max_workers=8, thread_name_prefix="audio_session_worker"
-        )
+        self._shared_executor = ThreadPoolExecutor(max_workers=8, thread_name_prefix="audio_session_worker")
 
         # Start cleanup background thread
-        self._cleanup_thread = threading.Thread(
-            target=self._cleanup_loop, daemon=True, name="SessionCleanupThread"
-        )
+        self._cleanup_thread = threading.Thread(target=self._cleanup_loop, daemon=True, name="SessionCleanupThread")
         self._cleanup_thread.start()
 
         logger.info("SessionManager initialized")
 
-    def create_session(
-        self, session_id: str, user_id: Optional[str] = None
-    ) -> SessionData:
+    def create_session(self, session_id: str, user_id: Optional[str] = None) -> SessionData:
         """Create a new session or reset existing one"""
         with self._lock:
             if session_id in self._sessions:
@@ -87,11 +81,7 @@ class SessionManager:
             engine = CarnaticAudioEngine(config)
 
             session = SessionData(
-                session_id=session_id,
-                user_id=user_id,
-                created_at=time.time(),
-                last_activity=time.time(),
-                audio_engine=engine,
+                session_id=session_id, user_id=user_id, created_at=time.time(), last_activity=time.time(), audio_engine=engine
             )
 
             self._sessions[session_id] = session
@@ -129,9 +119,7 @@ class SessionManager:
         with self._lock:
             now = time.time()
             expired_ids = [
-                sid
-                for sid, session in self._sessions.items()
-                if (now - session.last_activity) > self._session_timeout
+                sid for sid, session in self._sessions.items() if (now - session.last_activity) > self._session_timeout
             ]
 
             for sid in expired_ids:
@@ -139,9 +127,7 @@ class SessionManager:
                 del self._sessions[sid]
 
             if expired_ids:
-                logger.info(
-                    f"Cleaned up {len(expired_ids)} expired sessions. Active count: {len(self._sessions)}"
-                )
+                logger.info(f"Cleaned up {len(expired_ids)} expired sessions. Active count: {len(self._sessions)}")
 
     def shutdown(self):
         """Graceful shutdown"""

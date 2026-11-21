@@ -29,9 +29,7 @@ def authenticate_as_guest(page: Page):
     # Mock any other API calls that might fail
     def handle_api_fallback(route):
         if "/api/auth" in route.request.url:
-            route.fulfill(
-                status=200, content_type="application/json", body='{"success": true}'
-            )
+            route.fulfill(status=200, content_type="application/json", body='{"success": true}')
         else:
             route.continue_()
 
@@ -104,9 +102,7 @@ def measure_page_load_time_authenticated(page: Page) -> float:
     page.route("**/api/auth/verify**", handle_auth_verify)
     page.route(
         "**/api/**",
-        lambda route: route.fulfill(
-            status=200, content_type="application/json", body='{"success": true}'
-        )
+        lambda route: route.fulfill(status=200, content_type="application/json", body='{"success": true}')
         if "/api/auth" in route.request.url
         else route.continue_(),
     )
@@ -158,9 +154,7 @@ class TestSaraliPracticeControls:
     def test_mode_switching_listen_to_practice(self, authenticated_page: Page):
         """Test switching from Listen mode to Practice mode."""
         page = authenticated_page
-        practice_btn = page.get_by_role(
-            "button", name=re.compile("Practice|अभ्यास", re.IGNORECASE)
-        )
+        practice_btn = page.get_by_role("button", name=re.compile("Practice|अभ्यास", re.IGNORECASE))
         if practice_btn.is_visible():
             practice_btn.click()
             page.wait_for_timeout(500)
@@ -255,9 +249,7 @@ class TestSaraliSettingsModal:
     def test_settings_button_opens_modal(self, authenticated_page: Page):
         """Test that settings button opens modal."""
         page = authenticated_page
-        settings_btn = page.locator(
-            'button:has-text("Settings"), button:has-text("ℹ"), button:has-text("Info")'
-        )
+        settings_btn = page.locator('button:has-text("Settings"), button:has-text("ℹ"), button:has-text("Info")')
         if settings_btn.first.is_visible():
             settings_btn.first.click()
             page.wait_for_timeout(500)
@@ -317,9 +309,7 @@ class TestSaraliPerformance:
         page.wait_for_timeout(3000)
 
         # Filter out non-critical errors
-        critical_errors = [
-            e for e in errors if "favicon" not in e.lower() and "404" not in e
-        ]
+        critical_errors = [e for e in errors if "favicon" not in e.lower() and "404" not in e]
         if critical_errors:
             print(f"Console errors found: {critical_errors}")
 
@@ -341,9 +331,7 @@ class TestSaraliAudioIntegration:
         """Test that microphone permission can be requested."""
         page = authenticated_page
         page.context.grant_permissions(["microphone"])
-        practice_btn = page.get_by_role(
-            "button", name=re.compile("Practice|Start|Record", re.IGNORECASE)
-        )
+        practice_btn = page.get_by_role("button", name=re.compile("Practice|Start|Record", re.IGNORECASE))
         if practice_btn.first.is_visible():
             expect(practice_btn.first).to_be_enabled()
 

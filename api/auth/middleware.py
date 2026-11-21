@@ -48,9 +48,7 @@ def require_valid_session(f):
             # Check session exists
             user_id = session.get("user_id")
             if not user_id:
-                logger.warning(
-                    f"Unauthenticated request to {request.endpoint} from {request.remote_addr}"
-                )
+                logger.warning(f"Unauthenticated request to {request.endpoint} from {request.remote_addr}")
                 return (
                     jsonify(
                         {
@@ -83,12 +81,7 @@ def require_valid_session(f):
                 except ValueError:
                     # Invalid expiry format, clear session
                     session.clear()
-                    return (
-                        jsonify(
-                            {"error": "Invalid session", "code": "SESSION_INVALID"}
-                        ),
-                        401,
-                    )
+                    return jsonify({"error": "Invalid session", "code": "SESSION_INVALID"}), 401
 
             # Validate session integrity
             user_type = session.get("user_type", "guest")
@@ -97,21 +90,14 @@ def require_valid_session(f):
             if not created_at:
                 logger.warning(f"Session missing creation timestamp for user {user_id}")
                 session.clear()
-                return (
-                    jsonify(
-                        {"error": "Invalid session format", "code": "SESSION_INVALID"}
-                    ),
-                    401,
-                )
+                return jsonify({"error": "Invalid session format", "code": "SESSION_INVALID"}), 401
 
             # Check for session hijacking (basic)
             user_agent = request.headers.get("User-Agent", "")
             session_agent = session.get("user_agent", "")
 
             if session_agent and user_agent != session_agent:
-                logger.warning(
-                    f"User-Agent mismatch for session {user_id}: {user_agent} vs {session_agent}"
-                )
+                logger.warning(f"User-Agent mismatch for session {user_id}: {user_agent} vs {session_agent}")
                 # Don't clear session automatically, but log for monitoring
                 # In high-security apps, you might want to clear the session
 
@@ -119,18 +105,13 @@ def require_valid_session(f):
             session["last_activity"] = datetime.utcnow().isoformat()
 
             # Log successful authentication for monitoring
-            logger.debug(
-                f"Authenticated request: user={user_id}, type={user_type}, endpoint={request.endpoint}"
-            )
+            logger.debug(f"Authenticated request: user={user_id}, type={user_type}, endpoint={request.endpoint}")
 
             return f(*args, **kwargs)
 
         except Exception as e:
             logger.error(f"Authentication middleware error: {str(e)}")
-            return (
-                jsonify({"error": "Authentication system error", "code": "AUTH_ERROR"}),
-                500,
-            )
+            return jsonify({"error": "Authentication system error", "code": "AUTH_ERROR"}), 500
 
     return decorated_function
 
@@ -161,11 +142,7 @@ def rate_limit(requests_per_minute: int = 60, per_user: bool = True):
                 if key in rate_limit_store:
                     requests = rate_limit_store[key]["requests"]
                     # Remove requests older than 1 minute
-                    requests = [
-                        req_time
-                        for req_time in requests
-                        if current_time - req_time < 60
-                    ]
+                    requests = [req_time for req_time in requests if current_time - req_time < 60]
                     rate_limit_store[key]["requests"] = requests
                 else:
                     rate_limit_store[key] = {"requests": []}
@@ -173,9 +150,7 @@ def rate_limit(requests_per_minute: int = 60, per_user: bool = True):
                 # Check rate limit
                 request_count = len(rate_limit_store[key]["requests"])
                 if request_count >= requests_per_minute:
-                    logger.warning(
-                        f"Rate limit exceeded for {key}: {request_count} requests/minute"
-                    )
+                    logger.warning(f"Rate limit exceeded for {key}: {request_count} requests/minute")
                     return (
                         jsonify(
                             {
@@ -241,9 +216,7 @@ def validate_guest_session_creation():
     return {"user_agent": user_agent, "verified": human_verification}
 
 
-def create_secure_session(
-    user_id: str, user_type: str = "guest", duration_hours: int = 24
-) -> Dict[str, Any]:
+def create_secure_session(user_id: str, user_type: str = "guest", duration_hours: int = 24) -> Dict[str, Any]:
     """
     Create a secure session with proper validation and logging
 
@@ -272,9 +245,7 @@ def create_secure_session(
     session["user_agent"] = request.headers.get("User-Agent", "")
 
     # Log session creation
-    logger.info(
-        f"Session created: user={user_id}, type={user_type}, expires={expires_at.isoformat()}"
-    )
+    logger.info(f"Session created: user={user_id}, type={user_type}, expires={expires_at.isoformat()}")
 
     return {
         "user_id": user_id,
@@ -324,9 +295,7 @@ def cleanup_rate_limits():
 
     for key, data in rate_limit_store.items():
         # Remove requests older than 1 minute
-        requests = [
-            req_time for req_time in data["requests"] if current_time - req_time < 60
-        ]
+        requests = [req_time for req_time in data["requests"] if current_time - req_time < 60]
 
         if not requests:
             keys_to_remove.append(key)

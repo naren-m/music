@@ -28,15 +28,12 @@ class TestUpperSaMappings:
         """Verify upper Sa is NOT index 16 (Komal Rishaba)."""
         # This was the bug: 'Sa'' was mapping to index 16 which is Komal Rishaba
         # After fix, it should map to 0 (Sa)
-        assert (
-            SWARA_TO_SHRUTI_INDEX.get("Sa'") != 16
-        ), "Upper Sa should NOT map to index 16 (Komal Rishaba)"
+        assert SWARA_TO_SHRUTI_INDEX.get("Sa'") != 16, "Upper Sa should NOT map to index 16 (Komal Rishaba)"
 
         # Confirm index 16 is Komal Rishaba if it exists
         if len(SHRUTI_SYSTEM) > 16:
             assert (
-                "Komal Rishaba" in SHRUTI_SYSTEM[16].name
-                or "Rishaba" in SHRUTI_SYSTEM[16].name
+                "Komal Rishaba" in SHRUTI_SYSTEM[16].name or "Rishaba" in SHRUTI_SYSTEM[16].name
             ), "Index 16 should be a Rishaba variant"
 
 
@@ -66,24 +63,16 @@ class TestUpperSaDetectionAndValidation:
         result = self.engine.detect_shruti(tone)
 
         assert result is not None, "Should detect upper Sa frequency"
-        assert (
-            result.note_name == "Shadja"
-        ), f"523.26Hz should normalize to Shadja, got {result.note_name}"
-        assert (
-            abs(result.cent_deviation) < 2
-        ), f"Deviation should be < 2¢, got {result.cent_deviation}"
-        assert (
-            result.confidence > 0.95
-        ), f"Confidence should be > 0.95, got {result.confidence}"
+        assert result.note_name == "Shadja", f"523.26Hz should normalize to Shadja, got {result.note_name}"
+        assert abs(result.cent_deviation) < 2, f"Deviation should be < 2¢, got {result.cent_deviation}"
+        assert result.confidence > 0.95, f"Confidence should be > 0.95, got {result.confidence}"
 
     def test_upper_sa_validation_with_exercise_sequence(self):
         """Full roundtrip: detect 523.26Hz and validate it against 'Sa''."""
         upper_sa_freq = self.base_sa * 2  # 523.26 Hz
 
         # Create exercise sequence with upper Sa at the end
-        exercise = ExerciseSequence(
-            pattern_sequence=["Sa", "Sa'"], tolerance_cents=50.0
-        )
+        exercise = ExerciseSequence(pattern_sequence=["Sa", "Sa'"], tolerance_cents=50.0)
 
         # Simulate practice: play first note (base Sa)
         tone_sa = self.generate_sine_tone(self.base_sa)
@@ -91,12 +80,8 @@ class TestUpperSaDetectionAndValidation:
         assert result_sa is not None
 
         # Validate first note
-        validation_sa = exercise.validate_note(
-            result_sa.note_name, result_sa.confidence
-        )
-        assert validation_sa[
-            "is_correct"
-        ], f"Base Sa should validate correctly. Got: {validation_sa}"
+        validation_sa = exercise.validate_note(result_sa.note_name, result_sa.confidence)
+        assert validation_sa["is_correct"], f"Base Sa should validate correctly. Got: {validation_sa}"
         assert exercise.current_position == 1, "Should advance to next note"
 
         # Play upper Sa
@@ -105,14 +90,8 @@ class TestUpperSaDetectionAndValidation:
         assert result_upper is not None, "Should detect upper Sa"
 
         # Validate upper Sa (THIS IS THE KEY TEST)
-        accuracy_score = (
-            min(1.0, result_upper.confidence)
-            if abs(result_upper.cent_deviation) < 50
-            else 0.5
-        )
-        validation_upper = exercise.validate_note(
-            result_upper.note_name, accuracy_score
-        )
+        accuracy_score = min(1.0, result_upper.confidence) if abs(result_upper.cent_deviation) < 50 else 0.5
+        validation_upper = exercise.validate_note(result_upper.note_name, accuracy_score)
 
         # CRITICAL: After fix, this should now PASS
         assert validation_upper["is_correct"], (
@@ -133,11 +112,7 @@ class TestUpperSaDetectionAndValidation:
         expected_index = SWARA_TO_SHRUTI_INDEX.get(expected_note)
         detected_index = SWARA_TO_SHRUTI_INDEX.get(detected_shruti_name)
 
-        note_matches = (
-            detected_index is not None
-            and expected_index is not None
-            and detected_index == expected_index
-        )
+        note_matches = detected_index is not None and expected_index is not None and detected_index == expected_index
 
         assert note_matches, (
             f"Upper Sa ('Sa'') should match Shadja detection. "

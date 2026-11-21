@@ -24,11 +24,7 @@ from core.models.shruti import (
     calculate_shruti_frequency,
     find_closest_shruti,
 )
-from core.services.audio_engine import (
-    AudioConfig,
-    CarnaticAudioEngine,
-    PitchDetectionResult,
-)
+from core.services.audio_engine import AudioConfig, CarnaticAudioEngine, PitchDetectionResult
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -62,27 +58,20 @@ WELL_SEPARATED_SHRUTI_NAMES = [
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-def generate_sine(
-    frequency: float, duration: float = 0.1, sample_rate: int = SAMPLE_RATE
-) -> np.ndarray:
+def generate_sine(frequency: float, duration: float = 0.1, sample_rate: int = SAMPLE_RATE) -> np.ndarray:
     """Generate a pure sine-wave tone at *frequency* Hz."""
     t = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
     return np.sin(2 * np.pi * frequency * t).astype(np.float32)
 
 
 def generate_sine_with_noise(
-    frequency: float,
-    snr_db: float,
-    duration: float = 0.1,
-    sample_rate: int = SAMPLE_RATE,
+    frequency: float, snr_db: float, duration: float = 0.1, sample_rate: int = SAMPLE_RATE
 ) -> np.ndarray:
     """Generate a sine wave with additive white Gaussian noise at *snr_db*."""
     signal = generate_sine(frequency, duration, sample_rate)
     signal_power = np.mean(signal**2)
     noise_power = signal_power / (10 ** (snr_db / 10))
-    noise = np.sqrt(noise_power) * np.random.default_rng(42).standard_normal(
-        len(signal)
-    )
+    noise = np.sqrt(noise_power) * np.random.default_rng(42).standard_normal(len(signal))
     return (signal + noise).astype(np.float32)
 
 
@@ -136,10 +125,7 @@ class TestShrutiRoundTrip:
         audio = generate_sine(freq, duration=0.1)
 
         result = engine.detect_shruti(audio)
-        assert result is not None, (
-            f"Detection returned None for {shruti_name} @ {freq:.2f} Hz "
-            f"(base_sa={base_sa})"
-        )
+        assert result is not None, f"Detection returned None for {shruti_name} @ {freq:.2f} Hz " f"(base_sa={base_sa})"
         assert result.note_name == shruti_name, (
             f"Expected '{shruti_name}' but got '{result.note_name}' "
             f"(freq={freq:.2f}, base_sa={base_sa}, "
@@ -156,9 +142,7 @@ class TestShrutiRoundTrip:
 
         result = engine.detect_shruti(audio)
         assert result is not None
-        assert (
-            result.confidence >= 0.15
-        ), f"Confidence {result.confidence:.3f} too low for clean sine"
+        assert result.confidence >= 0.15, f"Confidence {result.confidence:.3f} too low for clean sine"
 
     @pytest.mark.parametrize("shruti_name", WELL_SEPARATED_SHRUTI_NAMES)
     def test_cent_deviation_within_tolerance(self, shruti_name):
@@ -170,9 +154,7 @@ class TestShrutiRoundTrip:
 
         result = engine.detect_shruti(audio)
         assert result is not None
-        assert (
-            abs(result.cent_deviation) <= 50
-        ), f"Deviation {result.cent_deviation:.1f}¢ exceeds 50¢ for {shruti_name}"
+        assert abs(result.cent_deviation) <= 50, f"Deviation {result.cent_deviation:.1f}¢ exceeds 50¢ for {shruti_name}"
 
 
 # =========================================================================
@@ -191,9 +173,7 @@ class TestBaseFrequencyRange:
         result = engine.detect_shruti(audio)
 
         assert result is not None, f"Sa not detected at base_sa={base_sa}"
-        assert (
-            result.note_name == "Shadja"
-        ), f"Expected 'Shadja' but got '{result.note_name}' at base_sa={base_sa}"
+        assert result.note_name == "Shadja", f"Expected 'Shadja' but got '{result.note_name}' at base_sa={base_sa}"
 
     @pytest.mark.parametrize("base_sa", [100, 150, 200, 261.63, 350, 440, 500])
     def test_panchama_detection_at_various_bases(self, base_sa):
@@ -204,9 +184,7 @@ class TestBaseFrequencyRange:
         result = engine.detect_shruti(audio)
 
         assert result is not None, f"Pa not detected at base_sa={base_sa}"
-        assert (
-            result.note_name == "Panchama"
-        ), f"Expected 'Panchama' but got '{result.note_name}' at base_sa={base_sa}"
+        assert result.note_name == "Panchama", f"Expected 'Panchama' but got '{result.note_name}' at base_sa={base_sa}"
 
     def test_mid_session_base_change(self):
         """Changing base_sa mid-session recalibrates detection correctly."""
@@ -275,9 +253,7 @@ class TestToneQuality:
         spectrum = np.abs(np.fft.rfft(audio))
         freqs = np.fft.rfftfreq(n, d=1.0 / SAMPLE_RATE)
         dominant_freq = freqs[np.argmax(spectrum)]
-        assert (
-            abs(dominant_freq - freq) < 5.0
-        ), f"FFT peak at {dominant_freq:.1f} Hz, expected {freq:.1f} Hz"
+        assert abs(dominant_freq - freq) < 5.0, f"FFT peak at {dominant_freq:.1f} Hz, expected {freq:.1f} Hz"
 
     def test_octave_up_doubles_frequency(self):
         """A tone one octave above Sa should still resolve to Shadja."""
@@ -289,9 +265,7 @@ class TestToneQuality:
 
         assert result is not None, "Upper octave Sa not detected"
         # Octave normalisation should map it back to Shadja
-        assert (
-            result.note_name == "Shadja"
-        ), f"Expected 'Shadja' for upper octave but got '{result.note_name}'"
+        assert result.note_name == "Shadja", f"Expected 'Shadja' for upper octave but got '{result.note_name}'"
 
     def test_octave_down_halves_frequency(self):
         """A tone one octave below Sa should still resolve to Shadja."""
@@ -302,9 +276,7 @@ class TestToneQuality:
         result = engine.detect_shruti(audio)
 
         assert result is not None, "Lower octave Sa not detected"
-        assert (
-            result.note_name == "Shadja"
-        ), f"Expected 'Shadja' for lower octave but got '{result.note_name}'"
+        assert result.note_name == "Shadja", f"Expected 'Shadja' for lower octave but got '{result.note_name}'"
 
 
 # =========================================================================
@@ -353,9 +325,7 @@ class TestDetectionAccuracy:
         result = noisy_engine.detect_shruti(audio)
 
         assert result is not None, f"Sa not detected at SNR={snr_db}dB"
-        assert (
-            result.note_name == "Shadja"
-        ), f"Expected 'Shadja' at SNR={snr_db}dB but got '{result.note_name}'"
+        assert result.note_name == "Shadja", f"Expected 'Shadja' at SNR={snr_db}dB but got '{result.note_name}'"
 
     @pytest.mark.parametrize("cents_offset", [5, 10, 20])
     def test_detection_with_slight_detuning(self, cents_offset):
@@ -368,9 +338,7 @@ class TestDetectionAccuracy:
         result = engine.detect_shruti(audio)
 
         assert result is not None, f"Sa detuned +{cents_offset}¢ not detected"
-        assert (
-            result.note_name == "Shadja"
-        ), f"Expected 'Shadja' at +{cents_offset}¢ but got '{result.note_name}'"
+        assert result.note_name == "Shadja", f"Expected 'Shadja' at +{cents_offset}¢ but got '{result.note_name}'"
 
     def test_find_closest_shruti_exact_match(self):
         """find_closest_shruti returns zero deviation for exact frequency."""
@@ -451,17 +419,12 @@ class TestRagaPhraseRoundTrip:
             audio = generate_sine(freq, duration=0.1)
             result = engine.detect_shruti(audio)
 
-            assert result is not None, (
-                f"Failed to detect {full_name} ({abbrev}) in {raga_name} "
-                f"@ {freq:.2f} Hz"
-            )
+            assert result is not None, f"Failed to detect {full_name} ({abbrev}) in {raga_name} " f"@ {freq:.2f} Hz"
             detected_sequence.append(result.note_name)
 
         expected_sequence = [self.ABBREV_TO_NAME[a] for a in phrase]
         assert detected_sequence == expected_sequence, (
-            f"Raga {raga_name} phrase mismatch:\n"
-            f"  expected: {expected_sequence}\n"
-            f"  detected: {detected_sequence}"
+            f"Raga {raga_name} phrase mismatch:\n" f"  expected: {expected_sequence}\n" f"  detected: {detected_sequence}"
         )
 
     @pytest.mark.parametrize("raga_name", ["Sankarabharanam", "Mohanam", "Kalyani"])
@@ -479,9 +442,7 @@ class TestRagaPhraseRoundTrip:
             audio = generate_sine(freq, duration=0.1)
             result = engine.detect_shruti(audio)
 
-            assert (
-                result is not None
-            ), f"Failed to detect {full_name} in descending {raga_name}"
+            assert result is not None, f"Failed to detect {full_name} in descending {raga_name}"
             detected_sequence.append(result.note_name)
 
         expected = [self.ABBREV_TO_NAME[a] for a in phrase]

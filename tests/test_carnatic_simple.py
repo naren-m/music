@@ -21,9 +21,7 @@ async def test_carnatic_comprehensive_suite():
     async with async_playwright() as p:
         # Launch browser
         browser = await p.chromium.launch(headless=False, slow_mo=1000)
-        context = await browser.new_context(
-            permissions=["microphone"], viewport={"width": 1280, "height": 720}
-        )
+        context = await browser.new_context(permissions=["microphone"], viewport={"width": 1280, "height": 720})
         page = await context.new_page()
 
         try:
@@ -35,9 +33,7 @@ async def test_carnatic_comprehensive_suite():
             await page.wait_for_load_state("networkidle")
 
             # Check page title
-            await expect(page).to_have_title(
-                "🎵 Carnatic Music Learning - Real-time Shruti Detection"
-            )
+            await expect(page).to_have_title("🎵 Carnatic Music Learning - Real-time Shruti Detection")
             print("   ✅ Page title is correct")
 
             # Check main header
@@ -60,12 +56,7 @@ async def test_carnatic_comprehensive_suite():
             await page.wait_for_timeout(2000)
 
             # Look for API status indicator
-            api_status_selectors = [
-                "#connectionStatus",
-                "#statusText",
-                ".status-indicator",
-                ".status-dot",
-            ]
+            api_status_selectors = ["#connectionStatus", "#statusText", ".status-indicator", ".status-dot"]
             api_status_found = False
 
             for selector in api_status_selectors:
@@ -80,20 +71,13 @@ async def test_carnatic_comprehensive_suite():
                     break
 
             if not api_status_found:
-                print(
-                    "   ⚠️ API status indicator not found - checking for general status displays"
-                )
+                print("   ⚠️ API status indicator not found - checking for general status displays")
 
             # Test 3: WebSocket connection handling
             print("\n3️⃣ Testing WebSocket connection handling...")
 
             # Check for WebSocket status indicators
-            ws_selectors = [
-                "#websocket-status",
-                "#ws-status",
-                ".websocket-status",
-                ".connection-status",
-            ]
+            ws_selectors = ["#websocket-status", "#ws-status", ".websocket-status", ".connection-status"]
             ws_status_found = False
 
             for selector in ws_selectors:
@@ -109,23 +93,15 @@ async def test_carnatic_comprehensive_suite():
             page.on("console", lambda msg: console_messages.append(msg.text))
             await page.wait_for_timeout(3000)
 
-            ws_console_msgs = [
-                msg
-                for msg in console_messages
-                if "websocket" in msg.lower() or "socket" in msg.lower()
-            ]
+            ws_console_msgs = [msg for msg in console_messages if "websocket" in msg.lower() or "socket" in msg.lower()]
             if ws_console_msgs:
-                print(
-                    f"   ✅ WebSocket console activity: {len(ws_console_msgs)} messages"
-                )
+                print(f"   ✅ WebSocket console activity: {len(ws_console_msgs)} messages")
 
             # Test 4: Error handling and status indicators
             print("\n4️⃣ Testing error handling and status indicators...")
 
             # Look for various status indicators
-            all_status_indicators = page.locator(
-                "[id*='status'], [class*='status'], [class*='indicator']"
-            )
+            all_status_indicators = page.locator("[id*='status'], [class*='status'], [class*='indicator']")
             indicator_count = await all_status_indicators.count()
             print(f"   ✅ Found {indicator_count} status indicators")
 
@@ -159,18 +135,14 @@ async def test_carnatic_comprehensive_suite():
             ]
 
             for viewport in viewports:
-                await page.set_viewport_size(
-                    {"width": viewport["width"], "height": viewport["height"]}
-                )
+                await page.set_viewport_size({"width": viewport["width"], "height": viewport["height"]})
                 await page.wait_for_timeout(500)
 
                 # Check main elements are still visible
                 await expect(page.locator("h1")).to_be_visible()
                 container = page.locator(".container, .main-container, body")
                 await expect(container.first).to_be_visible()
-                print(
-                    f"   ✅ UI responsive at {viewport['name']} ({viewport['width']}x{viewport['height']})"
-                )
+                print(f"   ✅ UI responsive at {viewport['name']} ({viewport['width']}x{viewport['height']})")
 
             # Reset to desktop size for remaining tests
             await page.set_viewport_size({"width": 1280, "height": 720})
@@ -237,13 +209,7 @@ async def test_carnatic_comprehensive_suite():
                     viz_found += 1
 
             # Check output area
-            output_selectors = [
-                "#frequency",
-                ".detection-display",
-                ".frequency-display",
-                "#shruti-display",
-                "#note-display",
-            ]
+            output_selectors = ["#frequency", ".detection-display", ".frequency-display", "#shruti-display", "#note-display"]
             output_found = False
             for selector in output_selectors:
                 elements = page.locator(selector)
@@ -252,9 +218,7 @@ async def test_carnatic_comprehensive_suite():
                     output_found = True
                     break
 
-            print(
-                f"   ✅ Audio interface validated: {audio_controls_found} controls, {viz_found} visualizations"
-            )
+            print(f"   ✅ Audio interface validated: {audio_controls_found} controls, {viz_found} visualizations")
 
             # Test 8: Performance and loading
             print("\n8️⃣ Testing performance and loading...")
@@ -268,9 +232,7 @@ async def test_carnatic_comprehensive_suite():
             print(f"   ⏱️ Page reload time: {load_time:.2f} seconds")
 
             # Check for console errors
-            error_count = len(
-                [msg for msg in console_messages if "error" in msg.lower()]
-            )
+            error_count = len([msg for msg in console_messages if "error" in msg.lower()])
             print(f"   🐛 Console errors: {error_count}")
 
             # Test JavaScript functionality

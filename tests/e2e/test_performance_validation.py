@@ -31,9 +31,7 @@ class TestPerformanceValidation:
                 ],
             )
 
-            context = await browser.new_context(
-                permissions=["microphone"], viewport={"width": 1280, "height": 720}
-            )
+            context = await browser.new_context(permissions=["microphone"], viewport={"width": 1280, "height": 720})
 
             yield context
             await browser.close()
@@ -67,10 +65,7 @@ class TestPerformanceValidation:
             await app_page.click('[data-testid="start-detection-btn"]')
 
             # Wait for connection confirmation
-            await app_page.wait_for_selector(
-                '[data-testid="connection-status"][data-status="connected"]',
-                timeout=5000,
-            )
+            await app_page.wait_for_selector('[data-testid="connection-status"][data-status="connected"]', timeout=5000)
 
             connection_time = (time.time() - start_time) * 1000  # ms
             connection_times.append(connection_time)
@@ -111,12 +106,8 @@ class TestPerformanceValidation:
         print(f"   Maximum message latency: {max_latency:.1f}ms")
 
         # Performance assertions
-        assert (
-            avg_connection_time < 500
-        ), f"Average connection time {avg_connection_time:.1f}ms exceeds 500ms"
-        assert (
-            max_connection_time < 1000
-        ), f"Max connection time {max_connection_time:.1f}ms exceeds 1000ms"
+        assert avg_connection_time < 500, f"Average connection time {avg_connection_time:.1f}ms exceeds 500ms"
+        assert max_connection_time < 1000, f"Max connection time {max_connection_time:.1f}ms exceeds 1000ms"
         assert avg_latency < 100, f"Average latency {avg_latency:.1f}ms exceeds 100ms"
         assert max_latency < 200, f"Max latency {max_latency:.1f}ms exceeds 200ms"
 
@@ -126,9 +117,7 @@ class TestPerformanceValidation:
 
         # Start audio detection
         await app_page.click('[data-testid="start-detection-btn"]')
-        await app_page.wait_for_selector(
-            '[data-testid="detection-status"][data-status="active"]'
-        )
+        await app_page.wait_for_selector('[data-testid="detection-status"][data-status="active"]')
 
         # Simulate audio chunks being sent
         processing_times = []
@@ -187,15 +176,9 @@ class TestPerformanceValidation:
         print(f"   95th percentile: {p95_processing_time:.1f}ms")
 
         # Performance assertions
-        assert (
-            success_rate > 0.90
-        ), f"Success rate {success_rate:.1%} below 90% requirement"
-        assert (
-            avg_processing_time < 50
-        ), f"Average processing {avg_processing_time:.1f}ms exceeds 50ms"
-        assert (
-            p95_processing_time < 75
-        ), f"95th percentile {p95_processing_time:.1f}ms exceeds 75ms"
+        assert success_rate > 0.90, f"Success rate {success_rate:.1%} below 90% requirement"
+        assert avg_processing_time < 50, f"Average processing {avg_processing_time:.1f}ms exceeds 50ms"
+        assert p95_processing_time < 75, f"95th percentile {p95_processing_time:.1f}ms exceeds 75ms"
 
     async def test_concurrent_user_simulation(self, browser_context: BrowserContext):
         """Test concurrent user performance simulation"""
@@ -217,9 +200,7 @@ class TestPerformanceValidation:
 
             tasks = []
             for page in pages:
-                task = asyncio.create_task(
-                    page.click('[data-testid="start-detection-btn"]')
-                )
+                task = asyncio.create_task(page.click('[data-testid="start-detection-btn"]'))
                 tasks.append(task)
 
             await asyncio.gather(*tasks, return_exceptions=True)
@@ -230,10 +211,7 @@ class TestPerformanceValidation:
             active_connections = 0
             for page in pages:
                 try:
-                    await page.wait_for_selector(
-                        '[data-testid="connection-status"][data-status="connected"]',
-                        timeout=5000,
-                    )
+                    await page.wait_for_selector('[data-testid="connection-status"][data-status="connected"]', timeout=5000)
                     active_connections += 1
                 except:
                     pass
@@ -265,13 +243,9 @@ class TestPerformanceValidation:
 
             # Performance assertions
             connection_rate = active_connections / num_users
-            assert (
-                connection_rate > 0.8
-            ), f"Connection rate {connection_rate:.1%} below 80%"
+            assert connection_rate > 0.8, f"Connection rate {connection_rate:.1%} below 80%"
             assert setup_time < 2000, f"Setup time {setup_time:.1f}ms exceeds 2000ms"
-            assert (
-                processing_time < 500
-            ), f"Processing time {processing_time:.1f}ms exceeds 500ms"
+            assert processing_time < 500, f"Processing time {processing_time:.1f}ms exceeds 500ms"
 
         finally:
             # Cleanup
@@ -308,39 +282,25 @@ class TestPerformanceValidation:
 
             # Check memory after each cycle
             current_metrics = await app_page.evaluate("performance.memory")
-            memory_increase = (
-                (current_metrics["usedJSHeapSize"] - initial_metrics["usedJSHeapSize"])
-                / 1024
-                / 1024
-            )  # MB
+            memory_increase = (current_metrics["usedJSHeapSize"] - initial_metrics["usedJSHeapSize"]) / 1024 / 1024  # MB
 
             print(f"   Cycle {cycle + 1}: Memory increase = {memory_increase:.1f}MB")
 
             # Memory should not increase excessively
-            assert (
-                memory_increase < 50
-            ), f"Memory increase {memory_increase:.1f}MB exceeds 50MB limit"
+            assert memory_increase < 50, f"Memory increase {memory_increase:.1f}MB exceeds 50MB limit"
 
         # Stop detection
         await app_page.click('[data-testid="stop-detection-btn"]')
 
         # Final memory check
         final_metrics = await app_page.evaluate("performance.memory")
-        total_memory_increase = (
-            (final_metrics["usedJSHeapSize"] - initial_metrics["usedJSHeapSize"])
-            / 1024
-            / 1024
-        )
+        total_memory_increase = (final_metrics["usedJSHeapSize"] - initial_metrics["usedJSHeapSize"]) / 1024 / 1024
 
         print(f"📊 Memory Stability:")
         print(f"   Total memory increase: {total_memory_increase:.1f}MB")
-        print(
-            f"   Final heap size: {final_metrics['usedJSHeapSize'] / 1024 / 1024:.1f}MB"
-        )
+        print(f"   Final heap size: {final_metrics['usedJSHeapSize'] / 1024 / 1024:.1f}MB")
 
-        assert (
-            total_memory_increase < 100
-        ), f"Total memory increase {total_memory_increase:.1f}MB exceeds 100MB"
+        assert total_memory_increase < 100, f"Total memory increase {total_memory_increase:.1f}MB exceeds 100MB"
 
     async def test_ui_responsiveness_under_load(self, app_page: Page):
         """Test UI responsiveness during heavy audio processing"""
@@ -386,12 +346,8 @@ class TestPerformanceValidation:
         print(f"   Maximum response time: {max_response_time:.1f}ms")
 
         # UI should remain responsive
-        assert (
-            avg_response_time < 200
-        ), f"Average UI response {avg_response_time:.1f}ms exceeds 200ms"
-        assert (
-            max_response_time < 500
-        ), f"Max UI response {max_response_time:.1f}ms exceeds 500ms"
+        assert avg_response_time < 200, f"Average UI response {avg_response_time:.1f}ms exceeds 200ms"
+        assert max_response_time < 500, f"Max UI response {max_response_time:.1f}ms exceeds 500ms"
 
     async def _create_audio_load(self, page: Page):
         """Create continuous audio processing load"""
@@ -415,19 +371,12 @@ class TestPerformanceValidation:
         print("\n📈 Testing for performance regressions...")
 
         # Baseline performance expectations (optimized values)
-        baseline_metrics = {
-            "connection_time_ms": 300,
-            "audio_processing_ms": 25,
-            "ui_response_ms": 100,
-            "memory_usage_mb": 30,
-        }
+        baseline_metrics = {"connection_time_ms": 300, "audio_processing_ms": 25, "ui_response_ms": 100, "memory_usage_mb": 30}
 
         # Test connection performance
         connection_start = time.time()
         await app_page.click('[data-testid="start-detection-btn"]')
-        await app_page.wait_for_selector(
-            '[data-testid="connection-status"][data-status="connected"]'
-        )
+        await app_page.wait_for_selector('[data-testid="connection-status"][data-status="connected"]')
         connection_time = (time.time() - connection_start) * 1000
 
         # Test audio processing
@@ -472,16 +421,12 @@ class TestPerformanceValidation:
             ratio = actual / baseline
             status = "✅" if ratio <= 1.2 else "⚠️" if ratio <= 1.5 else "❌"
 
-            print(
-                f"   {metric}: {actual:.1f} vs {baseline:.1f} (ratio: {ratio:.2f}) {status}"
-            )
+            print(f"   {metric}: {actual:.1f} vs {baseline:.1f} (ratio: {ratio:.2f}) {status}")
 
             if ratio > 1.5:  # 50% regression threshold
                 regression_detected = True
 
-        assert (
-            not regression_detected
-        ), "Performance regression detected - metrics exceed 150% of baseline"
+        assert not regression_detected, "Performance regression detected - metrics exceed 150% of baseline"
 
         print("✅ No significant performance regressions detected")
 

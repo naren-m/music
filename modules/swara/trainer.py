@@ -106,27 +106,12 @@ class SwaraExerciseGenerator:
         self.basic_swaras = ["Sa", "R₂", "G₃", "M₁", "Pa", "D₂", "N₃"]
 
         # Extended swaras for intermediate
-        self.extended_swaras = [
-            "Sa",
-            "R₁",
-            "R₂",
-            "G₂",
-            "G₃",
-            "M₁",
-            "M₂",
-            "Pa",
-            "D₁",
-            "D₂",
-            "N₂",
-            "N₃",
-        ]
+        self.extended_swaras = ["Sa", "R₁", "R₂", "G₂", "G₃", "M₁", "M₂", "Pa", "D₁", "D₂", "N₂", "N₃"]
 
         # All 22 shrutis for advanced
         self.all_shrutis = [s.western_equiv for s in shruti_system.shrutis]
 
-    def generate_exercise(
-        self, user_profile: UserProfile, exercise_type: ExerciseType
-    ) -> ExerciseConfig:
+    def generate_exercise(self, user_profile: UserProfile, exercise_type: ExerciseType) -> ExerciseConfig:
         """Generate appropriate exercise based on user skill and type"""
 
         skill_level = user_profile.overall_skill_level
@@ -169,9 +154,7 @@ class SwaraExerciseGenerator:
             with_metronome=(exercise_type == ExerciseType.SEQUENTIAL_PATTERN),
         )
 
-    def _get_exercise_duration(
-        self, exercise_type: ExerciseType, difficulty: DifficultyLevel
-    ) -> int:
+    def _get_exercise_duration(self, exercise_type: ExerciseType, difficulty: DifficultyLevel) -> int:
         """Get appropriate exercise duration"""
         base_durations = {
             ExerciseType.SINGLE_SWARA: 30,
@@ -234,9 +217,7 @@ class SwaraTrainer:
             "milestone_achieved": [],
         }
 
-    def process_detection_result(
-        self, detection_data: Dict[str, any], user_base_sa_frequency: float
-    ) -> None:
+    def process_detection_result(self, detection_data: Dict[str, any], user_base_sa_frequency: float) -> None:
         """
         Processes a raw detection result from the client and feeds it into the trainer.
         """
@@ -250,17 +231,13 @@ class SwaraTrainer:
         )
         self._on_shruti_detected(detection, user_base_sa_frequency)
 
-    def start_exercise(
-        self, user_profile: UserProfile, exercise_type: ExerciseType
-    ) -> ExerciseConfig:
+    def start_exercise(self, user_profile: UserProfile, exercise_type: ExerciseType) -> ExerciseConfig:
         """Start a new swara exercise"""
         if self.is_active:
             self.stop_exercise()
 
         # Generate exercise
-        self.current_exercise = self.exercise_generator.generate_exercise(
-            user_profile, exercise_type
-        )
+        self.current_exercise = self.exercise_generator.generate_exercise(user_profile, exercise_type)
 
         # Initialize state
         self.exercise_start_time = datetime.utcnow()
@@ -339,9 +316,7 @@ class SwaraTrainer:
         # Trigger callback
         self._trigger_callbacks("target_changed", self.current_target)
 
-    def _on_shruti_detected(
-        self, detection: ShrutiDetectionResult, user_base_sa_frequency: float
-    ) -> None:
+    def _on_shruti_detected(self, detection: ShrutiDetectionResult, user_base_sa_frequency: float) -> None:
         """Handle shruti detection from audio engine"""
         if not self.is_active or not self.current_target:
             return
@@ -361,17 +336,12 @@ class SwaraTrainer:
 
         # Determine if attempt is correct
         cent_deviation = abs(detection.cent_deviation)
-        is_correct = (
-            cent_deviation <= self.current_exercise.cent_tolerance
-            and detection.confidence >= 0.6
-        )
+        is_correct = cent_deviation <= self.current_exercise.cent_tolerance and detection.confidence >= 0.6
 
         # Record attempt
         attempt = ExerciseAttempt(
             target_shruti=self.current_target,
-            detected_shruti=detection.shruti.western_equiv
-            if detection.shruti
-            else None,
+            detected_shruti=detection.shruti.western_equiv if detection.shruti else None,
             target_frequency=target_frequency,
             detected_frequency=detection.detected_frequency,
             cent_deviation=detection.cent_deviation,
@@ -409,10 +379,7 @@ class SwaraTrainer:
                 average_cent_deviation=0.0,
                 total_correct=0,
                 feedback="No attempts recorded. Try singing closer to the microphone.",
-                recommendations=[
-                    "Check microphone setup",
-                    "Ensure clear pronunciation",
-                ],
+                recommendations=["Check microphone setup", "Ensure clear pronunciation"],
                 achieved_milestones=[],
             )
 
@@ -426,9 +393,7 @@ class SwaraTrainer:
         consistency_score = max(0.0, 1.0 - (np.std(cent_deviations) / 50.0))
 
         # Generate feedback and recommendations
-        feedback, recommendations = self._generate_feedback(
-            overall_accuracy, average_deviation, consistency_score
-        )
+        feedback, recommendations = self._generate_feedback(overall_accuracy, average_deviation, consistency_score)
 
         # Check for milestones
         milestones = self._check_milestones(overall_accuracy, consistency_score)
@@ -447,9 +412,7 @@ class SwaraTrainer:
             achieved_milestones=milestones,
         )
 
-    def _generate_feedback(
-        self, accuracy: float, avg_deviation: float, consistency: float
-    ) -> Tuple[str, List[str]]:
+    def _generate_feedback(self, accuracy: float, avg_deviation: float, consistency: float) -> Tuple[str, List[str]]:
         """Generate personalized feedback and recommendations"""
         feedback = ""
         recommendations = []
@@ -460,38 +423,28 @@ class SwaraTrainer:
         elif accuracy >= 0.75:
             feedback = "Good accuracy. Continue practicing to improve consistency."
         elif accuracy >= 0.6:
-            feedback = (
-                "Fair accuracy. Focus on listening carefully to the target pitch."
-            )
+            feedback = "Fair accuracy. Focus on listening carefully to the target pitch."
         else:
             feedback = "Needs improvement. Take time to hear each swara clearly before singing."
 
         # Cent deviation feedback
         if avg_deviation > 30:
-            recommendations.append(
-                "Practice with a tanpura drone to improve intonation"
-            )
+            recommendations.append("Practice with a tanpura drone to improve intonation")
             recommendations.append("Slow down and focus on pitch accuracy over speed")
         elif avg_deviation > 20:
-            recommendations.append(
-                "Use ear training exercises to refine pitch perception"
-            )
+            recommendations.append("Use ear training exercises to refine pitch perception")
 
         # Consistency feedback
         if consistency < 0.5:
             recommendations.append("Work on maintaining steady pitch throughout notes")
-            recommendations.append(
-                "Practice breathing techniques for better vocal stability"
-            )
+            recommendations.append("Practice breathing techniques for better vocal stability")
         elif consistency < 0.7:
             recommendations.append("Focus on smooth transitions between swaras")
 
         # General recommendations based on difficulty
         if self.current_exercise.difficulty == DifficultyLevel.BEGINNER:
             recommendations.append("Practice basic Sa-Pa-Sa patterns daily")
-            recommendations.append(
-                "Listen to classical recordings to internalize swaras"
-            )
+            recommendations.append("Listen to classical recordings to internalize swaras")
 
         return feedback, recommendations
 
@@ -528,9 +481,7 @@ class SwaraTrainer:
         if not self.is_active or not self.current_target:
             return None
 
-        recent_attempts = (
-            self.attempts[-5:] if len(self.attempts) >= 5 else self.attempts
-        )
+        recent_attempts = self.attempts[-5:] if len(self.attempts) >= 5 else self.attempts
 
         if not recent_attempts:
             return {
@@ -540,9 +491,7 @@ class SwaraTrainer:
                 "suggestions": ["Start singing the target swara"],
             }
 
-        recent_accuracy = sum(1 for a in recent_attempts if a.is_correct) / len(
-            recent_attempts
-        )
+        recent_accuracy = sum(1 for a in recent_attempts if a.is_correct) / len(recent_attempts)
         avg_deviation = np.mean([abs(a.cent_deviation) for a in recent_attempts])
 
         # Generate real-time suggestions
@@ -563,9 +512,7 @@ class SwaraTrainer:
             "last_attempt": recent_attempts[-1] if recent_attempts else None,
             "suggestions": suggestions,
             "total_attempts": len(self.attempts),
-            "elapsed_time": (
-                datetime.utcnow() - self.exercise_start_time
-            ).total_seconds(),
+            "elapsed_time": (datetime.utcnow() - self.exercise_start_time).total_seconds(),
         }
 
     def add_callback(self, event: str, callback: Callable) -> None:
@@ -604,11 +551,7 @@ class SwaraProgressTracker:
     def get_progress_analytics(self, user_id: str, days: int = 30) -> Dict[str, any]:
         """Generate progress analytics for user"""
         cutoff_date = datetime.utcnow() - timedelta(days=days)
-        recent_sessions = [
-            session
-            for session in self.session_history
-            if session.start_time >= cutoff_date
-        ]
+        recent_sessions = [session for session in self.session_history if session.start_time >= cutoff_date]
 
         if not recent_sessions:
             return {"message": "No recent practice sessions found"}
@@ -625,16 +568,9 @@ class SwaraProgressTracker:
             "average_consistency": np.mean(consistencies),
             "consistency_trend": self._calculate_trend(consistencies),
             "average_deviation": np.mean(deviations),
-            "deviation_trend": self._calculate_trend(
-                [-d for d in deviations]
-            ),  # Negative for improvement
-            "milestones_achieved": sum(
-                len(s.achieved_milestones) for s in recent_sessions
-            ),
-            "practice_time": sum(
-                (s.end_time - s.start_time).total_seconds() for s in recent_sessions
-            )
-            / 60,
+            "deviation_trend": self._calculate_trend([-d for d in deviations]),  # Negative for improvement
+            "milestones_achieved": sum(len(s.achieved_milestones) for s in recent_sessions),
+            "practice_time": sum((s.end_time - s.start_time).total_seconds() for s in recent_sessions) / 60,
         }
 
     def _calculate_trend(self, values: List[float]) -> str:

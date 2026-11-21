@@ -114,9 +114,7 @@ class PerformancePredictionEngine:
 
         self.logger = logging.getLogger(__name__)
 
-    def extract_features(
-        self, user_id: int, session_data: List[Dict[str, Any]]
-    ) -> PerformanceFeatures:
+    def extract_features(self, user_id: int, session_data: List[Dict[str, Any]]) -> PerformanceFeatures:
         """Extract comprehensive performance features from user session data"""
 
         if not session_data:
@@ -141,16 +139,12 @@ class PerformancePredictionEngine:
 
         # Consistency score
         recent_accuracies = [s["accuracy"] for s in recent_sessions]
-        consistency_score = (
-            1.0 - np.std(recent_accuracies) if recent_accuracies else 0.0
-        )
+        consistency_score = 1.0 - np.std(recent_accuracies) if recent_accuracies else 0.0
 
         # Practice frequency (sessions per week)
         if len(sessions) >= 2:
             time_span = (sessions[-1]["timestamp"] - sessions[0]["timestamp"]).days
-            practice_frequency = (
-                len(sessions) / max(time_span, 1)
-            ) * 7  # Sessions per week
+            practice_frequency = (len(sessions) / max(time_span, 1)) * 7  # Sessions per week
         else:
             practice_frequency = 1.0
 
@@ -170,9 +164,7 @@ class PerformancePredictionEngine:
         for session in sessions:
             mistakes = session.get("mistakes", {})
             for mistake_type, count in mistakes.items():
-                mistake_frequency[mistake_type] = (
-                    mistake_frequency.get(mistake_type, 0) + count
-                )
+                mistake_frequency[mistake_type] = mistake_frequency.get(mistake_type, 0) + count
 
         # Engagement indicators
         engagement_indicators = self._calculate_engagement_indicators(sessions)
@@ -207,17 +199,10 @@ class PerformancePredictionEngine:
         self.user_features[user_id] = features
         return features
 
-    def _calculate_engagement_indicators(
-        self, sessions: List[Dict[str, Any]]
-    ) -> Dict[str, float]:
+    def _calculate_engagement_indicators(self, sessions: List[Dict[str, Any]]) -> Dict[str, float]:
         """Calculate various engagement indicators from session data"""
 
-        indicators = {
-            "completion_rate": 0.0,
-            "time_efficiency": 0.0,
-            "voluntary_practice": 0.0,
-            "exploration_rate": 0.0,
-        }
+        indicators = {"completion_rate": 0.0, "time_efficiency": 0.0, "voluntary_practice": 0.0, "exploration_rate": 0.0}
 
         if not sessions:
             return indicators
@@ -242,9 +227,7 @@ class PerformancePredictionEngine:
             week_key = session["timestamp"].strftime("%Y-%W")
             weekly_sessions[week_key] = weekly_sessions.get(week_key, 0) + 1
 
-        extra_sessions = sum(
-            max(0, count - 3) for count in weekly_sessions.values()
-        )  # >3 per week
+        extra_sessions = sum(max(0, count - 3) for count in weekly_sessions.values())  # >3 per week
         indicators["voluntary_practice"] = extra_sessions / len(sessions)
 
         # Exploration rate (variety in content types)
@@ -256,9 +239,7 @@ class PerformancePredictionEngine:
 
         return indicators
 
-    def _analyze_skill_areas(
-        self, sessions: List[Dict[str, Any]]
-    ) -> Tuple[List[str], List[str]]:
+    def _analyze_skill_areas(self, sessions: List[Dict[str, Any]]) -> Tuple[List[str], List[str]]:
         """Analyze skill area performance to identify strengths and weaknesses"""
 
         skill_performance = {}
@@ -287,17 +268,10 @@ class PerformancePredictionEngine:
 
         return strengths, weaknesses
 
-    def _analyze_learning_style(
-        self, sessions: List[Dict[str, Any]]
-    ) -> Dict[str, float]:
+    def _analyze_learning_style(self, sessions: List[Dict[str, Any]]) -> Dict[str, float]:
         """Analyze learning style indicators from session behavior"""
 
-        indicators = {
-            "visual": 0.0,
-            "auditory": 0.0,
-            "kinesthetic": 0.0,
-            "analytical": 0.0,
-        }
+        indicators = {"visual": 0.0, "auditory": 0.0, "kinesthetic": 0.0, "analytical": 0.0}
 
         if not sessions:
             return indicators
@@ -313,9 +287,7 @@ class PerformancePredictionEngine:
         indicators["auditory"] = audio_sessions / total_sessions
 
         # Kinesthetic learning indicators
-        interactive_sessions = sum(
-            1 for s in sessions if s.get("interactive_practice", False)
-        )
+        interactive_sessions = sum(1 for s in sessions if s.get("interactive_practice", False))
         indicators["kinesthetic"] = interactive_sessions / total_sessions
 
         # Analytical learning indicators
@@ -334,11 +306,7 @@ class PerformancePredictionEngine:
         cultural_engagement = cultural_sessions / len(sessions)
 
         # Boost for cultural content completion
-        cultural_completions = sum(
-            1
-            for s in sessions
-            if s.get("cultural_content", False) and s.get("completed", False)
-        )
+        cultural_completions = sum(1 for s in sessions if s.get("cultural_content", False) and s.get("completed", False))
 
         if cultural_sessions > 0:
             completion_boost = cultural_completions / cultural_sessions
@@ -347,10 +315,7 @@ class PerformancePredictionEngine:
         return cultural_engagement
 
     def predict_performance(
-        self,
-        user_id: int,
-        prediction_type: PredictionType,
-        context: Optional[Dict[str, Any]] = None,
+        self, user_id: int, prediction_type: PredictionType, context: Optional[Dict[str, Any]] = None
     ) -> PredictionResult:
         """Generate performance prediction for a user"""
 
@@ -389,9 +354,7 @@ class PerformancePredictionEngine:
         base_prob += consistency_adjustment
 
         # Adjust for practice frequency
-        frequency_factor = min(
-            features.practice_frequency / 4, 1.0
-        )  # Optimal at 4 sessions/week
+        frequency_factor = min(features.practice_frequency / 4, 1.0)  # Optimal at 4 sessions/week
         frequency_adjustment = (frequency_factor - 0.5) * 0.2
         base_prob += frequency_adjustment
 
@@ -403,19 +366,13 @@ class PerformancePredictionEngine:
         # Context-specific adjustments
         if context:
             content_difficulty = context.get("content_difficulty", 3)
-            difficulty_adjustment = (
-                3 - content_difficulty
-            ) * 0.1  # Easier content = higher success
+            difficulty_adjustment = (3 - content_difficulty) * 0.1  # Easier content = higher success
             base_prob += difficulty_adjustment
 
             # User strength/weakness match
             content_tags = context.get("content_tags", [])
-            strength_match = any(
-                tag in features.skill_area_strengths for tag in content_tags
-            )
-            weakness_match = any(
-                tag in features.skill_area_weaknesses for tag in content_tags
-            )
+            strength_match = any(tag in features.skill_area_strengths for tag in content_tags)
+            weakness_match = any(tag in features.skill_area_weaknesses for tag in content_tags)
 
             if strength_match:
                 base_prob += 0.1
@@ -427,17 +384,12 @@ class PerformancePredictionEngine:
 
         # Calculate confidence based on data amount and consistency
         data_confidence = min(features.session_count / 20, 1.0)
-        trend_confidence = 1.0 - abs(
-            features.accuracy_trend
-        )  # Lower trend = higher confidence
+        trend_confidence = 1.0 - abs(features.accuracy_trend)  # Lower trend = higher confidence
         confidence = (data_confidence + trend_confidence) / 2
 
         # Confidence interval
         ci_width = 0.3 * (1 - confidence)
-        confidence_interval = (
-            max(0.0, predicted_prob - ci_width),
-            min(1.0, predicted_prob + ci_width),
-        )
+        confidence_interval = (max(0.0, predicted_prob - ci_width), min(1.0, predicted_prob + ci_width))
 
         # Contributing factors
         contributing_factors = {
@@ -472,9 +424,7 @@ class PerformancePredictionEngine:
             recommendation_priority=priority,
         )
 
-    def _predict_completion_time(
-        self, features: PerformanceFeatures, context: Optional[Dict[str, Any]]
-    ) -> PredictionResult:
+    def _predict_completion_time(self, features: PerformanceFeatures, context: Optional[Dict[str, Any]]) -> PredictionResult:
         """Predict expected completion time for learning content"""
 
         # Base time from user's average session duration
@@ -504,10 +454,7 @@ class PerformancePredictionEngine:
 
         # Confidence interval
         ci_width = predicted_time * 0.4 * (1 - confidence)
-        confidence_interval = (
-            max(5.0, predicted_time - ci_width),
-            predicted_time + ci_width,
-        )
+        confidence_interval = (max(5.0, predicted_time - ci_width), predicted_time + ci_width)
 
         contributing_factors = {
             "avg_session_duration": features.session_duration_avg,
@@ -573,10 +520,7 @@ class PerformancePredictionEngine:
         confidence = min(features.session_count / 10, 1.0) * features.consistency_score
 
         ci_width = 0.25 * (1 - confidence)
-        confidence_interval = (
-            max(0.0, predicted_retention - ci_width),
-            min(1.0, predicted_retention + ci_width),
-        )
+        confidence_interval = (max(0.0, predicted_retention - ci_width), min(1.0, predicted_retention + ci_width))
 
         contributing_factors = {
             "days_since_practice": days_since_practice,
@@ -618,18 +562,14 @@ class PerformancePredictionEngine:
         recommendations = []
 
         # Analyze prediction results for risk patterns
-        high_risk_predictions = [
-            p for p in prediction_results if p.recommendation_priority >= 4
-        ]
+        high_risk_predictions = [p for p in prediction_results if p.recommendation_priority >= 4]
         all_risk_factors = set()
         for pred in prediction_results:
             all_risk_factors.update(pred.risk_factors)
 
         # Generate specific interventions
         if "declining_accuracy_trend" in all_risk_factors:
-            recommendations.append(
-                self._create_difficulty_adjustment_intervention(features)
-            )
+            recommendations.append(self._create_difficulty_adjustment_intervention(features))
 
         if "low_engagement" in all_risk_factors:
             recommendations.append(self._create_engagement_intervention(features))
@@ -641,25 +581,17 @@ class PerformancePredictionEngine:
             recommendations.append(self._create_consistency_intervention(features))
 
         if features.skill_area_weaknesses:
-            recommendations.append(
-                self._create_skill_reinforcement_intervention(features)
-            )
+            recommendations.append(self._create_skill_reinforcement_intervention(features))
 
         if features.cultural_engagement < 0.3:
-            recommendations.append(
-                self._create_cultural_engagement_intervention(features)
-            )
+            recommendations.append(self._create_cultural_engagement_intervention(features))
 
         # Sort by urgency and effectiveness
-        recommendations.sort(
-            key=lambda x: (x.urgency.value, -x.estimated_effectiveness)
-        )
+        recommendations.sort(key=lambda x: (x.urgency.value, -x.estimated_effectiveness))
 
         return recommendations
 
-    def _create_difficulty_adjustment_intervention(
-        self, features: PerformanceFeatures
-    ) -> InterventionRecommendation:
+    def _create_difficulty_adjustment_intervention(self, features: PerformanceFeatures) -> InterventionRecommendation:
         """Create intervention for difficulty adjustment"""
 
         return InterventionRecommendation(
@@ -675,16 +607,10 @@ class PerformancePredictionEngine:
             expected_outcome="Improved success rate and renewed confidence within 2 weeks",
             urgency=RiskLevel.HIGH,
             estimated_effectiveness=0.8,
-            monitoring_metrics=[
-                "accuracy_trend",
-                "consistency_score",
-                "engagement_indicators",
-            ],
+            monitoring_metrics=["accuracy_trend", "consistency_score", "engagement_indicators"],
         )
 
-    def _create_engagement_intervention(
-        self, features: PerformanceFeatures
-    ) -> InterventionRecommendation:
+    def _create_engagement_intervention(self, features: PerformanceFeatures) -> InterventionRecommendation:
         """Create intervention for improving engagement"""
 
         engagement_score = np.mean(list(features.engagement_indicators.values()))
@@ -703,16 +629,10 @@ class PerformancePredictionEngine:
             expected_outcome="Increased engagement and voluntary practice within 1 week",
             urgency=RiskLevel.MODERATE,
             estimated_effectiveness=0.75,
-            monitoring_metrics=[
-                "completion_rate",
-                "voluntary_practice",
-                "session_duration",
-            ],
+            monitoring_metrics=["completion_rate", "voluntary_practice", "session_duration"],
         )
 
-    def _create_retention_intervention(
-        self, features: PerformanceFeatures
-    ) -> InterventionRecommendation:
+    def _create_retention_intervention(self, features: PerformanceFeatures) -> InterventionRecommendation:
         """Create intervention for retention at risk"""
 
         days_absent = (datetime.now() - features.last_session_timestamp).days
@@ -731,16 +651,10 @@ class PerformancePredictionEngine:
             expected_outcome="User returns to regular practice within 1 week",
             urgency=RiskLevel.CRITICAL,
             estimated_effectiveness=0.6,
-            monitoring_metrics=[
-                "days_since_practice",
-                "session_frequency",
-                "engagement_score",
-            ],
+            monitoring_metrics=["days_since_practice", "session_frequency", "engagement_score"],
         )
 
-    def _create_consistency_intervention(
-        self, features: PerformanceFeatures
-    ) -> InterventionRecommendation:
+    def _create_consistency_intervention(self, features: PerformanceFeatures) -> InterventionRecommendation:
         """Create intervention for improving consistency"""
 
         return InterventionRecommendation(
@@ -757,16 +671,10 @@ class PerformancePredictionEngine:
             expected_outcome="Improved consistency score within 3 weeks",
             urgency=RiskLevel.MODERATE,
             estimated_effectiveness=0.7,
-            monitoring_metrics=[
-                "consistency_score",
-                "practice_frequency",
-                "session_regularity",
-            ],
+            monitoring_metrics=["consistency_score", "practice_frequency", "session_regularity"],
         )
 
-    def _create_skill_reinforcement_intervention(
-        self, features: PerformanceFeatures
-    ) -> InterventionRecommendation:
+    def _create_skill_reinforcement_intervention(self, features: PerformanceFeatures) -> InterventionRecommendation:
         """Create intervention for skill area reinforcement"""
 
         weakness_areas = ", ".join(features.skill_area_weaknesses[:3])
@@ -785,16 +693,10 @@ class PerformancePredictionEngine:
             expected_outcome="Measurable improvement in weak skill areas within 4 weeks",
             urgency=RiskLevel.MODERATE,
             estimated_effectiveness=0.8,
-            monitoring_metrics=[
-                "skill_area_performance",
-                "mistake_frequency",
-                "technique_scores",
-            ],
+            monitoring_metrics=["skill_area_performance", "mistake_frequency", "technique_scores"],
         )
 
-    def _create_cultural_engagement_intervention(
-        self, features: PerformanceFeatures
-    ) -> InterventionRecommendation:
+    def _create_cultural_engagement_intervention(self, features: PerformanceFeatures) -> InterventionRecommendation:
         """Create intervention for cultural engagement"""
 
         return InterventionRecommendation(
@@ -811,16 +713,10 @@ class PerformancePredictionEngine:
             expected_outcome="Increased cultural interest and deeper musical understanding",
             urgency=RiskLevel.LOW,
             estimated_effectiveness=0.6,
-            monitoring_metrics=[
-                "cultural_engagement",
-                "cultural_content_completion",
-                "overall_engagement",
-            ],
+            monitoring_metrics=["cultural_engagement", "cultural_content_completion", "overall_engagement"],
         )
 
-    def update_prediction_accuracy(
-        self, user_id: int, prediction_result: PredictionResult, actual_outcome: float
-    ) -> None:
+    def update_prediction_accuracy(self, user_id: int, prediction_result: PredictionResult, actual_outcome: float) -> None:
         """Update prediction accuracy tracking for model improvement"""
 
         if user_id not in self.historical_predictions:
@@ -862,9 +758,7 @@ class PerformancePredictionEngine:
         # Calculate metrics by prediction type
         metrics_by_type = {}
         for pred_type in PredictionType:
-            type_predictions = [
-                p for p in all_predictions if p["prediction_type"] == pred_type
-            ]
+            type_predictions = [p for p in all_predictions if p["prediction_type"] == pred_type]
 
             if type_predictions:
                 errors = [p["error"] for p in type_predictions]
@@ -883,8 +777,7 @@ class PerformancePredictionEngine:
             "overall_mae": np.mean(all_errors),
             "overall_rmse": np.sqrt(np.mean([e**2 for e in all_errors])),
             "total_predictions": len(all_predictions),
-            "accuracy_within_10pct": sum(1 for e in all_errors if e <= 0.1)
-            / len(all_errors),
+            "accuracy_within_10pct": sum(1 for e in all_errors if e <= 0.1) / len(all_errors),
         }
 
         return {

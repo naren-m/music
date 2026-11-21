@@ -117,30 +117,16 @@ def _register_app_error_handlers(app: Flask):
             f"Endpoint: {request.endpoint}"
         )
 
-        return (
-            jsonify({"error": error.message, "error_code": "AUTH_ERROR"}),
-            error.status_code,
-        )
+        return jsonify({"error": error.message, "error_code": "AUTH_ERROR"}), error.status_code
 
     @app.errorhandler(RateLimitError)
     def handle_rate_limit_error(error):
         """Handle rate limiting with security monitoring"""
         logger.warning(
-            f"Rate limit exceeded: {error.message} | "
-            f"IP: {request.remote_addr} | "
-            f"Endpoint: {request.endpoint}"
+            f"Rate limit exceeded: {error.message} | " f"IP: {request.remote_addr} | " f"Endpoint: {request.endpoint}"
         )
 
-        return (
-            jsonify(
-                {
-                    "error": error.message,
-                    "error_code": "RATE_LIMIT_ERROR",
-                    "retry_after": 60,
-                }
-            ),
-            error.status_code,
-        )
+        return jsonify({"error": error.message, "error_code": "RATE_LIMIT_ERROR", "retry_after": 60}), error.status_code
 
     @app.errorhandler(SecurityError)
     def handle_security_error(error):
@@ -156,27 +142,16 @@ def _register_app_error_handlers(app: Flask):
         # Emit structured security event for SIEM ingestion
         _emit_security_event(
             "security_violation",
-            {
-                "error_code": error.error_code,
-                "message": error.message,
-                "session": request.cookies.get("session", "None"),
-            },
+            {"error_code": error.error_code, "message": error.message, "session": request.cookies.get("session", "None")},
         )
 
-        return (
-            jsonify(
-                {"error": "Security policy violation", "error_code": error.error_code}
-            ),
-            error.status_code,
-        )
+        return jsonify({"error": "Security policy violation", "error_code": error.error_code}), error.status_code
 
     @app.errorhandler(AudioProcessingError)
     def handle_audio_error(error):
         """Handle audio processing errors safely"""
         logger.error(
-            f"Audio processing error: {error.message} | "
-            f"IP: {request.remote_addr} | "
-            f"Endpoint: {request.endpoint}"
+            f"Audio processing error: {error.message} | " f"IP: {request.remote_addr} | " f"Endpoint: {request.endpoint}"
         )
 
         return (
@@ -208,10 +183,7 @@ def _register_http_error_handlers(app: Flask):
         # Return generic message to prevent information disclosure
         generic_message = GENERIC_ERROR_MESSAGES.get(error.code, "An error occurred")
 
-        return (
-            jsonify({"error": generic_message, "error_code": f"HTTP_{error.code}"}),
-            error.code,
-        )
+        return jsonify({"error": generic_message, "error_code": f"HTTP_{error.code}"}), error.code
 
     @app.errorhandler(413)
     def handle_request_too_large(error):
@@ -222,16 +194,7 @@ def _register_http_error_handlers(app: Flask):
             f"Endpoint: {request.endpoint}"
         )
 
-        return (
-            jsonify(
-                {
-                    "error": "Request too large",
-                    "error_code": "REQUEST_TOO_LARGE",
-                    "max_size": "2MB",
-                }
-            ),
-            413,
-        )
+        return jsonify({"error": "Request too large", "error_code": "REQUEST_TOO_LARGE", "max_size": "2MB"}), 413
 
     @app.errorhandler(Exception)
     def handle_unexpected_error(error):
@@ -290,16 +253,12 @@ def _register_request_logging(app: Flask):
         """Log response information for monitoring"""
         if current_app.config.get("LOG_RESPONSES", False):
             logger.debug(
-                f"Response: {response.status_code} | "
-                f"Content-Length: {response.content_length} | "
-                f"Path: {request.path}"
+                f"Response: {response.status_code} | " f"Content-Length: {response.content_length} | " f"Path: {request.path}"
             )
         return response
 
 
-def create_error_response(
-    message: str, status_code: int = 400, error_code: str = None, details: dict = None
-):
+def create_error_response(message: str, status_code: int = 400, error_code: str = None, details: dict = None):
     """
     Create standardized error response
 
@@ -352,10 +311,7 @@ def validate_request_security():
 
     for header in suspicious_headers:
         if header in request.headers:
-            log_security_event(
-                "SUSPICIOUS_HEADER",
-                {"header": header, "value": request.headers[header]},
-            )
+            log_security_event("SUSPICIOUS_HEADER", {"header": header, "value": request.headers[header]})
 
     # Check for path traversal attempts
     if ".." in request.path or "//" in request.path:
@@ -368,8 +324,7 @@ def validate_request_security():
             value_lower = value.lower()
             if any(pattern in value_lower for pattern in sql_patterns):
                 log_security_event(
-                    "SQL_INJECTION_ATTEMPT",
-                    {"parameter": param, "value": value[:100]},  # Truncate for security
+                    "SQL_INJECTION_ATTEMPT", {"parameter": param, "value": value[:100]}  # Truncate for security
                 )
                 raise SecurityError("Invalid input detected", 400, "SQL_INJECTION")
 

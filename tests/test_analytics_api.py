@@ -45,9 +45,7 @@ class AnalyticsTestDataConfig(DatabaseConfig):
 @pytest.fixture(scope="session")
 def app_with_db():
     """Create Flask application for testing with a fresh in-memory SQLite DB."""
-    os.environ[
-        "SECRET_KEY"
-    ] = "test-secret-key-for-env"  # Set environment variable for testing
+    os.environ["SECRET_KEY"] = "test-secret-key-for-env"  # Set environment variable for testing
     app, _ = create_app("testing")
     app.config.update(
         {
@@ -56,9 +54,7 @@ def app_with_db():
             "SQLALCHEMY_TRACK_MODIFICATIONS": False,
             "SECRET_KEY": "a-super-secret-key-for-testing",  # Set a dummy secret key
             "WTF_CSRF_ENABLED": False,
-            "SQLALCHEMY_ENGINE_OPTIONS": {
-                "connect_args": {"check_same_thread": False}
-            },  # SQLite specific for threading
+            "SQLALCHEMY_ENGINE_OPTIONS": {"connect_args": {"check_same_thread": False}},  # SQLite specific for threading
         }
     )
 
@@ -74,16 +70,10 @@ def app_with_db():
 
         # Define the side effect for initialize_postgresql
         def mock_init_postgresql():
-            mock_db_manager_instance.engine = create_engine(
-                "sqlite:///:memory:", connect_args={"check_same_thread": False}
-            )
-            mock_db_manager_instance.session_factory = sessionmaker(
-                bind=mock_db_manager_instance.engine
-            )
+            mock_db_manager_instance.engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+            mock_db_manager_instance.session_factory = sessionmaker(bind=mock_db_manager_instance.engine)
 
-        mock_db_manager_instance.initialize_postgresql.side_effect = (
-            mock_init_postgresql
-        )
+        mock_db_manager_instance.initialize_postgresql.side_effect = mock_init_postgresql
 
         # Patch the global db_manager with our mock instance
         with patch("config.database.db_manager", new=mock_db_manager_instance):
@@ -93,9 +83,7 @@ def app_with_db():
             # Initialize Flask-SQLAlchemy extension with the app
             db = init_db_with_flask(app)
 
-            Base.metadata.create_all(
-                bind=db.engine
-            )  # Create tables using Base metadata
+            Base.metadata.create_all(bind=db.engine)  # Create tables using Base metadata
 
             yield app
 
@@ -131,9 +119,7 @@ def db_session(app_with_db):
             "api.analytics.dashboard.get_db_session"
         ) as mock_dashboard_get_db_session:
             mock_get_db_session.return_value.__enter__.return_value = session
-            mock_get_db_session.return_value.__exit__.return_value = (
-                None  # Ensure context manager exits cleanly
-            )
+            mock_get_db_session.return_value.__exit__.return_value = None  # Ensure context manager exits cleanly
             mock_dashboard_get_db_session.return_value.__enter__.return_value = session
             mock_dashboard_get_db_session.return_value.__exit__.return_value = None
             yield session
@@ -181,22 +167,15 @@ def sample_progress_data(db_session, sample_user, sample_exercise):
     for i in range(10):
         # Create a streak of 5 days leading up to today
         if i >= 5:
-            created_at_date = datetime.now(timezone.utc) - timedelta(
-                days=9 - i
-            )  # Use actual dates for the first 5
+            created_at_date = datetime.now(timezone.utc) - timedelta(days=9 - i)  # Use actual dates for the first 5
         else:
-            created_at_date = datetime.now(timezone.utc) - timedelta(
-                days=4 - i
-            )  # Consecutive days for the last 5
+            created_at_date = datetime.now(timezone.utc) - timedelta(days=4 - i)  # Consecutive days for the last 5
 
         progress = Progress(
             user_id=sample_user.id,
             exercise_id=sample_exercise.id,
             completion_percentage=0.5 + (i * 0.05),
-            accuracy_metrics={
-                "cent_deviation": random.uniform(5, 20),
-                "target_swara": "Sa",
-            },
+            accuracy_metrics={"cent_deviation": random.uniform(5, 20), "target_swara": "Sa"},
             practice_time=300,
             attempt_count=i + 1,
             average_accuracy=0.6 + (i * 0.03),
@@ -238,14 +217,7 @@ def test_get_dashboard_with_data(client, db_session, sample_user, sample_progres
     assert data["streak_analysis"]["current_streak"] > 0
 
     # Check a specific metric
-    accuracy_metric = next(
-        (
-            m
-            for m in data["performance_metrics"]
-            if m["metric_name"] == "Average Accuracy"
-        ),
-        None,
-    )
+    accuracy_metric = next((m for m in data["performance_metrics"] if m["metric_name"] == "Average Accuracy"), None)
     assert accuracy_metric is not None
     assert accuracy_metric["current_value"] > 0
 
@@ -263,10 +235,7 @@ def test_get_metrics(client, db_session, sample_user, sample_progress_data):
     assert response.status_code == 200
     metrics = response.get_json()
     assert len(metrics) > 0
-    assert (
-        next((m for m in metrics if m["metric_name"] == "Average Accuracy"), None)
-        is not None
-    )
+    assert next((m for m in metrics if m["metric_name"] == "Average Accuracy"), None) is not None
 
 
 def test_get_insights(client, db_session, sample_user, sample_progress_data):
@@ -275,12 +244,7 @@ def test_get_insights(client, db_session, sample_user, sample_progress_data):
     assert response.status_code == 200
     insights = response.get_json()
     assert len(insights) > 0
-    assert insights[0]["category"] in (
-        "Consistency",
-        "Practice Duration",
-        "Accuracy",
-        "Performance",
-    )
+    assert insights[0]["category"] in ("Consistency", "Practice Duration", "Accuracy", "Performance")
 
 
 def test_get_swara_performance(client, db_session, sample_user, sample_progress_data):
@@ -309,11 +273,7 @@ DB_FAILURE_LOG_CASES = [
     ("_analyze_time_distribution", True, "Error analyzing time distribution"),
     ("_analyze_difficulty_progression", True, "Error analyzing difficulty progression"),
     ("_generate_comparative_analysis", True, "Error generating comparative analysis"),
-    (
-        "_generate_personalized_recommendations",
-        False,
-        "Error generating recommendations",
-    ),
+    ("_generate_personalized_recommendations", False, "Error generating recommendations"),
 ]
 
 
@@ -321,14 +281,11 @@ DB_FAILURE_LOG_CASES = [
 def test_analysis_db_failure_is_logged(caplog, method, takes_period, message):
     analytics = AdvancedAnalytics()
     args = (1, AnalyticsPeriod.MONTHLY) if takes_period else (1,)
-    with patch(
-        "api.analytics.dashboard.get_db_session", side_effect=RuntimeError("db down")
-    ), caplog.at_level("ERROR", logger="api.analytics.dashboard"):
+    with patch("api.analytics.dashboard.get_db_session", side_effect=RuntimeError("db down")), caplog.at_level(
+        "ERROR", logger="api.analytics.dashboard"
+    ):
         asyncio.run(getattr(analytics, method)(*args))
     records = [r for r in caplog.records if r.name == "api.analytics.dashboard"]
-    assert any(
-        r.getMessage().startswith(message)
-        and "db down" in r.getMessage()
-        and r.exc_info
-        for r in records
-    ), [r.getMessage() for r in records]
+    assert any(r.getMessage().startswith(message) and "db down" in r.getMessage() and r.exc_info for r in records), [
+        r.getMessage() for r in records
+    ]

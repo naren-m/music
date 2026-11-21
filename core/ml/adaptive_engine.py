@@ -90,25 +90,13 @@ class AdaptiveLearningEngine:
                 "tempo_variations": 3,
                 "rhythmic_patterns": 4,
             },
-            "janta_varisai": {
-                "simple_doubles": 2,
-                "transition_focus": 3,
-                "complex_patterns": 4,
-                "speed_building": 5,
-            },
-            "alankaram": {
-                "basic_patterns": 3,
-                "ornamentation": 4,
-                "raga_specific": 5,
-                "advanced_combinations": 6,
-            },
+            "janta_varisai": {"simple_doubles": 2, "transition_focus": 3, "complex_patterns": 4, "speed_building": 5},
+            "alankaram": {"basic_patterns": 3, "ornamentation": 4, "raga_specific": 5, "advanced_combinations": 6},
         }
 
         self.logger = logging.getLogger(__name__)
 
-    def initialize_user_profile(
-        self, user_id: int, initial_assessment: Dict[str, Any]
-    ) -> UserPerformanceMetrics:
+    def initialize_user_profile(self, user_id: int, initial_assessment: Dict[str, Any]) -> UserPerformanceMetrics:
         """Initialize a new user profile based on initial assessment"""
 
         # Determine initial skill level from assessment
@@ -126,9 +114,7 @@ class AdaptiveLearningEngine:
         )
 
         self.user_profiles[user_id] = profile
-        self.logger.info(
-            f"Initialized profile for user {user_id}: {initial_skill}, {learning_style}"
-        )
+        self.logger.info(f"Initialized profile for user {user_id}: {initial_skill}, {learning_style}")
 
         return profile
 
@@ -204,9 +190,7 @@ class AdaptiveLearningEngine:
 
         return max(style_scores, key=style_scores.get)
 
-    def update_performance_metrics(
-        self, user_id: int, session_data: Dict[str, Any]
-    ) -> None:
+    def update_performance_metrics(self, user_id: int, session_data: Dict[str, Any]) -> None:
         """Update user performance metrics after a practice session"""
 
         if user_id not in self.user_profiles:
@@ -254,9 +238,7 @@ class AdaptiveLearningEngine:
         profile.last_updated = datetime.now()
         self.logger.info(f"Updated metrics for user {user_id}")
 
-    def _update_engagement_score(
-        self, profile: UserPerformanceMetrics, session_data: Dict[str, Any]
-    ) -> None:
+    def _update_engagement_score(self, profile: UserPerformanceMetrics, session_data: Dict[str, Any]) -> None:
         """Update engagement score based on session patterns"""
 
         current_engagement = profile.engagement_score
@@ -285,13 +267,9 @@ class AdaptiveLearningEngine:
             engagement_delta += 0.03
 
         # Apply smoothing (0.8 weight to current, 0.2 to new)
-        profile.engagement_score = 0.8 * current_engagement + 0.2 * min(
-            1.0, max(0.0, current_engagement + engagement_delta)
-        )
+        profile.engagement_score = 0.8 * current_engagement + 0.2 * min(1.0, max(0.0, current_engagement + engagement_delta))
 
-    def _update_retention_rate(
-        self, profile: UserPerformanceMetrics, session_data: Dict[str, Any]
-    ) -> None:
+    def _update_retention_rate(self, profile: UserPerformanceMetrics, session_data: Dict[str, Any]) -> None:
         """Update retention rate based on performance consistency"""
 
         if len(profile.accuracy_history) < 3:
@@ -302,9 +280,7 @@ class AdaptiveLearningEngine:
         consistency = 1.0 - np.std(recent_accuracy)  # Lower std = higher consistency
 
         # Update retention rate with smoothing
-        profile.retention_rate = 0.7 * profile.retention_rate + 0.3 * max(
-            0.0, min(1.0, consistency)
-        )
+        profile.retention_rate = 0.7 * profile.retention_rate + 0.3 * max(0.0, min(1.0, consistency))
 
     def _reassess_skill_level(self, profile: UserPerformanceMetrics) -> None:
         """Reassess user skill level based on recent performance"""
@@ -318,10 +294,7 @@ class AdaptiveLearningEngine:
         current_thresholds = self.difficulty_thresholds[profile.skill_level]
 
         # Check if ready to advance
-        if (
-            recent_avg_accuracy >= current_thresholds["accuracy"]
-            and consistency >= current_thresholds["consistency"]
-        ):
+        if recent_avg_accuracy >= current_thresholds["accuracy"] and consistency >= current_thresholds["consistency"]:
             if profile.skill_level.value < SkillLevel.EXPERT.value:
                 new_level = SkillLevel(profile.skill_level.value + 1)
                 profile.skill_level = new_level
@@ -336,9 +309,7 @@ class AdaptiveLearningEngine:
             profile.skill_level = new_level
             self.logger.info(f"User {profile.user_id} adjusted to {new_level}")
 
-    def _analyze_strengths_weaknesses(
-        self, profile: UserPerformanceMetrics, session_data: Dict[str, Any]
-    ) -> None:
+    def _analyze_strengths_weaknesses(self, profile: UserPerformanceMetrics, session_data: Dict[str, Any]) -> None:
         """Analyze user's strengths and areas needing improvement"""
 
         strengths = []
@@ -365,9 +336,7 @@ class AdaptiveLearningEngine:
         profile.weakness_areas = list(set(profile.weakness_areas + weaknesses))
 
         # Remove weaknesses that have become strengths
-        profile.weakness_areas = [
-            w for w in profile.weakness_areas if w not in strengths
-        ]
+        profile.weakness_areas = [w for w in profile.weakness_areas if w not in strengths]
 
     def get_next_recommendation(self, user_id: int) -> Optional[AdaptiveRecommendation]:
         """Generate next exercise recommendation based on user profile"""
@@ -408,9 +377,7 @@ class AdaptiveLearningEngine:
             cultural_context=cultural_context,
         )
 
-        self.logger.info(
-            f"Generated recommendation for user {user_id}: {exercise_type} at level {difficulty_level}"
-        )
+        self.logger.info(f"Generated recommendation for user {user_id}: {exercise_type} at level {difficulty_level}")
 
         return recommendation
 
@@ -445,9 +412,7 @@ class AdaptiveLearningEngine:
 
         return focus_areas
 
-    def _select_exercise_type(
-        self, profile: UserPerformanceMetrics, focus_areas: List[str]
-    ) -> str:
+    def _select_exercise_type(self, profile: UserPerformanceMetrics, focus_areas: List[str]) -> str:
         """Select the most appropriate exercise type"""
 
         # Exercise type priorities based on skill level
@@ -459,9 +424,7 @@ class AdaptiveLearningEngine:
             SkillLevel.EXPERT: ["advanced_alankaram", "composition_practice"],
         }
 
-        available_exercises = skill_exercises.get(
-            profile.skill_level, ["sarali_varisai"]
-        )
+        available_exercises = skill_exercises.get(profile.skill_level, ["sarali_varisai"])
 
         # Consider focus areas and weaknesses
         if "basic_rhythm" in focus_areas or "pitch_accuracy" in focus_areas:
@@ -474,9 +437,7 @@ class AdaptiveLearningEngine:
         # Default to most appropriate for skill level
         return available_exercises[0]
 
-    def _calculate_difficulty(
-        self, profile: UserPerformanceMetrics, exercise_type: str
-    ) -> int:
+    def _calculate_difficulty(self, profile: UserPerformanceMetrics, exercise_type: str) -> int:
         """Calculate appropriate difficulty level"""
 
         base_difficulty = {
@@ -499,16 +460,12 @@ class AdaptiveLearningEngine:
                 difficulty = max(1, difficulty - 1)
 
         # Ensure difficulty is within valid range for exercise type
-        max_difficulty = max(
-            self.exercise_complexity.get(exercise_type, {1: 1}).values()
-        )
+        max_difficulty = max(self.exercise_complexity.get(exercise_type, {1: 1}).values())
         difficulty = min(difficulty, max_difficulty)
 
         return difficulty
 
-    def _suggest_tempo(
-        self, profile: UserPerformanceMetrics, exercise_type: str
-    ) -> int:
+    def _suggest_tempo(self, profile: UserPerformanceMetrics, exercise_type: str) -> int:
         """Suggest appropriate tempo based on user's progress"""
 
         base_tempo = {
@@ -524,17 +481,10 @@ class AdaptiveLearningEngine:
         # Adjust based on recent tempo progress
         if profile.tempo_progress:
             recent_tempo = np.mean(profile.tempo_progress[-5:])
-            max_recent = (
-                max(profile.tempo_progress[-5:])
-                if len(profile.tempo_progress) >= 5
-                else tempo
-            )
+            max_recent = max(profile.tempo_progress[-5:]) if len(profile.tempo_progress) >= 5 else tempo
 
             # If consistently performing well at higher tempos, suggest increase
-            if (
-                len(profile.accuracy_history) >= 3
-                and np.mean(profile.accuracy_history[-3:]) >= 0.8
-            ):
+            if len(profile.accuracy_history) >= 3 and np.mean(profile.accuracy_history[-3:]) >= 0.8:
                 tempo = min(max_recent + 5, 120)  # Max 120 BPM
             else:
                 tempo = max(int(recent_tempo * 0.9), 50)  # Reduce tempo if struggling
@@ -568,12 +518,7 @@ class AdaptiveLearningEngine:
 
         return max(10, min(60, duration))  # Between 10-60 minutes
 
-    def _generate_reasoning(
-        self,
-        profile: UserPerformanceMetrics,
-        exercise_type: str,
-        focus_areas: List[str],
-    ) -> str:
+    def _generate_reasoning(self, profile: UserPerformanceMetrics, exercise_type: str, focus_areas: List[str]) -> str:
         """Generate human-readable reasoning for the recommendation"""
 
         skill_level_desc = profile.skill_level.name.lower()
@@ -581,16 +526,12 @@ class AdaptiveLearningEngine:
         reasoning_parts = [f"Based on your {skill_level_desc} level proficiency"]
 
         if profile.weakness_areas:
-            reasoning_parts.append(
-                f"focusing on improving {', '.join(profile.weakness_areas[:2])}"
-            )
+            reasoning_parts.append(f"focusing on improving {', '.join(profile.weakness_areas[:2])}")
 
         if len(profile.accuracy_history) >= 3:
             recent_accuracy = np.mean(profile.accuracy_history[-3:])
             if recent_accuracy >= 0.85:
-                reasoning_parts.append(
-                    "with challenging variations due to strong recent performance"
-                )
+                reasoning_parts.append("with challenging variations due to strong recent performance")
             elif recent_accuracy <= 0.65:
                 reasoning_parts.append("with supportive pacing to build confidence")
 
@@ -605,9 +546,7 @@ class AdaptiveLearningEngine:
 
         return ", ".join(reasoning_parts) + "."
 
-    def _get_cultural_context(
-        self, exercise_type: str, difficulty_level: int
-    ) -> Optional[str]:
+    def _get_cultural_context(self, exercise_type: str, difficulty_level: int) -> Optional[str]:
         """Provide cultural context for the recommended exercise"""
 
         cultural_contexts = {
@@ -674,23 +613,13 @@ class AdaptiveLearningEngine:
             "learning_style": profile.learning_style.name,
             "engagement_score": profile.engagement_score,
             "retention_rate": profile.retention_rate,
-            "performance_trends": {
-                "accuracy": accuracy_trend,
-                "tempo": tempo_trend,
-                "practice_duration": duration_trend,
-            },
+            "performance_trends": {"accuracy": accuracy_trend, "tempo": tempo_trend, "practice_duration": duration_trend},
             "strengths": profile.strength_areas,
             "areas_for_improvement": profile.weakness_areas,
-            "common_mistakes": dict(
-                sorted(
-                    profile.mistake_patterns.items(), key=lambda x: x[1], reverse=True
-                )[:5]
-            ),
+            "common_mistakes": dict(sorted(profile.mistake_patterns.items(), key=lambda x: x[1], reverse=True)[:5]),
             "insights": insights,
             "total_sessions": len(profile.accuracy_history),
-            "average_accuracy": np.mean(profile.accuracy_history)
-            if profile.accuracy_history
-            else 0,
+            "average_accuracy": np.mean(profile.accuracy_history) if profile.accuracy_history else 0,
             "last_updated": profile.last_updated.isoformat(),
         }
 
@@ -708,9 +637,7 @@ class AdaptiveLearningEngine:
 
         slope = np.corrcoef(x, y)[0, 1] if len(data) > 2 else (y[-1] - y[0]) / len(data)
 
-        direction = (
-            "improving" if slope > 0.1 else "declining" if slope < -0.1 else "stable"
-        )
+        direction = "improving" if slope > 0.1 else "declining" if slope < -0.1 else "stable"
         magnitude = abs(slope)
 
         return {
@@ -720,46 +647,32 @@ class AdaptiveLearningEngine:
             "overall_average": np.mean(data),
         }
 
-    def _generate_performance_insights(
-        self, profile: UserPerformanceMetrics
-    ) -> List[str]:
+    def _generate_performance_insights(self, profile: UserPerformanceMetrics) -> List[str]:
         """Generate actionable insights based on user performance"""
 
         insights = []
 
         # Engagement insights
         if profile.engagement_score >= 0.8:
-            insights.append(
-                "High engagement - consider introducing more challenging material"
-            )
+            insights.append("High engagement - consider introducing more challenging material")
         elif profile.engagement_score <= 0.4:
-            insights.append(
-                "Low engagement detected - recommend shorter sessions or varied content"
-            )
+            insights.append("Low engagement detected - recommend shorter sessions or varied content")
 
         # Consistency insights
         if profile.accuracy_history and len(profile.accuracy_history) >= 5:
             consistency = 1.0 - np.std(profile.accuracy_history[-10:])
             if consistency >= 0.8:
-                insights.append(
-                    "Excellent consistency - ready for skill level advancement"
-                )
+                insights.append("Excellent consistency - ready for skill level advancement")
             elif consistency <= 0.5:
-                insights.append(
-                    "Inconsistent performance - focus on foundational practice"
-                )
+                insights.append("Inconsistent performance - focus on foundational practice")
 
         # Practice pattern insights
         if profile.practice_duration:
             avg_duration = np.mean(profile.practice_duration)
             if avg_duration < 15:
-                insights.append(
-                    "Consider longer practice sessions for better retention"
-                )
+                insights.append("Consider longer practice sessions for better retention")
             elif avg_duration > 45:
-                insights.append(
-                    "Long practice sessions detected - ensure adequate breaks"
-                )
+                insights.append("Long practice sessions detected - ensure adequate breaks")
 
         # Learning style insights
         style_recommendations = {

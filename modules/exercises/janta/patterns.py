@@ -138,9 +138,7 @@ class JantaPatternGenerator:
             List of JantaExercise objects, or empty list if loading fails
         """
         try:
-            exercises, config = load_exercises_from_folder(
-                "JantaVarasalu", f"{self.raga}.txt"
-            )
+            exercises, config = load_exercises_from_folder("JantaVarasalu", f"{self.raga}.txt")
 
             if not exercises:
                 return []
@@ -196,9 +194,7 @@ class JantaPatternGenerator:
                 description=f"Janta exercise level {exercise.level}",
                 double_patterns=double_patterns,
                 tempo_range=tempo_range,
-                difficulty_score=level_config.get(
-                    "difficulty", 0.15 + (exercise.level - 1) * 0.1
-                ),
+                difficulty_score=level_config.get("difficulty", 0.15 + (exercise.level - 1) * 0.1),
                 breath_points=[len(double_patterns) // 2, len(double_patterns)],
                 learning_objectives=level_config.get(
                     "learning_objectives",
@@ -208,11 +204,7 @@ class JantaPatternGenerator:
                         "Build transition control",
                     ],
                 ),
-                common_mistakes=[
-                    "Uneven repetitions",
-                    "Poor transition between doubles",
-                    "Inconsistent timing",
-                ],
+                common_mistakes=["Uneven repetitions", "Poor transition between doubles", "Inconsistent timing"],
                 practice_techniques=level_config.get(
                     "practice_tips",
                     [
@@ -221,17 +213,11 @@ class JantaPatternGenerator:
                         "Practice transitions separately",
                     ],
                 ),
-                mastery_criteria={
-                    "pitch_consistency": 0.9,
-                    "timing_accuracy": 0.85,
-                    "smoothness_score": 0.8,
-                },
+                mastery_criteria={"pitch_consistency": 0.9, "timing_accuracy": 0.85, "smoothness_score": 0.8},
             )
 
         except Exception as e:
-            logger.warning(
-                f"Failed to convert Janta exercise level {exercise.level}: {e}"
-            )
+            logger.warning(f"Failed to convert Janta exercise level {exercise.level}: {e}")
             return None
 
     def _detect_double_patterns(self, swaras: List[str]) -> List[DoubleNotePattern]:
@@ -494,9 +480,7 @@ class JantaPatternGenerator:
                 DoubleNotePattern(
                     swara=swara,
                     repetitions=reps,
-                    transition_type=TransitionType.SMOOTH
-                    if reps == 2
-                    else TransitionType.LEGATO,
+                    transition_type=TransitionType.SMOOTH if reps == 2 else TransitionType.LEGATO,
                     duration_ratio=0.8 if reps == 3 else 1.0,
                     gap_allowance=0.05,
                     smoothness_threshold=0.88,
@@ -652,10 +636,7 @@ class JantaPatternGenerator:
         )
 
     def analyze_transition_quality(
-        self,
-        audio_data: np.ndarray,
-        expected_transitions: List[Tuple[str, str]],
-        sample_rate: int = 44100,
+        self, audio_data: np.ndarray, expected_transitions: List[Tuple[str, str]], sample_rate: int = 44100
     ) -> List[TransitionAnalysis]:
         """
         Analyze the quality of transitions between double notes
@@ -666,13 +647,9 @@ class JantaPatternGenerator:
             # This is a simplified analysis - in production would use advanced audio processing
             for i, (from_swara, to_swara) in enumerate(expected_transitions):
                 # Calculate movement quality based on pitch continuity
-                smoothness_score = self._calculate_smoothness(
-                    audio_data, from_swara, to_swara
-                )
+                smoothness_score = self._calculate_smoothness(audio_data, from_swara, to_swara)
                 gap_duration = self._detect_gap_duration(audio_data, i)
-                pitch_deviation = self._measure_pitch_deviation(
-                    audio_data, from_swara, to_swara
-                )
+                pitch_deviation = self._measure_pitch_deviation(audio_data, from_swara, to_swara)
 
                 # Determine movement quality
                 if smoothness_score >= 0.9 and gap_duration < 0.05:
@@ -707,9 +684,7 @@ class JantaPatternGenerator:
 
         return analyses
 
-    def _calculate_smoothness(
-        self, audio_data: np.ndarray, from_swara: str, to_swara: str
-    ) -> float:
+    def _calculate_smoothness(self, audio_data: np.ndarray, from_swara: str, to_swara: str) -> float:
         """Calculate smoothness score for transition"""
         # Simplified calculation - would use spectral analysis in production
         from_freq = self.swara_frequencies[from_swara]
@@ -721,17 +696,13 @@ class JantaPatternGenerator:
 
         return smoothness
 
-    def _detect_gap_duration(
-        self, audio_data: np.ndarray, transition_index: int
-    ) -> float:
+    def _detect_gap_duration(self, audio_data: np.ndarray, transition_index: int) -> float:
         """Detect duration of gaps in audio"""
         # Simplified gap detection
         # In production, would analyze RMS energy to detect silence
         return np.random.uniform(0.02, 0.15)  # Simulated gap duration
 
-    def _measure_pitch_deviation(
-        self, audio_data: np.ndarray, from_swara: str, to_swara: str
-    ) -> float:
+    def _measure_pitch_deviation(self, audio_data: np.ndarray, from_swara: str, to_swara: str) -> float:
         """Measure pitch deviation from expected"""
         expected_freq = self.swara_frequencies[to_swara]
         # Simplified deviation measurement
@@ -739,11 +710,7 @@ class JantaPatternGenerator:
         return deviation
 
     def _generate_transition_recommendations(
-        self,
-        quality: MovementQuality,
-        smoothness: float,
-        gap_duration: float,
-        pitch_deviation: float,
+        self, quality: MovementQuality, smoothness: float, gap_duration: float, pitch_deviation: float
     ) -> List[str]:
         """Generate recommendations based on transition analysis"""
         recommendations = []
@@ -765,9 +732,7 @@ class JantaPatternGenerator:
             recommendations.append("Strengthen ear training exercises")
 
         if not recommendations:
-            recommendations.append(
-                "Excellent technique! Continue to maintain consistency"
-            )
+            recommendations.append("Excellent technique! Continue to maintain consistency")
 
         return recommendations
 
@@ -778,20 +743,12 @@ class JantaPatternGenerator:
                 return exercise
         return None
 
-    def get_exercises_for_difficulty(
-        self, difficulty_range: Tuple[float, float]
-    ) -> List[JantaExercise]:
+    def get_exercises_for_difficulty(self, difficulty_range: Tuple[float, float]) -> List[JantaExercise]:
         """Get exercises within specified difficulty range"""
         min_diff, max_diff = difficulty_range
-        return [
-            ex
-            for ex in self.janta_exercises
-            if min_diff <= ex.difficulty_score <= max_diff
-        ]
+        return [ex for ex in self.janta_exercises if min_diff <= ex.difficulty_score <= max_diff]
 
-    def generate_practice_sequence(
-        self, level: int, session_duration: int, focus_areas: List[str] = None
-    ) -> Dict[str, Any]:
+    def generate_practice_sequence(self, level: int, session_duration: int, focus_areas: List[str] = None) -> Dict[str, Any]:
         """Generate practice sequence for Janta Varisai"""
         exercise = self.get_exercise_by_level(level)
         if not exercise:
@@ -886,15 +843,11 @@ def get_janta_exercise(level: int) -> Optional[JantaExercise]:
     return janta_generator.get_exercise_by_level(level)
 
 
-def analyze_janta_performance(
-    audio_data: np.ndarray, expected_transitions: List[Tuple[str, str]]
-) -> List[TransitionAnalysis]:
+def analyze_janta_performance(audio_data: np.ndarray, expected_transitions: List[Tuple[str, str]]) -> List[TransitionAnalysis]:
     """Analyze Janta Varisai performance"""
     return janta_generator.analyze_transition_quality(audio_data, expected_transitions)
 
 
-def generate_janta_practice_session(
-    level: int, duration: int, focus_areas: List[str] = None
-) -> Dict[str, Any]:
+def generate_janta_practice_session(level: int, duration: int, focus_areas: List[str] = None) -> Dict[str, Any]:
     """Generate Janta practice session"""
     return janta_generator.generate_practice_sequence(level, duration, focus_areas)

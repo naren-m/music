@@ -54,10 +54,7 @@ def validate_audio_data(audio_b64: str) -> np.ndarray:
     # Check base64 string length (approximate size check)
     estimated_size = len(audio_b64) * 0.75  # Base64 is ~1.33x larger than original
     if estimated_size > MAX_AUDIO_SIZE:
-        raise ValidationError(
-            f"Audio data too large (max {MAX_AUDIO_SIZE//1024//1024}MB)",
-            field="audio_data",
-        )
+        raise ValidationError(f"Audio data too large (max {MAX_AUDIO_SIZE//1024//1024}MB)", field="audio_data")
 
     # Validate base64 format
     try:
@@ -72,10 +69,7 @@ def validate_audio_data(audio_b64: str) -> np.ndarray:
 
     # Check decoded size
     if len(audio_bytes) > MAX_AUDIO_SIZE:
-        raise ValidationError(
-            f"Audio file too large (max {MAX_AUDIO_SIZE//1024//1024}MB)",
-            field="audio_data",
-        )
+        raise ValidationError(f"Audio file too large (max {MAX_AUDIO_SIZE//1024//1024}MB)", field="audio_data")
 
     # Minimum size check (at least 100 bytes)
     if len(audio_bytes) < 100:
@@ -100,9 +94,7 @@ def validate_audio_data(audio_b64: str) -> np.ndarray:
     # Validate audio duration
     duration = len(audio_array) / SAMPLE_RATE
     if duration > MAX_AUDIO_DURATION:
-        raise ValidationError(
-            f"Audio duration too long (max {MAX_AUDIO_DURATION}s)", field="audio_data"
-        )
+        raise ValidationError(f"Audio duration too long (max {MAX_AUDIO_DURATION}s)", field="audio_data")
 
     if duration < 0.1:  # Minimum 100ms
         raise ValidationError("Audio duration too short (min 0.1s)", field="audio_data")
@@ -120,9 +112,7 @@ def validate_audio_data(audio_b64: str) -> np.ndarray:
     if max_amplitude < 1e-6:
         raise ValidationError("Audio appears to be silent", field="audio_data")
 
-    logger.debug(
-        f"Audio validation passed: {len(audio_array)} samples, {duration:.2f}s"
-    )
+    logger.debug(f"Audio validation passed: {len(audio_array)} samples, {duration:.2f}s")
     return audio_array
 
 
@@ -140,10 +130,7 @@ def validate_json_request(f):
         # Check content length
         content_length = request.content_length
         if content_length and content_length > MAX_JSON_SIZE:
-            return (
-                jsonify({"error": f"Request too large (max {MAX_JSON_SIZE//1024}KB)"}),
-                413,
-            )
+            return jsonify({"error": f"Request too large (max {MAX_JSON_SIZE//1024}KB)"}), 413
 
         # Parse and validate JSON
         try:
@@ -188,16 +175,12 @@ def validate_frequency_parameter(frequency: Any) -> float:
 
     # Validate range (reasonable musical frequencies)
     if not (80.0 <= freq_value <= 800.0):
-        raise ValidationError(
-            "Frequency must be between 80Hz and 800Hz", field="frequency"
-        )
+        raise ValidationError("Frequency must be between 80Hz and 800Hz", field="frequency")
 
     return freq_value
 
 
-def validate_user_input(
-    data: Dict[str, Any], required_fields: list = None
-) -> Dict[str, Any]:
+def validate_user_input(data: Dict[str, Any], required_fields: list = None) -> Dict[str, Any]:
     """
     Generic validation for user input data
 
@@ -232,9 +215,7 @@ def validate_user_input(
 
             # Basic XSS prevention
             if any(char in value for char in ["<", ">", '"', "'"]):
-                logger.warning(
-                    f"Potentially unsafe characters in field '{key}': {value}"
-                )
+                logger.warning(f"Potentially unsafe characters in field '{key}': {value}")
                 # You might want to sanitize or reject based on your needs
 
         validated[key] = value

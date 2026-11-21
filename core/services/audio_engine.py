@@ -11,12 +11,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
-from core.models.shruti import (
-    Shruti,
-    ShrutiSystem,
-    analyze_pitch_deviation,
-    find_closest_shruti,
-)
+from core.models.shruti import Shruti, ShrutiSystem, analyze_pitch_deviation, find_closest_shruti
 
 logger = logging.getLogger(__name__)
 
@@ -35,9 +30,7 @@ class AudioConfig:
     autocorr_peak_threshold: float = 0.10  # Higher for cleaner instrument signals
     cent_tolerance: float = 25.0  # Tighter tolerance for precise keyboard pitch
     max_deviation_cents: float = 50.0  # Stricter for keyboard (was 100 for voice)
-    spectral_flatness_threshold: float = (
-        0.3  # Lower threshold - instruments are more tonal
-    )
+    spectral_flatness_threshold: float = 0.3  # Lower threshold - instruments are more tonal
     enable_parallel_processing: bool = False
     max_worker_threads: int = 2
 
@@ -73,9 +66,7 @@ class CarnaticAudioEngine:
         self._last_process_time = 0
         self._avg_latency = 0
 
-        logger.info(
-            f"CarnaticAudioEngine initialized with sample_rate={self.config.sample_rate}"
-        )
+        logger.info(f"CarnaticAudioEngine initialized with sample_rate={self.config.sample_rate}")
 
     def set_base_frequency(self, frequency: float):
         """Update the base Sa frequency"""
@@ -157,9 +148,7 @@ class CarnaticAudioEngine:
             filtered = np.zeros_like(audio_data)
             filtered[0] = audio_data[0]
             for i in range(1, len(audio_data)):
-                filtered[i] = alpha * (
-                    filtered[i - 1] + audio_data[i] - audio_data[i - 1]
-                )
+                filtered[i] = alpha * (filtered[i - 1] + audio_data[i] - audio_data[i - 1])
             audio_data = filtered
 
         # Normalize to [-1, 1] range while preserving relative amplitude
@@ -199,9 +188,7 @@ class CarnaticAudioEngine:
         # 1. Calculate Signal Energy / RMS for voicing detection
         rms = np.sqrt(np.mean(audio_data**2))
         if rms < self.config.silence_threshold:  # Configurable silence threshold
-            logger.debug(
-                f"Below silence threshold: rms={rms:.4f} < {self.config.silence_threshold}"
-            )
+            logger.debug(f"Below silence threshold: rms={rms:.4f} < {self.config.silence_threshold}")
             return None
 
         # 2. Spectral flatness check - noise has flat spectrum, music has peaks
@@ -216,13 +203,8 @@ class CarnaticAudioEngine:
         # In a real implementation, this would use a more robust algorithm like YIN or CREPE
         frequency, confidence = self._detect_pitch_autocorr(audio_data)
 
-        if (
-            confidence < self.config.confidence_threshold
-            or frequency < self.config.min_frequency
-        ):
-            logger.debug(
-                f"Rejected: confidence={confidence:.2f} or freq={frequency:.1f}Hz below thresholds"
-            )
+        if confidence < self.config.confidence_threshold or frequency < self.config.min_frequency:
+            logger.debug(f"Rejected: confidence={confidence:.2f} or freq={frequency:.1f}Hz below thresholds")
             return None
 
         # 4. Shruti Mapping with octave equivalence
@@ -250,9 +232,7 @@ class CarnaticAudioEngine:
             timestamp=start_time,
             detected_frequency=frequency,
             confidence=confidence,
-            shruti=self.shruti_system.get_shruti(match["shruti_name"])
-            if match["shruti_name"]
-            else None,
+            shruti=self.shruti_system.get_shruti(match["shruti_name"]) if match["shruti_name"] else None,
             cent_deviation=match["deviation_cents"],
             note_name=match["shruti_name"] or "Unknown",
             is_voiced=True,
@@ -310,10 +290,7 @@ class CarnaticAudioEngine:
         # A peak is where the value is greater than its neighbors
         peaks = []
         for i in range(1, len(search_region) - 1):
-            if (
-                search_region[i] > search_region[i - 1]
-                and search_region[i] > search_region[i + 1]
-            ):
+            if search_region[i] > search_region[i - 1] and search_region[i] > search_region[i + 1]:
                 if search_region[i] >= self.config.autocorr_peak_threshold:
                     peaks.append((i + min_period, search_region[i]))
 
@@ -332,8 +309,7 @@ class CarnaticAudioEngine:
             peak_idx, peak_val = best_peak
 
             logger.debug(
-                f"Selected period {peak_idx} -> {self.config.sample_rate/peak_idx:.1f}Hz "
-                f"(confidence: {peak_val:.2f})"
+                f"Selected period {peak_idx} -> {self.config.sample_rate/peak_idx:.1f}Hz " f"(confidence: {peak_val:.2f})"
             )
 
         true_idx = self._parabolic_peak_index(autocorr, peak_idx)

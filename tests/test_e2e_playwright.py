@@ -7,11 +7,7 @@ import asyncio
 import json
 
 import pytest
-from conftest import (
-    measure_page_load_time,
-    simulate_microphone_input,
-    wait_for_audio_permission,
-)
+from conftest import measure_page_load_time, simulate_microphone_input, wait_for_audio_permission
 from playwright.async_api import Page, expect
 
 
@@ -76,9 +72,7 @@ class TestUserAuthentication:
 class TestSwaraRecognitionWorkflow:
     """Test complete swara recognition learning workflow."""
 
-    async def test_swara_exercise_initialization(
-        self, page: Page, test_server_url: str
-    ):
+    async def test_swara_exercise_initialization(self, page: Page, test_server_url: str):
         """Test swara exercise setup."""
         await page.goto(f"{test_server_url}/learning/swara")
 
@@ -119,9 +113,7 @@ class TestSwaraRecognitionWorkflow:
         await page.wait_for_selector('[data-testid="detected-pitch"]', timeout=5000)
 
         # Verify pitch display
-        pitch_display = await page.locator(
-            '[data-testid="detected-pitch"]'
-        ).text_content()
+        pitch_display = await page.locator('[data-testid="detected-pitch"]').text_content()
         assert "Sa" in pitch_display or "261" in pitch_display
 
     async def test_shruti_accuracy_feedback(self, page: Page, test_server_url: str):
@@ -309,18 +301,10 @@ class TestPerformanceTesting:
     async def test_page_load_performance(self, page: Page, test_server_url: str):
         """Test page load times."""
         # Test main pages
-        pages_to_test = [
-            "/",
-            "/learning",
-            "/learning/swara",
-            "/learning/ragas",
-            "/dashboard",
-        ]
+        pages_to_test = ["/", "/learning", "/learning/swara", "/learning/ragas", "/dashboard"]
 
         for page_path in pages_to_test:
-            load_time = await measure_page_load_time(
-                page, f"{test_server_url}{page_path}"
-            )
+            load_time = await measure_page_load_time(page, f"{test_server_url}{page_path}")
             assert load_time < 3.0, f"Page {page_path} took {load_time:.2f}s to load"
 
     async def test_audio_latency(self, page: Page, test_server_url: str):
@@ -443,9 +427,7 @@ class TestErrorHandling:
 
         # Verify permission error handling
         await page.wait_for_selector('[data-testid="permission-error"]')
-        error_text = await page.locator(
-            '[data-testid="permission-error"]'
-        ).text_content()
+        error_text = await page.locator('[data-testid="permission-error"]').text_content()
         assert "microphone" in error_text.lower()
 
     async def test_browser_compatibility(self, page: Page, test_server_url: str):
@@ -461,10 +443,6 @@ class TestErrorHandling:
 
         if not web_audio_support:
             # Verify fallback message
-            await page.wait_for_selector(
-                '[data-testid="browser-compatibility-warning"]'
-            )
-            warning_text = await page.locator(
-                '[data-testid="browser-compatibility-warning"]'
-            ).text_content()
+            await page.wait_for_selector('[data-testid="browser-compatibility-warning"]')
+            warning_text = await page.locator('[data-testid="browser-compatibility-warning"]').text_content()
             assert "browser" in warning_text.lower()

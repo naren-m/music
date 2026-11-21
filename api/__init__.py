@@ -41,11 +41,7 @@ def create_app(config_name: str = "development") -> Tuple[Flask, SocketIO]:
     setup_cors(app)
 
     # Initialize SocketIO
-    socketio_instance = SocketIO(
-        app,
-        cors_allowed_origins=app.config.get("ALLOWED_ORIGINS"),
-        async_mode="threading",
-    )
+    socketio_instance = SocketIO(app, cors_allowed_origins=app.config.get("ALLOWED_ORIGINS"), async_mode="threading")
 
     # Register blueprints
     register_blueprints(app)
@@ -66,9 +62,7 @@ def setup_logging(app: Flask, config_name: str) -> None:
     elif config_name == "testing":
         log_level = logging.ERROR
 
-    logging.basicConfig(
-        level=log_level, format="%(asctime)s %(levelname)s [%(name)s] %(message)s"
-    )
+    logging.basicConfig(level=log_level, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
     app.logger.setLevel(log_level)
     if config_name == "production":
         logging.getLogger("werkzeug").setLevel(logging.WARNING)
@@ -79,9 +73,7 @@ def load_config(app: Flask, config_name: str) -> None:
     app.config.update(
         {
             "SECRET_KEY": os.environ.get("SECRET_KEY"),
-            "DATABASE_URL": os.environ.get(
-                "DATABASE_URL", "postgresql://localhost/carnatic_music"
-            ),
+            "DATABASE_URL": os.environ.get("DATABASE_URL", "postgresql://localhost/carnatic_music"),
             "MAX_CONTENT_LENGTH": 2 * 1024 * 1024,
             "ALLOWED_ORIGINS": os.environ.get(
                 "ALLOWED_ORIGINS",
@@ -98,9 +90,7 @@ def load_config(app: Flask, config_name: str) -> None:
         app.config["DEBUG"] = False
         app.config["TESTING"] = config_name == "testing"
         if not app.config["SECRET_KEY"]:
-            raise RuntimeError(
-                "SECRET_KEY environment variable must be set in production/testing"
-            )
+            raise RuntimeError("SECRET_KEY environment variable must be set in production/testing")
 
 
 def setup_cors(app: Flask) -> None:
@@ -118,9 +108,7 @@ def setup_cors(app: Flask) -> None:
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers[
-            "Strict-Transport-Security"
-        ] = "max-age=31536000; includeSubDomains"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
 
@@ -173,10 +161,7 @@ def _register_page_routes(app: Flask) -> None:
 
         from flask import jsonify, request
 
-        from modules.exercises.sarali.patterns import (
-            get_sarali_pattern,
-            sarali_generator,
-        )
+        from modules.exercises.sarali.patterns import get_sarali_pattern, sarali_generator
 
         level = request.args.get("level", type=int)
 

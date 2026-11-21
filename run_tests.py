@@ -45,15 +45,7 @@ class TestRunner:
 
     def run_integration_tests(self, verbose=False):
         """Run API integration tests."""
-        cmd = [
-            sys.executable,
-            "-m",
-            "pytest",
-            "tests/test_api_integration.py",
-            "-m",
-            "integration",
-            "--tb=short",
-        ]
+        cmd = [sys.executable, "-m", "pytest", "tests/test_api_integration.py", "-m", "integration", "--tb=short"]
 
         if verbose:
             cmd.append("-v")
@@ -65,15 +57,7 @@ class TestRunner:
         # Install Playwright browsers if needed
         self._install_playwright_browsers()
 
-        cmd = [
-            sys.executable,
-            "-m",
-            "pytest",
-            "tests/test_e2e_playwright.py",
-            "-m",
-            "e2e",
-            "--tb=short",
-        ]
+        cmd = [sys.executable, "-m", "pytest", "tests/test_e2e_playwright.py", "-m", "e2e", "--tb=short"]
 
         if verbose:
             cmd.append("-v")
@@ -101,13 +85,7 @@ class TestRunner:
             cmd.append("-v")
 
         if benchmark:
-            cmd.extend(
-                [
-                    "--benchmark-only",
-                    "--benchmark-sort=mean",
-                    "--benchmark-json=benchmark_results.json",
-                ]
-            )
+            cmd.extend(["--benchmark-only", "--benchmark-sort=mean", "--benchmark-json=benchmark_results.json"])
 
         return self._execute_command(cmd, "Performance Tests")
 
@@ -169,30 +147,16 @@ class TestRunner:
         results = {}
 
         # Black formatting check
-        black_cmd = [
-            sys.executable,
-            "-m",
-            "black",
-            "--check",
-            "core/",
-            "api/",
-            "modules/",
-        ]
-        results["black"] = self._execute_command(
-            black_cmd, "Black Formatting", capture_output=True
-        )
+        black_cmd = [sys.executable, "-m", "black", "--check", "core/", "api/", "modules/"]
+        results["black"] = self._execute_command(black_cmd, "Black Formatting", capture_output=True)
 
         # Flake8 linting
         flake8_cmd = [sys.executable, "-m", "flake8", "core/", "api/", "modules/"]
-        results["flake8"] = self._execute_command(
-            flake8_cmd, "Flake8 Linting", capture_output=True
-        )
+        results["flake8"] = self._execute_command(flake8_cmd, "Flake8 Linting", capture_output=True)
 
         # MyPy type checking
         mypy_cmd = [sys.executable, "-m", "mypy", "core/", "api/", "modules/"]
-        results["mypy"] = self._execute_command(
-            mypy_cmd, "MyPy Type Checking", capture_output=True
-        )
+        results["mypy"] = self._execute_command(mypy_cmd, "MyPy Type Checking", capture_output=True)
 
         return results
 
@@ -209,9 +173,7 @@ class TestRunner:
             "project": "Carnatic Learning Application v2.0",
             "unit_tests": self.run_unit_tests(verbose=True),
             "integration_tests": self.run_integration_tests(verbose=True),
-            "performance_tests": self.run_performance_tests(
-                verbose=True, benchmark=include_benchmarks
-            ),
+            "performance_tests": self.run_performance_tests(verbose=True, benchmark=include_benchmarks),
             "lint_results": self.lint_and_format(),
         }
 
@@ -247,9 +209,7 @@ class TestRunner:
 
         try:
             if capture_output:
-                result = subprocess.run(
-                    cmd, capture_output=True, text=True, cwd=self.project_root
-                )
+                result = subprocess.run(cmd, capture_output=True, text=True, cwd=self.project_root)
             else:
                 result = subprocess.run(cmd, cwd=self.project_root)
 
@@ -257,21 +217,11 @@ class TestRunner:
             status = "✅ PASSED" if success else "❌ FAILED"
             print(f"📊 {description}: {status}")
 
-            return {
-                "success": success,
-                "returncode": result.returncode,
-                "command": " ".join(cmd),
-                "description": description,
-            }
+            return {"success": success, "returncode": result.returncode, "command": " ".join(cmd), "description": description}
 
         except Exception as e:
             print(f"❌ Error running {description}: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "command": " ".join(cmd),
-                "description": description,
-            }
+            return {"success": False, "error": str(e), "command": " ".join(cmd), "description": description}
 
     def _install_playwright_browsers(self):
         """Install Playwright browsers if needed."""
@@ -287,40 +237,20 @@ class TestRunner:
 
 def main():
     """Main test runner entry point."""
-    parser = argparse.ArgumentParser(
-        description="Carnatic Learning Application Test Runner"
-    )
+    parser = argparse.ArgumentParser(description="Carnatic Learning Application Test Runner")
     parser.add_argument("--unit", action="store_true", help="Run unit tests only")
-    parser.add_argument(
-        "--integration", action="store_true", help="Run integration tests only"
-    )
+    parser.add_argument("--integration", action="store_true", help="Run integration tests only")
     parser.add_argument("--e2e", action="store_true", help="Run end-to-end tests")
-    parser.add_argument(
-        "--performance", action="store_true", help="Run performance tests"
-    )
-    parser.add_argument(
-        "--benchmark",
-        action="store_true",
-        help="Run performance benchmarks with detailed metrics",
-    )
-    parser.add_argument(
-        "--accessibility", action="store_true", help="Run accessibility tests"
-    )
+    parser.add_argument("--performance", action="store_true", help="Run performance tests")
+    parser.add_argument("--benchmark", action="store_true", help="Run performance benchmarks with detailed metrics")
+    parser.add_argument("--accessibility", action="store_true", help="Run accessibility tests")
     parser.add_argument("--quick", action="store_true", help="Run quick smoke tests")
     parser.add_argument("--all", action="store_true", help="Run all tests")
-    parser.add_argument(
-        "--lint", action="store_true", help="Run linting and formatting checks"
-    )
-    parser.add_argument(
-        "--report", action="store_true", help="Generate comprehensive test report"
-    )
+    parser.add_argument("--lint", action="store_true", help="Run linting and formatting checks")
+    parser.add_argument("--report", action="store_true", help="Generate comprehensive test report")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
-    parser.add_argument(
-        "--headed", action="store_true", help="Run Playwright tests in headed mode"
-    )
-    parser.add_argument(
-        "--no-coverage", action="store_true", help="Skip coverage reporting"
-    )
+    parser.add_argument("--headed", action="store_true", help="Run Playwright tests in headed mode")
+    parser.add_argument("--no-coverage", action="store_true", help="Skip coverage reporting")
 
     args = parser.parse_args()
 
@@ -354,14 +284,10 @@ def main():
         results.append(runner.run_integration_tests(verbose=args.verbose))
 
     if args.e2e:
-        results.append(
-            runner.run_e2e_tests(headless=not args.headed, verbose=args.verbose)
-        )
+        results.append(runner.run_e2e_tests(headless=not args.headed, verbose=args.verbose))
 
     if args.performance or args.benchmark:
-        results.append(
-            runner.run_performance_tests(verbose=args.verbose, benchmark=args.benchmark)
-        )
+        results.append(runner.run_performance_tests(verbose=args.verbose, benchmark=args.benchmark))
 
     if args.accessibility:
         results.append(runner.run_accessibility_tests(verbose=args.verbose))
@@ -370,9 +296,7 @@ def main():
         results.append(runner.run_quick_tests())
 
     if args.all:
-        results.append(
-            runner.run_all_tests(verbose=args.verbose, coverage=not args.no_coverage)
-        )
+        results.append(runner.run_all_tests(verbose=args.verbose, coverage=not args.no_coverage))
 
     if args.lint:
         lint_results = runner.lint_and_format()

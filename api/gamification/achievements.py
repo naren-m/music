@@ -116,9 +116,7 @@ class GamificationEngine:
         self.achievement_definitions = self._load_achievement_definitions()
         self.badge_definitions = self._load_badge_definitions()
         self.level_thresholds = self._calculate_level_thresholds()
-        self._previous_ranks: Dict[
-            str, Dict[int, int]
-        ] = {}  # {period: {user_id: rank}}
+        self._previous_ranks: Dict[str, Dict[int, int]] = {}  # {period: {user_id: rank}}
         self.active_challenges = []
 
     def _load_achievement_definitions(self) -> List[Badge]:
@@ -401,9 +399,7 @@ class GamificationEngine:
 
         return thresholds
 
-    async def check_achievements(
-        self, user_id: int, session_data: Dict[str, Any]
-    ) -> List[Badge]:
+    async def check_achievements(self, user_id: int, session_data: Dict[str, Any]) -> List[Badge]:
         """Check and award new achievements based on session data"""
         newly_earned = []
 
@@ -430,9 +426,7 @@ class GamificationEngine:
             logger.exception("Error checking achievements for user %s: %s", user_id, e)
             return []
 
-    def _check_badge_requirements(
-        self, badge: Badge, user_stats: UserStats, session_data: Dict
-    ) -> bool:
+    def _check_badge_requirements(self, badge: Badge, user_stats: UserStats, session_data: Dict) -> bool:
         """Check if badge requirements are met"""
         requirements = badge.requirements
 
@@ -503,9 +497,7 @@ class GamificationEngine:
                 logger.info("Awarded badge '%s' to user %s", badge.name, user_id)
 
         except Exception as e:
-            logger.exception(
-                "Error awarding badge %s to user %s: %s", badge.id, user_id, e
-            )
+            logger.exception("Error awarding badge %s to user %s: %s", badge.id, user_id, e)
 
     def _calculate_level(self, total_points: int) -> int:
         """Calculate user level based on total points"""
@@ -523,50 +515,32 @@ class GamificationEngine:
                     return self._create_empty_user_stats(user_id)
 
                 # Get practice statistics
-                progress_records = (
-                    db.query(Progress).filter(Progress.user_id == user_id).all()
-                )
+                progress_records = db.query(Progress).filter(Progress.user_id == user_id).all()
 
-                total_practice_time = sum(
-                    (p.session_duration or 0) for p in progress_records
-                )
+                total_practice_time = sum((p.session_duration or 0) for p in progress_records)
                 sessions_completed = len(progress_records)
 
                 # Calculate streak
-                current_streak, longest_streak = self._calculate_streaks(
-                    progress_records
-                )
+                current_streak, longest_streak = self._calculate_streaks(progress_records)
 
                 # Calculate average accuracy
-                accuracies = [
-                    p.accuracy_score for p in progress_records if p.accuracy_score
-                ]
-                average_accuracy = (
-                    sum(accuracies) / len(accuracies) if accuracies else 0.0
-                )
+                accuracies = [p.accuracy_score for p in progress_records if p.accuracy_score]
+                average_accuracy = sum(accuracies) / len(accuracies) if accuracies else 0.0
 
                 # Count mastered swaras and ragas
                 swaras_mastered = self._count_mastered_swaras(progress_records)
                 ragas_explored = self._count_explored_ragas(progress_records)
 
                 # Get achievements count
-                achievements = (
-                    db.query(UserAchievement)
-                    .filter(UserAchievement.user_id == user_id)
-                    .count()
-                )
+                achievements = db.query(UserAchievement).filter(UserAchievement.user_id == user_id).count()
 
                 total_points = user.total_points or 0
                 level = self._calculate_level(total_points)
                 next_level_points = (
-                    self.level_thresholds[level + 1]
-                    if level + 1 < len(self.level_thresholds)
-                    else total_points
+                    self.level_thresholds[level + 1] if level + 1 < len(self.level_thresholds) else total_points
                 )
                 current_level_points = self.level_thresholds[level]
-                next_level_progress = (total_points - current_level_points) / (
-                    next_level_points - current_level_points
-                )
+                next_level_progress = (total_points - current_level_points) / (next_level_points - current_level_points)
 
                 return UserStats(
                     user_id=user_id,
@@ -672,11 +646,7 @@ class GamificationEngine:
         """Get all achievements earned by user"""
         try:
             with get_db_session() as db:
-                achievements = (
-                    db.query(UserAchievement)
-                    .filter(UserAchievement.user_id == user_id)
-                    .all()
-                )
+                achievements = db.query(UserAchievement).filter(UserAchievement.user_id == user_id).all()
 
                 return [
                     {
@@ -693,9 +663,7 @@ class GamificationEngine:
             logger.exception("Error getting user achievements for %s: %s", user_id, e)
             return []
 
-    async def get_leaderboard(
-        self, period: str = "monthly", limit: int = 100
-    ) -> List[LeaderboardEntry]:
+    async def get_leaderboard(self, period: str = "monthly", limit: int = 100) -> List[LeaderboardEntry]:
         """Get leaderboard for specified period"""
         try:
             with get_db_session() as db:
@@ -706,25 +674,16 @@ class GamificationEngine:
                 elif period == "weekly":
                     days_since_monday = now.weekday()
                     start_date = now - timedelta(days=days_since_monday)
-                    start_date = start_date.replace(
-                        hour=0, minute=0, second=0, microsecond=0
-                    )
+                    start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
                 elif period == "monthly":
-                    start_date = now.replace(
-                        day=1, hour=0, minute=0, second=0, microsecond=0
-                    )
+                    start_date = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
                 else:  # all time
                     start_date = datetime.min
 
                 # Get users with their points in the period
                 if period == "all_time":
                     leaderboard_data = (
-                        db.query(
-                            User.id,
-                            User.username,
-                            User.avatar,
-                            func.coalesce(User.total_points, 0).label("score"),
-                        )
+                        db.query(User.id, User.username, User.avatar, func.coalesce(User.total_points, 0).label("score"))
                         .filter(User.total_points.isnot(None))
                         .order_by(User.total_points.desc())
                         .limit(limit)
@@ -737,9 +696,7 @@ class GamificationEngine:
                             User.id,
                             User.username,
                             User.avatar,
-                            func.coalesce(
-                                func.sum(UserAchievement.points_awarded), 0
-                            ).label("score"),
+                            func.coalesce(func.sum(UserAchievement.points_awarded), 0).label("score"),
                         )
                         .join(UserAchievement, User.id == UserAchievement.user_id)
                         .filter(UserAchievement.earned_at >= start_date)
@@ -755,18 +712,10 @@ class GamificationEngine:
                 # Format leaderboard entries
                 entries = []
                 current_ranks = {}
-                for rank, (user_id, username, avatar, score) in enumerate(
-                    leaderboard_data, 1
-                ):
+                for rank, (user_id, username, avatar, score) in enumerate(leaderboard_data, 1):
                     # Calculate user level
-                    total_points = (
-                        score if period == "all_time" else 0
-                    )  # For period boards, show period points
-                    level = (
-                        self._calculate_level(total_points)
-                        if period == "all_time"
-                        else 1
-                    )
+                    total_points = score if period == "all_time" else 0  # For period boards, show period points
+                    level = self._calculate_level(total_points) if period == "all_time" else 1
 
                     # Calculate rank change (positive = moved up, negative = moved down)
                     prev_rank = previous_ranks.get(user_id)
@@ -868,11 +817,7 @@ async def get_user_gamification_data(user_id: int) -> Dict:
         "stats": asdict(stats),
         "achievements": achievements,
         "active_challenges": [asdict(c) for c in active_challenges],
-        "available_badges": [
-            asdict(b)
-            for b in gamification_engine.achievement_definitions
-            if not b.hidden
-        ],
+        "available_badges": [asdict(b) for b in gamification_engine.achievement_definitions if not b.hidden],
     }
 
 
@@ -887,17 +832,12 @@ def get_level_info(total_points: int) -> Dict:
     level = engine._calculate_level(total_points)
 
     current_threshold = engine.level_thresholds[level]
-    next_threshold = (
-        engine.level_thresholds[level + 1]
-        if level + 1 < len(engine.level_thresholds)
-        else total_points
-    )
+    next_threshold = engine.level_thresholds[level + 1] if level + 1 < len(engine.level_thresholds) else total_points
 
     return {
         "current_level": level,
         "current_points": total_points,
         "points_in_level": total_points - current_threshold,
         "points_to_next_level": next_threshold - total_points,
-        "progress_to_next_level": (total_points - current_threshold)
-        / (next_threshold - current_threshold),
+        "progress_to_next_level": (total_points - current_threshold) / (next_threshold - current_threshold),
     }

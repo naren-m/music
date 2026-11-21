@@ -31,9 +31,7 @@ from config.database import (
 from config.validators import SecurityValidationError, validate_db_name
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -62,10 +60,7 @@ def create_database_if_not_exists():
         cursor = conn.cursor()
 
         # Check if database exists (already safe with parameterized query)
-        cursor.execute(
-            "SELECT 1 FROM pg_catalog.pg_database WHERE datname = %s",
-            (validated_db_name,),
-        )
+        cursor.execute("SELECT 1 FROM pg_catalog.pg_database WHERE datname = %s", (validated_db_name,))
 
         if not cursor.fetchone():
             # Use psycopg2.sql for safe identifier composition
@@ -115,9 +110,7 @@ def initialize_database():
         if all(health.values()):
             logger.info("✅ Database initialization completed successfully!")
         else:
-            logger.warning(
-                f"⚠️  Database initialization completed with warnings: {health}"
-            )
+            logger.warning(f"⚠️  Database initialization completed with warnings: {health}")
 
         return True
 
@@ -135,12 +128,7 @@ def _sample_exercises():
             "difficulty_level": 1,
             "title": "Single Swara Practice - Sa",
             "description": "Practice singing Sa with proper intonation",
-            "content_data": {
-                "target_notes": ["Sa"],
-                "drone_notes": ["Sa", "Pa"],
-                "tempo": 60,
-                "duration": 300,  # 5 minutes
-            },
+            "content_data": {"target_notes": ["Sa"], "drone_notes": ["Sa", "Pa"], "tempo": 60, "duration": 300},  # 5 minutes
             "estimated_duration": 5,
         },
         {
@@ -153,11 +141,7 @@ def _sample_exercises():
                 "pattern": ["Sa", "Ri", "Ga", "Ma", "Pa", "Da", "Ni", "Sa"],
                 "repetitions": 3,
                 "tempo_progression": [60, 80, 100],
-                "evaluation_criteria": {
-                    "pitch_accuracy": 0.8,
-                    "rhythm_accuracy": 0.85,
-                    "smoothness": 0.7,
-                },
+                "evaluation_criteria": {"pitch_accuracy": 0.8, "rhythm_accuracy": 0.85, "smoothness": 0.7},
             },
             "estimated_duration": 8,
         },
@@ -209,11 +193,7 @@ def create_sample_data():
             sample_exercises = _sample_exercises()
 
             for exercise_data in sample_exercises:
-                existing = (
-                    session.query(Exercise)
-                    .filter_by(title=exercise_data["title"])
-                    .first()
-                )
+                existing = session.query(Exercise).filter_by(title=exercise_data["title"]).first()
                 if not existing:
                     exercise = Exercise(**exercise_data)
                     session.add(exercise)
@@ -229,11 +209,7 @@ def create_sample_data():
                     melakarta_number=None,  # Janya raga
                     arohanam="S R2 G3 P N3 S",
                     avarohanam="S N3 P G3 R2 S",
-                    characteristics={
-                        "time": "evening",
-                        "emotion": "devotional",
-                        "popularity": "high",
-                    },
+                    characteristics={"time": "evening", "emotion": "devotional", "popularity": "high"},
                 )
                 session.add(hamsadhwani)
                 session.flush()  # Get the ID
@@ -243,15 +219,9 @@ def create_sample_data():
 
             if hamsadhwani and adi_tala:
                 for comp_data in sample_compositions:
-                    existing = (
-                        session.query(Composition)
-                        .filter_by(title=comp_data["title"])
-                        .first()
-                    )
+                    existing = session.query(Composition).filter_by(title=comp_data["title"]).first()
                     if not existing:
-                        composition = Composition(
-                            **comp_data, raga_id=hamsadhwani.id, tala_id=adi_tala.id
-                        )
+                        composition = Composition(**comp_data, raga_id=hamsadhwani.id, tala_id=adi_tala.id)
                         session.add(composition)
 
             session.commit()
@@ -325,17 +295,9 @@ def main():
     """Main function for database operations"""
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Database management for Carnatic Music Learning Platform"
-    )
-    parser.add_argument(
-        "action",
-        choices=["init", "seed", "validate", "drop", "reset"],
-        help="Database action to perform",
-    )
-    parser.add_argument(
-        "--force", action="store_true", help="Force operation without confirmation"
-    )
+    parser = argparse.ArgumentParser(description="Database management for Carnatic Music Learning Platform")
+    parser.add_argument("action", choices=["init", "seed", "validate", "drop", "reset"], help="Database action to perform")
+    parser.add_argument("--force", action="store_true", help="Force operation without confirmation")
 
     args = parser.parse_args()
 
@@ -361,9 +323,7 @@ def main():
 
     elif args.action == "drop":
         if not args.force:
-            confirmation = input(
-                "⚠️  Are you sure you want to drop all tables? (yes/no): "
-            )
+            confirmation = input("⚠️  Are you sure you want to drop all tables? (yes/no): ")
             if confirmation.lower() != "yes":
                 logger.info("Operation cancelled")
                 return
@@ -371,9 +331,7 @@ def main():
 
     elif args.action == "reset":
         if not args.force:
-            confirmation = input(
-                "⚠️  Are you sure you want to reset the database? (yes/no): "
-            )
+            confirmation = input("⚠️  Are you sure you want to reset the database? (yes/no): ")
             if confirmation.lower() != "yes":
                 logger.info("Operation cancelled")
                 return

@@ -11,20 +11,7 @@ from typing import Any, Dict, Optional
 
 import redis
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import (
-    JSON,
-    Boolean,
-    Column,
-    DateTime,
-    Float,
-    ForeignKey,
-    Index,
-    Integer,
-    String,
-    Text,
-    create_engine,
-    text,
-)
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text, create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, relationship, sessionmaker
 from sqlalchemy.pool import QueuePool
@@ -61,15 +48,11 @@ class DatabaseConfig:
         # Development fallbacks with warnings
         if not self.postgresql_user:
             self.postgresql_user = "carnatic_user"
-            logger.warning(
-                "Using default POSTGRES_USER - set environment variable for production"
-            )
+            logger.warning("Using default POSTGRES_USER - set environment variable for production")
 
         if not self.postgresql_password:
             self.postgresql_password = "carnatic_pass"
-            logger.warning(
-                "Using default POSTGRES_PASSWORD - set environment variable for production"
-            )
+            logger.warning("Using default POSTGRES_PASSWORD - set environment variable for production")
 
     # Redis Configuration
     redis_host: str = os.getenv("REDIS_HOST", "localhost")
@@ -121,26 +104,16 @@ class User(Base):
     is_verified = Column(Boolean, default=False)
 
     # Metadata
-    created_at = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
-    )
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
     )
     last_login = Column(DateTime(timezone=True))
 
     # Relationships
-    progress_records = relationship(
-        "Progress", back_populates="user", cascade="all, delete-orphan"
-    )
-    recordings = relationship(
-        "Recording", back_populates="user", cascade="all, delete-orphan"
-    )
-    achievements = relationship(
-        "Achievement", back_populates="user", cascade="all, delete-orphan"
-    )
+    progress_records = relationship("Progress", back_populates="user", cascade="all, delete-orphan")
+    recordings = relationship("Recording", back_populates="user", cascade="all, delete-orphan")
+    achievements = relationship("Achievement", back_populates="user", cascade="all, delete-orphan")
 
     # Indexes for performance
     __table_args__ = (
@@ -158,9 +131,7 @@ class Exercise(Base):
     id = Column(Integer, primary_key=True)
 
     # Exercise categorization
-    type = Column(
-        String(50), nullable=False, index=True
-    )  # swara, sarali, janta, alankaram, etc.
+    type = Column(String(50), nullable=False, index=True)  # swara, sarali, janta, alankaram, etc.
     category = Column(String(50), nullable=False, index=True)
     difficulty_level = Column(Integer, nullable=False, index=True)  # 1-10 scale
 
@@ -180,13 +151,9 @@ class Exercise(Base):
     estimated_duration = Column(Integer)  # minutes
 
     # Metadata
-    created_at = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
-    )
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
     )
     is_active = Column(Boolean, default=True)
 
@@ -204,9 +171,7 @@ class Progress(Base):
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    exercise_id = Column(
-        Integer, ForeignKey("exercises.id"), nullable=False, index=True
-    )
+    exercise_id = Column(Integer, ForeignKey("exercises.id"), nullable=False, index=True)
 
     # Progress metrics
     completion_percentage = Column(Float, default=0.0)
@@ -225,13 +190,9 @@ class Progress(Base):
     total_sessions = Column(Integer, default=0)
 
     # Metadata
-    created_at = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
-    )
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
     )
 
     # Relationships
@@ -272,9 +233,7 @@ class Recording(Base):
     feedback_data = Column(JSON, default=dict)
 
     # Metadata
-    recorded_at = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
-    )
+    recorded_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     processed_at = Column(DateTime(timezone=True))
     is_processed = Column(Boolean, default=False)
 
@@ -310,13 +269,9 @@ class Raga(Base):
     notation_examples = Column(JSON, default=list)
 
     # Metadata
-    created_at = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
-    )
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
     )
     is_active = Column(Boolean, default=True)
 
@@ -347,9 +302,7 @@ class Tala(Base):
     difficulty_level = Column(Integer, default=1)
 
     # Metadata
-    created_at = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
-    )
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     is_active = Column(Boolean, default=True)
 
     # Relationships
@@ -385,13 +338,9 @@ class Composition(Base):
     practice_tips = Column(JSON, default=list)
 
     # Metadata
-    created_at = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
-    )
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
     )
     is_active = Column(Boolean, default=True)
 
@@ -422,9 +371,7 @@ class Achievement(Base):
     achievement_data = Column(JSON, default=dict)  # Context-specific data
 
     # Metadata
-    earned_at = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
-    )
+    earned_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     is_visible = Column(Boolean, default=True)
 
     # Relationships
@@ -455,13 +402,9 @@ class Group(Base):
     settings = Column(JSON, default=dict)
 
     # Metadata
-    created_at = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
-    )
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
     )
     is_active = Column(Boolean, default=True)
 
@@ -474,29 +417,16 @@ class FriendRequest(Base):
     id = Column(Integer, primary_key=True)
     sender_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     receiver_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    status = Column(
-        String(20), default="pending", nullable=False
-    )  # pending, accepted, rejected
-    sent_at = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
-    )
+    status = Column(String(20), default="pending", nullable=False)  # pending, accepted, rejected
+    sent_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     responded_at = Column(DateTime(timezone=True))
 
     # Relationships
-    sender = relationship(
-        "User", foreign_keys=[sender_id], backref="sent_friend_requests"
-    )
-    receiver = relationship(
-        "User", foreign_keys=[receiver_id], backref="received_friend_requests"
-    )
+    sender = relationship("User", foreign_keys=[sender_id], backref="sent_friend_requests")
+    receiver = relationship("User", foreign_keys=[receiver_id], backref="received_friend_requests")
 
     __table_args__ = (
-        Index(
-            "idx_friend_request_sender_receiver",
-            "sender_id",
-            "receiver_id",
-            unique=True,
-        ),
+        Index("idx_friend_request_sender_receiver", "sender_id", "receiver_id", unique=True),
         Index("idx_friend_request_receiver_status", "receiver_id", "status"),
     )
 
@@ -620,9 +550,7 @@ db_manager = DatabaseManager()
 def init_db_with_flask(app) -> SQLAlchemy:
     """Initialize database with Flask app"""
     if app.config.get("TESTING"):
-        app.config["SQLALCHEMY_DATABASE_URI"] = app.config.get(
-            "SQLALCHEMY_DATABASE_URI", "sqlite:///:memory:"
-        )
+        app.config["SQLALCHEMY_DATABASE_URI"] = app.config.get("SQLALCHEMY_DATABASE_URI", "sqlite:///:memory:")
     else:
         app.config["SQLALCHEMY_DATABASE_URI"] = db_manager.config.postgresql_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -674,18 +602,8 @@ def seed_initial_data(session: Session) -> None:
 
         # Create basic talas
         basic_talas = [
-            {
-                "name": "Adi",
-                "beats_per_cycle": 8,
-                "subdivisions": [4, 2, 2],
-                "pattern": "| | O |",
-            },
-            {
-                "name": "Rupaka",
-                "beats_per_cycle": 6,
-                "subdivisions": [2, 4],
-                "pattern": "O | |",
-            },
+            {"name": "Adi", "beats_per_cycle": 8, "subdivisions": [4, 2, 2], "pattern": "| | O |"},
+            {"name": "Rupaka", "beats_per_cycle": 6, "subdivisions": [2, 4], "pattern": "O | |"},
         ]
 
         for tala_data in basic_talas:

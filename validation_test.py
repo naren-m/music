@@ -26,10 +26,7 @@ def test_basic_flask_setup():
 
         @app.route("/")
         def home():
-            return {
-                "status": "Carnatic Learning Application v2.0",
-                "timestamp": datetime.now().isoformat(),
-            }
+            return {"status": "Carnatic Learning Application v2.0", "timestamp": datetime.now().isoformat()}
 
         print("✅ Basic Flask app with SocketIO created successfully")
         return True
@@ -136,9 +133,7 @@ def test_basic_pitch_detection():
 
         # Should detect 440Hz within tolerance
         assert abs(detected_frequency - frequency) < 5.0
-        print(
-            f"✅ Basic pitch detection works: {detected_frequency:.2f}Hz (target: {frequency}Hz)"
-        )
+        print(f"✅ Basic pitch detection works: {detected_frequency:.2f}Hz (target: {frequency}Hz)")
 
         return True
     except Exception as e:
@@ -191,12 +186,7 @@ def test_user_model_concept():
                 self.practice_time += seconds
 
         # Test user creation and modification
-        user = UserProfile(
-            user_id="test_123",
-            email="test@example.com",
-            name="Test User",
-            skill_level=SkillLevel.INTERMEDIATE,
-        )
+        user = UserProfile(user_id="test_123", email="test@example.com", name="Test User", skill_level=SkillLevel.INTERMEDIATE)
 
         user.add_practice_time(1800)  # 30 minutes
 

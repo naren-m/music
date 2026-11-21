@@ -8,13 +8,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from core.models.shruti import (
-    SHRUTI_SYSTEM,
-    Shruti,
-    analyze_pitch_deviation,
-    calculate_shruti_frequency,
-    find_closest_shruti,
-)
+from core.models.shruti import SHRUTI_SYSTEM, Shruti, analyze_pitch_deviation, calculate_shruti_frequency, find_closest_shruti
 from core.models.user import (
     Achievement,
     LearningGoal,
@@ -31,13 +25,7 @@ class TestShrutiModel:
 
     def test_shruti_creation(self):
         """Test Shruti dataclass creation."""
-        shruti = Shruti(
-            name="Shadja",
-            western_equiv="C",
-            cent_value=0,
-            frequency_ratio=1.0,
-            raga_usage=["All ragas"],
-        )
+        shruti = Shruti(name="Shadja", western_equiv="C", cent_value=0, frequency_ratio=1.0, raga_usage=["All ragas"])
 
         assert shruti.name == "Shadja"
         assert shruti.western_equiv == "C"
@@ -47,13 +35,7 @@ class TestShrutiModel:
 
     def test_frequency_calculation(self):
         """Test frequency calculation from ratio."""
-        shruti = Shruti(
-            name="Shadja",
-            western_equiv="C",
-            cent_value=0,
-            frequency_ratio=1.0,
-            raga_usage=[],
-        )
+        shruti = Shruti(name="Shadja", western_equiv="C", cent_value=0, frequency_ratio=1.0, raga_usage=[])
 
         base_sa = 261.63
         frequency = shruti.calculate_frequency(base_sa)
@@ -309,11 +291,7 @@ class TestModuleProgress:
 
     def test_module_progress_creation(self):
         """Test ModuleProgress creation."""
-        progress = ModuleProgress(
-            module_name="raga_recognition",
-            skill_level=SkillLevel.BEGINNER,
-            completion_percentage=45.5,
-        )
+        progress = ModuleProgress(module_name="raga_recognition", skill_level=SkillLevel.BEGINNER, completion_percentage=45.5)
 
         assert progress.module_name == "raga_recognition"
         assert progress.completion_percentage == 45.5
@@ -321,9 +299,7 @@ class TestModuleProgress:
 
     def test_update_progress(self):
         """Test updating progress with a session."""
-        progress = ModuleProgress(
-            module_name="swara_recognition", skill_level=SkillLevel.BEGINNER
-        )
+        progress = ModuleProgress(module_name="swara_recognition", skill_level=SkillLevel.BEGINNER)
 
         session = PracticeSession(
             session_id="update_test",

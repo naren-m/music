@@ -91,11 +91,7 @@ class RedisRateLimiter:
             if current_count >= rate_limit.requests:
                 # Get oldest request time for reset calculation
                 oldest = self.redis.zrange(f"{self.prefix}{key}", 0, 0, withscores=True)
-                reset_time = (
-                    oldest[0][1] + rate_limit.window
-                    if oldest
-                    else current_time + rate_limit.window
-                )
+                reset_time = oldest[0][1] + rate_limit.window if oldest else current_time + rate_limit.window
 
                 return RateLimitResult(
                     allowed=False,
@@ -114,12 +110,7 @@ class RedisRateLimiter:
             remaining = rate_limit.requests - current_count - 1
             reset_time = current_time + rate_limit.window
 
-            return RateLimitResult(
-                allowed=True,
-                remaining=remaining,
-                reset_time=reset_time,
-                limit_type="standard",
-            )
+            return RateLimitResult(allowed=True, remaining=remaining, reset_time=reset_time, limit_type="standard")
 
         except Exception as e:
             logger.error(f"Redis rate limit check failed: {e}")
@@ -142,22 +133,14 @@ class RedisRateLimiter:
 
         # Clean old entries
         if key in self._memory_store:
-            self._memory_store[key] = [
-                timestamp
-                for timestamp in self._memory_store[key]
-                if timestamp > window_start
-            ]
+            self._memory_store[key] = [timestamp for timestamp in self._memory_store[key] if timestamp > window_start]
         else:
             self._memory_store[key] = []
 
         current_count = len(self._memory_store[key])
 
         if current_count >= rate_limit.requests:
-            oldest_time = (
-                min(self._memory_store[key])
-                if self._memory_store[key]
-                else current_time
-            )
+            oldest_time = min(self._memory_store[key]) if self._memory_store[key] else current_time
             reset_time = oldest_time + rate_limit.window
 
             return RateLimitResult(
@@ -231,10 +214,7 @@ class RateLimitConfig:
 
     # Burst limits for real-time audio
     AUDIO_REALTIME = RateLimit(
-        requests=100,
-        window=60,  # 100 req/min base
-        burst_requests=10,
-        burst_window=1,  # Allow 10 req/sec burst
+        requests=100, window=60, burst_requests=10, burst_window=1  # 100 req/min base  # Allow 10 req/sec burst
     )
 
 
@@ -260,16 +240,12 @@ def get_client_identifier() -> str:
         client_ip = client_ip.split(",")[0].strip()
 
     # Create hash for privacy (don't store raw IPs)
-    ip_hash = hashlib.sha256(
-        f"{client_ip}:{request.headers.get('User-Agent', '')}".encode()
-    ).hexdigest()[:16]
+    ip_hash = hashlib.sha256(f"{client_ip}:{request.headers.get('User-Agent', '')}".encode()).hexdigest()[:16]
 
     return f"ip:{ip_hash}"
 
 
-def rate_limit(
-    rate_limit_config: RateLimit, key_suffix: str = None, per_user: bool = True
-):
+def rate_limit(rate_limit_config: RateLimit, key_suffix: str = None, per_user: bool = True):
     """
     Rate limiting decorator with advanced configuration
 
@@ -289,9 +265,7 @@ def rate_limit(
             client_id = get_client_identifier()
             if not per_user and client_id.startswith("user:"):
                 # Force IP-based limiting even for authenticated users
-                client_ip = request.environ.get(
-                    "HTTP_X_FORWARDED_FOR", request.remote_addr
-                )
+                client_ip = request.environ.get("HTTP_X_FORWARDED_FOR", request.remote_addr)
                 if client_ip:
                     client_ip = client_ip.split(",")[0].strip()
                 ip_hash = hashlib.sha256(client_ip.encode()).hexdigest()[:16]
@@ -420,9 +394,7 @@ def adaptive_rate_limit(base_limit: int = 60, burst_multiplier: float = 2.0):
                 # High load: reduce limit to protect the server
                 effective_limit = max(1, int(base_limit * 0.5))
 
-            return rate_limit(RateLimit(requests=effective_limit, window=60))(f)(
-                *args, **kwargs
-            )
+            return rate_limit(RateLimit(requests=effective_limit, window=60))(f)(*args, **kwargs)
 
         return decorated_function
 
@@ -465,11 +437,7 @@ def get_rate_limit_stats(key: str = None) -> Dict:
             # Get overall stats
             keys = limiter.redis.keys(f"{limiter.prefix}*")
             total_requests = sum(limiter.redis.zcard(key) for key in keys)
-            return {
-                "total_active_keys": len(keys),
-                "total_active_requests": total_requests,
-                "timestamp": time.time(),
-            }
+            return {"total_active_keys": len(keys), "total_active_requests": total_requests, "timestamp": time.time()}
     except Exception as e:
         logger.error(f"Failed to get rate limit stats: {e}")
         return {"error": str(e)}

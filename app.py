@@ -24,11 +24,7 @@ if __name__ == "__main__":
     # server uses async_mode='threading' (Werkzeug), so a production container
     # must opt in to the threaded server explicitly via ALLOW_UNSAFE_WERKZEUG=1
     # (set in the Docker image); this keeps dev semantics unchanged.
-    allow_werkzeug = is_dev or os.environ.get("ALLOW_UNSAFE_WERKZEUG", "").lower() in (
-        "1",
-        "true",
-        "yes",
-    )
+    allow_werkzeug = is_dev or os.environ.get("ALLOW_UNSAFE_WERKZEUG", "").lower() in ("1", "true", "yes")
     socketio.run(
         app,
         debug=is_dev,
