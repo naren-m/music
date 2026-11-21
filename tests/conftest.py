@@ -3,25 +3,26 @@ Test configuration for Carnatic Learning Application
 Pytest fixtures and test environment setup
 """
 
-import pytest
 import asyncio
 import os
 from pathlib import Path
 from unittest.mock import Mock, patch
-from flask import Flask
 
+import pytest
+from flask import Flask
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
 import sys
+
 sys.path.insert(0, str(project_root))
 
 # Set default environment variables for testing
-os.environ.setdefault('SECRET_KEY', 'test-secret-key-for-conftest')
+os.environ.setdefault("SECRET_KEY", "test-secret-key-for-conftest")
 
-from api import create_app
-from core.models.user import UserProfile, SubscriptionTier
+from api import create_app, rate_limiting
 from core.models.shruti import SHRUTI_SYSTEM
+from core.models.user import SubscriptionTier, UserProfile
 
 
 @pytest.fixture(scope="session")
@@ -32,17 +33,27 @@ def event_loop():
     loop.close()
 
 
+@pytest.fixture(autouse=True)
+def isolated_rate_limiter(monkeypatch):
+    """Give every test a fresh in-memory rate limiter.
+
+    Without this the limiter talks to whatever Redis answers on
+    localhost:6379. With no Redis it fails open; with one (the CI service)
+    request counts pile up across tests and later tests get 429.
+    """
+    monkeypatch.setattr(rate_limiting.RedisRateLimiter, "_get_redis_client", lambda self: None)
+    rate_limiting._limiter_holder.reset()
+    yield
+    rate_limiting._limiter_holder.reset()
+
+
 @pytest.fixture(scope="session")
 def flask_app():
     """Create Flask application for testing."""
     # create_app returns (app, socketio); the SocketIO instance also registers
     # itself in app.extensions['socketio'], so tests can retrieve it from there.
-    app, _socketio = create_app('testing')
-    app.config.update({
-        'TESTING': True,
-        'WTF_CSRF_ENABLED': False,
-        'SECRET_KEY': 'test-secret-key'
-    })
+    app, _socketio = create_app("testing")
+    app.config.update({"TESTING": True, "WTF_CSRF_ENABLED": False, "SECRET_KEY": "test-secret-key"})
     return app
 
 
@@ -59,18 +70,6 @@ def app_context(flask_app):
         yield flask_app
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 @pytest.fixture
 def sample_user():
     """Create sample user profile for testing."""
@@ -81,17 +80,15 @@ def sample_user():
         subscription_tier=SubscriptionTier.PREMIUM,
         learning_goal="raga_mastery",
         skill_level="intermediate",
-        preferred_shruti_count=12
+        preferred_shruti_count=12,
     )
-
-
-
 
 
 @pytest.fixture
 def mock_audio_data():
     """Create mock audio data for testing."""
     import numpy as np
+
     # Generate test audio data (440Hz sine wave for A4)
     sample_rate = 44100
     duration = 1.0
@@ -112,11 +109,7 @@ def cleanup_test_files():
     """Clean up test files after each test."""
     yield
     # Cleanup any test files created during tests
-    test_files = [
-        "test_recording.wav",
-        "test_output.json",
-        "test_session.dat"
-    ]
+    test_files = ["test_recording.wav", "test_output.json", "test_session.dat"]
     for file in test_files:
         if os.path.exists(file):
             os.remove(file)
@@ -124,22 +117,23 @@ def cleanup_test_files():
 
 class TestAudioMock:
     """Mock audio interface for testing."""
-    
+
     def __init__(self):
         self.is_recording = False
         self.audio_data = None
-    
+
     def start_recording(self):
         self.is_recording = True
-    
+
     def stop_recording(self):
         self.is_recording = False
-    
+
     def get_audio_data(self):
         return self.mock_audio_data()
-    
+
     def mock_audio_data(self):
         import numpy as np
+
         # Return mock audio data
         return np.random.random(1024).astype(np.float32)
 
@@ -152,23 +146,27 @@ def mock_audio():
 
 # Playwright helper functions
 
+
 async def wait_for_audio_permission(page):
     """Wait for audio permission to be granted."""
-    await page.context.grant_permissions(['microphone'], origin=page.url)
+    await page.context.grant_permissions(["microphone"], origin=page.url)
 
 
 async def simulate_microphone_input(page, frequency: float):
     """Simulate microphone input with a specific frequency."""
-    await page.evaluate(f"""
+    await page.evaluate(
+        f"""
         window.__mockAudioFrequency = {frequency};
-    """)
+    """
+    )
 
 
 async def measure_page_load_time(page, url: str) -> float:
     """Measure page load time and return in seconds."""
     import time
+
     start = time.time()
-    await page.goto(url, wait_until='domcontentloaded')
+    await page.goto(url, wait_until="domcontentloaded")
     end = time.time()
     return end - start
 
@@ -176,48 +174,26 @@ async def measure_page_load_time(page, url: str) -> float:
 @pytest.fixture(scope="session")
 def browser_context_args(browser_context_args):
     """Configure browser context for audio testing."""
-    return {
-        **browser_context_args,
-        "permissions": ["microphone"],
-        "viewport": {"width": 1280, "height": 720}
-    }
-
-
-
-
+    return {**browser_context_args, "permissions": ["microphone"], "viewport": {"width": 1280, "height": 720}}
 
 
 # Performance testing helpers
 @pytest.fixture
 def performance_metrics():
     """Track performance metrics during tests."""
-    metrics = {
-        'response_times': [],
-        'memory_usage': [],
-        'cpu_usage': []
-    }
+    metrics = {"response_times": [], "memory_usage": [], "cpu_usage": []}
     return metrics
-
-
-
 
 
 # Test data
 TEST_FREQUENCIES = {
-    'sa': 261.63,   # C4
-    'ri': 293.66,   # D4
-    'ga': 329.63,   # E4
-    'ma': 349.23,   # F4
-    'pa': 392.00,   # G4
-    'dha': 440.00,  # A4
-    'ni': 493.88    # B4
+    "sa": 261.63,  # C4
+    "ri": 293.66,  # D4
+    "ga": 329.63,  # E4
+    "ma": 349.23,  # F4
+    "pa": 392.00,  # G4
+    "dha": 440.00,  # A4
+    "ni": 493.88,  # B4
 }
 
-TEST_RAGAS = [
-    'Bilaval',
-    'Kalyan',
-    'Khamaj',
-    'Bhairav',
-    'Bhairavi',
-    'Asavari'
-]
+TEST_RAGAS = ["Bilaval", "Kalyan", "Khamaj", "Bhairav", "Bhairavi", "Asavari"]

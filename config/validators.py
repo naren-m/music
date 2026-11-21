@@ -3,14 +3,15 @@ Security Validators for Database Operations
 Prevents SQL injection and validates input parameters
 """
 
-import re
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
 
 class SecurityValidationError(Exception):
     """Raised when security validation fails"""
+
     pass
 
 
@@ -40,21 +41,26 @@ def validate_db_name(db_name: str) -> str:
     # - Must start with letter or underscore
     # - Can contain letters, digits, underscores
     # - Maximum 63 characters
-    if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', db_name):
+    if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", db_name):
         raise SecurityValidationError(
-            "Database name must start with letter or underscore and contain only "
-            "letters, digits, and underscores"
+            "Database name must start with letter or underscore and contain only " "letters, digits, and underscores"
         )
 
     if len(db_name) > 63:
-        raise SecurityValidationError(
-            f"Database name too long (max 63 characters, got {len(db_name)})"
-        )
+        raise SecurityValidationError(f"Database name too long (max 63 characters, got {len(db_name)})")
 
     # Prevent reserved words
     reserved_words = {
-        'postgres', 'template0', 'template1', 'information_schema',
-        'pg_catalog', 'public', 'user', 'admin', 'root', 'sys'
+        "postgres",
+        "template0",
+        "template1",
+        "information_schema",
+        "pg_catalog",
+        "public",
+        "user",
+        "admin",
+        "root",
+        "sys",
     }
 
     if db_name.lower() in reserved_words:
@@ -86,15 +92,12 @@ def validate_identifier(identifier: str, identifier_type: str = "identifier") ->
     if not identifier:
         raise SecurityValidationError(f"{identifier_type} cannot be empty")
 
-    if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', identifier):
+    if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", identifier):
         raise SecurityValidationError(
-            f"{identifier_type} must start with letter or underscore and contain only "
-            "letters, digits, and underscores"
+            f"{identifier_type} must start with letter or underscore and contain only " "letters, digits, and underscores"
         )
 
     if len(identifier) > 63:
-        raise SecurityValidationError(
-            f"{identifier_type} too long (max 63 characters, got {len(identifier)})"
-        )
+        raise SecurityValidationError(f"{identifier_type} too long (max 63 characters, got {len(identifier)})")
 
     return identifier

@@ -4,13 +4,15 @@ Simplified Playwright test suite for the improved carnatic.html page.
 Tests all key functionality without complex dependencies.
 """
 
-import pytest
 import asyncio
 import time
-from playwright.async_api import async_playwright, Page, expect
+
+import pytest
+from playwright.async_api import Page, async_playwright, expect
 
 BASE_URL = "http://localhost:5002"
 CARNATIC_URL = f"{BASE_URL}/carnatic"
+
 
 @pytest.mark.asyncio
 async def test_carnatic_comprehensive_suite():
@@ -19,10 +21,7 @@ async def test_carnatic_comprehensive_suite():
     async with async_playwright() as p:
         # Launch browser
         browser = await p.chromium.launch(headless=False, slow_mo=1000)
-        context = await browser.new_context(
-            permissions=['microphone'],
-            viewport={'width': 1280, 'height': 720}
-        )
+        context = await browser.new_context(permissions=["microphone"], viewport={"width": 1280, "height": 720})
         page = await context.new_page()
 
         try:
@@ -94,7 +93,7 @@ async def test_carnatic_comprehensive_suite():
             page.on("console", lambda msg: console_messages.append(msg.text))
             await page.wait_for_timeout(3000)
 
-            ws_console_msgs = [msg for msg in console_messages if 'websocket' in msg.lower() or 'socket' in msg.lower()]
+            ws_console_msgs = [msg for msg in console_messages if "websocket" in msg.lower() or "socket" in msg.lower()]
             if ws_console_msgs:
                 print(f"   ✅ WebSocket console activity: {len(ws_console_msgs)} messages")
 
@@ -114,12 +113,14 @@ async def test_carnatic_comprehensive_suite():
                         print(f"   📊 Status indicator {i+1}: {text[:50]}...")
 
             # Test error simulation
-            await page.evaluate("""
+            await page.evaluate(
+                """
                 console.log('Testing error handling simulation');
                 if (window.showError) {
                     window.showError('Test error message');
                 }
-            """)
+            """
+            )
             await page.wait_for_timeout(1000)
 
             # Test 5: User interface responsiveness
@@ -130,7 +131,7 @@ async def test_carnatic_comprehensive_suite():
                 {"width": 1920, "height": 1080, "name": "Desktop"},
                 {"width": 1024, "height": 768, "name": "Tablet landscape"},
                 {"width": 768, "height": 1024, "name": "Tablet portrait"},
-                {"width": 375, "height": 667, "name": "Mobile"}
+                {"width": 375, "height": 667, "name": "Mobile"},
             ]
 
             for viewport in viewports:
@@ -176,7 +177,7 @@ async def test_carnatic_comprehensive_suite():
                 "button:has-text('Start Detection')",
                 "button:has-text('Stop Detection')",
                 ".btn-primary",
-                ".btn-secondary"
+                ".btn-secondary",
             ]
 
             audio_controls_found = 0
@@ -198,7 +199,7 @@ async def test_carnatic_comprehensive_suite():
                 ".frequency-display",
                 ".detection-display",
                 "#visualizer",
-                ".shruti-wheel"
+                ".shruti-wheel",
             ]
             viz_found = 0
             for selector in viz_selectors:
@@ -208,13 +209,7 @@ async def test_carnatic_comprehensive_suite():
                     viz_found += 1
 
             # Check output area
-            output_selectors = [
-                "#frequency",
-                ".detection-display",
-                ".frequency-display",
-                "#shruti-display",
-                "#note-display"
-            ]
+            output_selectors = ["#frequency", ".detection-display", ".frequency-display", "#shruti-display", "#note-display"]
             output_found = False
             for selector in output_selectors:
                 elements = page.locator(selector)
@@ -237,11 +232,12 @@ async def test_carnatic_comprehensive_suite():
             print(f"   ⏱️ Page reload time: {load_time:.2f} seconds")
 
             # Check for console errors
-            error_count = len([msg for msg in console_messages if 'error' in msg.lower()])
+            error_count = len([msg for msg in console_messages if "error" in msg.lower()])
             print(f"   🐛 Console errors: {error_count}")
 
             # Test JavaScript functionality
-            js_ready = await page.evaluate("""
+            js_ready = await page.evaluate(
+                """
                 () => {
                     return {
                         documentReady: document.readyState === 'complete',
@@ -249,9 +245,12 @@ async def test_carnatic_comprehensive_suite():
                         hasAudioAPI: typeof navigator !== 'undefined' && !!navigator.mediaDevices
                     };
                 }
-            """)
+            """
+            )
 
-            print(f"   💻 JavaScript state: Document ready: {js_ready['documentReady']}, Window defined: {js_ready['windowDefined']}, Audio API: {js_ready['hasAudioAPI']}")
+            print(
+                f"   💻 JavaScript state: Document ready: {js_ready['documentReady']}, Window defined: {js_ready['windowDefined']}, Audio API: {js_ready['hasAudioAPI']}"
+            )
 
             # Test 9: Integration test
             print("\n9️⃣ Running integration test...")

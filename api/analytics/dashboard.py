@@ -5,23 +5,24 @@ Comprehensive analytics system providing detailed insights into learning
 progress, performance trends, and personalized recommendations.
 """
 
+import json
 import logging
-from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass, asdict
+import math
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 import pandas as pd
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_, or_
-import json
-import math
 
-from config.database import get_db_session
+from config.database import Achievement, Exercise, Progress, Recording, User, get_db_session
 from core.models.user import UserProfile
-from config.database import User, Progress, Exercise, Recording, Achievement
 
 logger = logging.getLogger(__name__)
+
 
 class AnalyticsPeriod(Enum):
     DAILY = "daily"
@@ -30,6 +31,7 @@ class AnalyticsPeriod(Enum):
     QUARTERLY = "quarterly"
     YEARLY = "yearly"
 
+
 class MetricType(Enum):
     ACCURACY = "accuracy"
     CONSISTENCY = "consistency"
@@ -37,6 +39,7 @@ class MetricType(Enum):
     STREAK = "streak"
     IMPROVEMENT = "improvement"
     DIFFICULTY = "difficulty"
+
 
 @dataclass
 class PerformanceMetric:
@@ -48,6 +51,7 @@ class PerformanceMetric:
     confidence: float
     recommendations: List[str]
 
+
 @dataclass
 class LearningInsight:
     category: str
@@ -58,6 +62,7 @@ class LearningInsight:
     action_items: List[str]
     priority: int
 
+
 @dataclass
 class PracticePattern:
     pattern_type: str
@@ -66,6 +71,7 @@ class PracticePattern:
     session_duration_avg: int
     consistency_score: float
     recommendations: List[str]
+
 
 @dataclass
 class SwararAnalysis:
@@ -77,6 +83,7 @@ class SwararAnalysis:
     common_issues: List[str]
     improvement_suggestions: List[str]
 
+
 @dataclass
 class ProgressPrediction:
     target_skill: str
@@ -85,6 +92,7 @@ class ProgressPrediction:
     confidence: float
     milestones: List[Dict[str, Any]]
     factors_affecting: List[str]
+
 
 class AdvancedAnalytics:
     """
@@ -101,39 +109,37 @@ class AdvancedAnalytics:
         try:
             # Check cache first (skip in testing mode to avoid cross-test pollution)
             from flask import current_app
+
             skip_cache = False
             try:
-                skip_cache = current_app.config.get('TESTING', False)
+                skip_cache = current_app.config.get("TESTING", False)
             except RuntimeError:
                 pass
 
             cache_key = f"dashboard_{user_id}_{period.value}"
             if not skip_cache and self._is_cache_valid(cache_key):
-                return self.analysis_cache[cache_key]['data']
+                return self.analysis_cache[cache_key]["data"]
 
             # Generate all analytics components
             dashboard_data = {
-                'user_id': user_id,
-                'period': period.value,
-                'generated_at': datetime.now().isoformat(),
-                'performance_metrics': await self._analyze_performance_metrics(user_id, period),
-                'learning_insights': await self._generate_learning_insights(user_id, period),
-                'practice_patterns': await self._analyze_practice_patterns(user_id, period),
-                'swara_analysis': await self._analyze_swara_performance(user_id, period),
-                'progress_predictions': await self._generate_progress_predictions(user_id),
-                'streak_analysis': await self._analyze_streaks(user_id, period),
-                'accuracy_trends': await self._analyze_accuracy_trends(user_id, period),
-                'time_distribution': await self._analyze_time_distribution(user_id, period),
-                'difficulty_progression': await self._analyze_difficulty_progression(user_id, period),
-                'comparative_analysis': await self._generate_comparative_analysis(user_id, period),
-                'recommendations': await self._generate_personalized_recommendations(user_id)
+                "user_id": user_id,
+                "period": period.value,
+                "generated_at": datetime.now().isoformat(),
+                "performance_metrics": await self._analyze_performance_metrics(user_id, period),
+                "learning_insights": await self._generate_learning_insights(user_id, period),
+                "practice_patterns": await self._analyze_practice_patterns(user_id, period),
+                "swara_analysis": await self._analyze_swara_performance(user_id, period),
+                "progress_predictions": await self._generate_progress_predictions(user_id),
+                "streak_analysis": await self._analyze_streaks(user_id, period),
+                "accuracy_trends": await self._analyze_accuracy_trends(user_id, period),
+                "time_distribution": await self._analyze_time_distribution(user_id, period),
+                "difficulty_progression": await self._analyze_difficulty_progression(user_id, period),
+                "comparative_analysis": await self._generate_comparative_analysis(user_id, period),
+                "recommendations": await self._generate_personalized_recommendations(user_id),
             }
 
             # Cache results
-            self.analysis_cache[cache_key] = {
-                'data': dashboard_data,
-                'timestamp': datetime.now()
-            }
+            self.analysis_cache[cache_key] = {"data": dashboard_data, "timestamp": datetime.now()}
 
             return dashboard_data
 
@@ -163,47 +169,59 @@ class AdvancedAnalytics:
                 # Accuracy metric
                 current_accuracy = np.mean([p.average_accuracy for p in current_data]) if current_data else 0
                 previous_accuracy = np.mean([p.average_accuracy for p in previous_data]) if previous_data else 0
-                accuracy_change = ((current_accuracy - previous_accuracy) / previous_accuracy * 100) if previous_accuracy > 0 else 0
+                accuracy_change = (
+                    ((current_accuracy - previous_accuracy) / previous_accuracy * 100) if previous_accuracy > 0 else 0
+                )
 
-                metrics.append(PerformanceMetric(
-                    metric_name="Average Accuracy",
-                    current_value=current_accuracy,
-                    previous_value=previous_accuracy,
-                    change_percent=accuracy_change,
-                    trend=self._determine_trend(accuracy_change),
-                    confidence=0.85,
-                    recommendations=self._get_accuracy_recommendations(current_accuracy, accuracy_change)
-                ))
+                metrics.append(
+                    PerformanceMetric(
+                        metric_name="Average Accuracy",
+                        current_value=current_accuracy,
+                        previous_value=previous_accuracy,
+                        change_percent=accuracy_change,
+                        trend=self._determine_trend(accuracy_change),
+                        confidence=0.85,
+                        recommendations=self._get_accuracy_recommendations(current_accuracy, accuracy_change),
+                    )
+                )
 
                 # Practice time metric
                 current_time = sum([(p.practice_time / 60) if p.practice_time is not None else 0 for p in current_data])
                 previous_time = sum([(p.practice_time / 60) if p.practice_time is not None else 0 for p in previous_data])
                 time_change = ((current_time - previous_time) / previous_time * 100) if previous_time > 0 else 0
 
-                metrics.append(PerformanceMetric(
-                    metric_name="Practice Time (minutes)",
-                    current_value=current_time,
-                    previous_value=previous_time,
-                    change_percent=time_change,
-                    trend=self._determine_trend(time_change),
-                    confidence=0.95,
-                    recommendations=self._get_time_recommendations(current_time, time_change)
-                ))
+                metrics.append(
+                    PerformanceMetric(
+                        metric_name="Practice Time (minutes)",
+                        current_value=current_time,
+                        previous_value=previous_time,
+                        change_percent=time_change,
+                        trend=self._determine_trend(time_change),
+                        confidence=0.95,
+                        recommendations=self._get_time_recommendations(current_time, time_change),
+                    )
+                )
 
                 # Consistency metric
                 current_consistency = self._calculate_consistency_score(current_data)
                 previous_consistency = self._calculate_consistency_score(previous_data)
-                consistency_change = ((current_consistency - previous_consistency) / previous_consistency * 100) if previous_consistency > 0 else 0
+                consistency_change = (
+                    ((current_consistency - previous_consistency) / previous_consistency * 100)
+                    if previous_consistency > 0
+                    else 0
+                )
 
-                metrics.append(PerformanceMetric(
-                    metric_name="Consistency Score",
-                    current_value=current_consistency,
-                    previous_value=previous_consistency,
-                    change_percent=consistency_change,
-                    trend=self._determine_trend(consistency_change),
-                    confidence=0.75,
-                    recommendations=self._get_consistency_recommendations(current_consistency, consistency_change)
-                ))
+                metrics.append(
+                    PerformanceMetric(
+                        metric_name="Consistency Score",
+                        current_value=current_consistency,
+                        previous_value=previous_consistency,
+                        change_percent=consistency_change,
+                        trend=self._determine_trend(consistency_change),
+                        confidence=0.75,
+                        recommendations=self._get_consistency_recommendations(current_consistency, consistency_change),
+                    )
+                )
 
                 return metrics
 
@@ -221,15 +239,17 @@ class AdvancedAnalytics:
                 progress_data = self._get_period_progress_data(db, user_id, current_start, current_end)
 
                 if not progress_data:
-                    insights.append(LearningInsight(
-                        category="Practice",
-                        title="No recent practice sessions",
-                        description="You haven't practiced recently. Regular practice is key to improvement.",
-                        severity="warning",
-                        data_points={},
-                        action_items=["Schedule daily practice time", "Start with 10-15 minutes per day"],
-                        priority=1
-                    ))
+                    insights.append(
+                        LearningInsight(
+                            category="Practice",
+                            title="No recent practice sessions",
+                            description="You haven't practiced recently. Regular practice is key to improvement.",
+                            severity="warning",
+                            data_points={},
+                            action_items=["Schedule daily practice time", "Start with 10-15 minutes per day"],
+                            priority=1,
+                        )
+                    )
                     return insights
 
                 # Analyze accuracy patterns
@@ -240,19 +260,21 @@ class AdvancedAnalytics:
 
                 # Positive insights
                 if accuracies and np.mean(accuracies) > 0.85:
-                    insights.append(LearningInsight(
-                        category="Achievement",
-                        title="Excellent accuracy!",
-                        description=f"Your accuracy ({np.mean(accuracies):.1%}) is excellent! You're making great progress.",
-                        severity="positive",
-                        data_points={"accuracy": np.mean(accuracies)},
-                        action_items=[
-                            "Consider advancing to more challenging exercises",
-                            "Explore new ragas or advanced patterns",
-                            "Help other students with your expertise"
-                        ],
-                        priority=4
-                    ))
+                    insights.append(
+                        LearningInsight(
+                            category="Achievement",
+                            title="Excellent accuracy!",
+                            description=f"Your accuracy ({np.mean(accuracies):.1%}) is excellent! You're making great progress.",
+                            severity="positive",
+                            data_points={"accuracy": np.mean(accuracies)},
+                            action_items=[
+                                "Consider advancing to more challenging exercises",
+                                "Explore new ragas or advanced patterns",
+                                "Help other students with your expertise",
+                            ],
+                            priority=4,
+                        )
+                    )
 
                 return sorted(insights, key=lambda x: x.priority)
 
@@ -268,34 +290,38 @@ class AdvancedAnalytics:
             accuracy_std = np.std(accuracies)
 
             if accuracy_std > 0.15:
-                insights.append(LearningInsight(
-                    category="Performance",
-                    title="Inconsistent accuracy detected",
-                    description=f"Your accuracy varies significantly (std: {accuracy_std:.2f}). This suggests inconsistent practice conditions or techniques.",
-                    severity="warning",
-                    data_points={"average_accuracy": avg_accuracy, "std_deviation": accuracy_std},
-                    action_items=[
-                        "Practice in a quiet, consistent environment",
-                        "Warm up before each session",
-                        "Focus on slower, more deliberate practice"
-                    ],
-                    priority=2
-                ))
+                insights.append(
+                    LearningInsight(
+                        category="Performance",
+                        title="Inconsistent accuracy detected",
+                        description=f"Your accuracy varies significantly (std: {accuracy_std:.2f}). This suggests inconsistent practice conditions or techniques.",
+                        severity="warning",
+                        data_points={"average_accuracy": avg_accuracy, "std_deviation": accuracy_std},
+                        action_items=[
+                            "Practice in a quiet, consistent environment",
+                            "Warm up before each session",
+                            "Focus on slower, more deliberate practice",
+                        ],
+                        priority=2,
+                    )
+                )
 
             if avg_accuracy < 0.7:
-                insights.append(LearningInsight(
-                    category="Accuracy",
-                    title="Below target accuracy",
-                    description=f"Your average accuracy ({avg_accuracy:.1%}) is below the recommended 70% threshold.",
-                    severity="critical",
-                    data_points={"current_accuracy": avg_accuracy, "target_accuracy": 0.7},
-                    action_items=[
-                        "Slow down your practice tempo",
-                        "Focus on pitch accuracy over speed",
-                        "Use a drone or tuner for reference"
-                    ],
-                    priority=1
-                ))
+                insights.append(
+                    LearningInsight(
+                        category="Accuracy",
+                        title="Below target accuracy",
+                        description=f"Your average accuracy ({avg_accuracy:.1%}) is below the recommended 70% threshold.",
+                        severity="critical",
+                        data_points={"current_accuracy": avg_accuracy, "target_accuracy": 0.7},
+                        action_items=[
+                            "Slow down your practice tempo",
+                            "Focus on pitch accuracy over speed",
+                            "Use a drone or tuner for reference",
+                        ],
+                        priority=1,
+                    )
+                )
         return insights
 
     def _frequency_and_duration_insights(self, progress_data, current_start, current_end) -> List[LearningInsight]:
@@ -307,37 +333,43 @@ class AdvancedAnalytics:
         practice_frequency = practice_days / period_days
 
         if practice_frequency < 0.5:
-            insights.append(LearningInsight(
-                category="Consistency",
-                title="Low practice frequency",
-                description=f"You practiced on only {practice_days} out of {period_days} days ({practice_frequency:.1%}).",
-                severity="warning",
-                data_points={"practice_days": practice_days, "total_days": period_days},
-                action_items=[
-                    "Set up a daily practice routine",
-                    "Start with shorter, more frequent sessions",
-                    "Use practice reminders"
-                ],
-                priority=2
-            ))
+            insights.append(
+                LearningInsight(
+                    category="Consistency",
+                    title="Low practice frequency",
+                    description=f"You practiced on only {practice_days} out of {period_days} days ({practice_frequency:.1%}).",
+                    severity="warning",
+                    data_points={"practice_days": practice_days, "total_days": period_days},
+                    action_items=[
+                        "Set up a daily practice routine",
+                        "Start with shorter, more frequent sessions",
+                        "Use practice reminders",
+                    ],
+                    priority=2,
+                )
+            )
 
-        durations = [(p.practice_time / 60) if p.practice_time is not None else 0 for p in progress_data if p.practice_time is not None]
+        durations = [
+            (p.practice_time / 60) if p.practice_time is not None else 0 for p in progress_data if p.practice_time is not None
+        ]
         if durations:
             avg_duration = np.mean(durations)
             if avg_duration < 10:
-                insights.append(LearningInsight(
-                    category="Practice Duration",
-                    title="Short practice sessions",
-                    description=f"Your average session is only {avg_duration:.1f} minutes. Longer sessions may be more beneficial.",
-                    severity="info",
-                    data_points={"average_duration": avg_duration},
-                    action_items=[
-                        "Gradually increase session length to 15-20 minutes",
-                        "Include warmup and cooldown time",
-                        "Focus on one skill per session"
-                    ],
-                    priority=3
-                ))
+                insights.append(
+                    LearningInsight(
+                        category="Practice Duration",
+                        title="Short practice sessions",
+                        description=f"Your average session is only {avg_duration:.1f} minutes. Longer sessions may be more beneficial.",
+                        severity="info",
+                        data_points={"average_duration": avg_duration},
+                        action_items=[
+                            "Gradually increase session length to 15-20 minutes",
+                            "Include warmup and cooldown time",
+                            "Focus on one skill per session",
+                        ],
+                        priority=3,
+                    )
+                )
         return insights
 
     async def _analyze_practice_patterns(self, user_id: int, period: AnalyticsPeriod) -> PracticePattern:
@@ -354,7 +386,7 @@ class AdvancedAnalytics:
                         preferred_times=[],
                         session_duration_avg=0,
                         consistency_score=0.0,
-                        recommendations=["Start with regular daily practice"]
+                        recommendations=["Start with regular daily practice"],
                     )
 
                 # Analyze practice times
@@ -385,7 +417,11 @@ class AdvancedAnalytics:
                     frequency = "Irregular"
 
                 # Average session duration
-                durations = [(p.practice_time / 60) if p.practice_time is not None else 0 for p in progress_data if p.practice_time is not None]
+                durations = [
+                    (p.practice_time / 60) if p.practice_time is not None else 0
+                    for p in progress_data
+                    if p.practice_time is not None
+                ]
                 avg_duration = int(np.mean(durations)) if durations else 0
 
                 # Consistency score
@@ -408,7 +444,7 @@ class AdvancedAnalytics:
                     preferred_times=preferred_times,
                     session_duration_avg=avg_duration,
                     consistency_score=consistency_score,
-                    recommendations=recommendations
+                    recommendations=recommendations,
                 )
 
         except Exception as e:
@@ -425,25 +461,29 @@ class AdvancedAnalytics:
                 swara_data = {}
                 for record in progress_data:
                     # Assuming target_swara is stored within accuracy_metrics JSON
-                    target_swara = record.accuracy_metrics.get('target_swara')
+                    target_swara = record.accuracy_metrics.get("target_swara")
                     if target_swara:
                         swara = target_swara
                         if swara not in swara_data:
                             swara_data[swara] = []
-                        swara_data[swara].append({
-                            'accuracy': record.average_accuracy,
-                            'date': record.created_at,
-                            'duration': (record.practice_time / 60) if record.practice_time is not None else 0
-                        })
+                        swara_data[swara].append(
+                            {
+                                "accuracy": record.average_accuracy,
+                                "date": record.created_at,
+                                "duration": (record.practice_time / 60) if record.practice_time is not None else 0,
+                            }
+                        )
 
                 analyses = []
                 for swara, records in swara_data.items():
                     if len(records) < 2:
                         continue
 
-                    accuracies = [r['accuracy'] for r in records]
+                    accuracies = [r["accuracy"] for r in records]
                     avg_accuracy = np.mean(accuracies)
-                    accuracy_trend = self._calculate_trend_line([r['accuracy'] for r in sorted(records, key=lambda x: x['date'])])
+                    accuracy_trend = self._calculate_trend_line(
+                        [r["accuracy"] for r in sorted(records, key=lambda x: x["date"])]
+                    )
 
                     # Determine mastery level
                     if avg_accuracy >= 0.9 and len(records) >= 5:
@@ -475,15 +515,17 @@ class AdvancedAnalytics:
                         common_issues.append("Insufficient practice")
                         suggestions.append(f"Practice {swara} more frequently")
 
-                    analyses.append(SwararAnalysis(
-                        swara=swara,
-                        accuracy_trend=accuracy_trend,
-                        practice_frequency=len(records),
-                        difficulty_score=difficulty_score,
-                        mastery_level=mastery_level,
-                        common_issues=common_issues,
-                        improvement_suggestions=suggestions
-                    ))
+                    analyses.append(
+                        SwararAnalysis(
+                            swara=swara,
+                            accuracy_trend=accuracy_trend,
+                            practice_frequency=len(records),
+                            difficulty_score=difficulty_score,
+                            mastery_level=mastery_level,
+                            common_issues=common_issues,
+                            improvement_suggestions=suggestions,
+                        )
+                    )
 
                 return sorted(analyses, key=lambda x: x.difficulty_score, reverse=True)
 
@@ -498,10 +540,11 @@ class AdvancedAnalytics:
         try:
             with get_db_session() as db:
                 # Get historical data for modeling
-                progress_data = db.query(Progress).filter(
-                    Progress.user_id == user_id,
-                    Progress.created_at >= datetime.utcnow() - timedelta(days=90)
-                ).all()
+                progress_data = (
+                    db.query(Progress)
+                    .filter(Progress.user_id == user_id, Progress.created_at >= datetime.utcnow() - timedelta(days=90))
+                    .all()
+                )
 
                 if len(progress_data) < 10:
                     return []  # Need sufficient data for predictions
@@ -527,21 +570,18 @@ class AdvancedAnalytics:
 
         swara_progress = {}
         for record in progress_data:
-            if record.exercise and record.exercise.content_data and 'target_swara' in record.exercise.content_data:
-                swara = record.exercise.content_data['target_swara']
+            if record.exercise and record.exercise.content_data and "target_swara" in record.exercise.content_data:
+                swara = record.exercise.content_data["target_swara"]
                 if swara not in swara_progress:
                     swara_progress[swara] = []
-                swara_progress[swara].append({
-                    'accuracy': record.average_accuracy,
-                    'date': record.created_at
-                })
+                swara_progress[swara].append({"accuracy": record.average_accuracy, "date": record.created_at})
 
         for swara, records in swara_progress.items():
             if len(records) < 5:
                 continue
 
-            sorted_records = sorted(records, key=lambda x: x['date'])
-            accuracies = [r['average_accuracy'] for r in sorted_records]
+            sorted_records = sorted(records, key=lambda x: x["date"])
+            accuracies = [r["average_accuracy"] for r in sorted_records]
 
             current_accuracy = np.mean(accuracies[-3:])  # Last 3 sessions
             if current_accuracy >= 0.9:
@@ -557,18 +597,20 @@ class AdvancedAnalytics:
 
             confidence = min(0.8, len(records) / 20.0)  # Higher confidence with more data
 
-            predictions.append(ProgressPrediction(
-                target_skill=f"{swara} Mastery",
-                current_level=current_accuracy,
-                predicted_timeline=days_needed,
-                confidence=confidence,
-                milestones=[
-                    {"accuracy": 0.8, "days": int(days_needed * 0.6)},
-                    {"accuracy": 0.85, "days": int(days_needed * 0.8)},
-                    {"accuracy": 0.9, "days": days_needed}
-                ],
-                factors_affecting=["Practice frequency", "Session quality", "Consistency"]
-            ))
+            predictions.append(
+                ProgressPrediction(
+                    target_skill=f"{swara} Mastery",
+                    current_level=current_accuracy,
+                    predicted_timeline=days_needed,
+                    confidence=confidence,
+                    milestones=[
+                        {"accuracy": 0.8, "days": int(days_needed * 0.6)},
+                        {"accuracy": 0.85, "days": int(days_needed * 0.8)},
+                        {"accuracy": 0.9, "days": days_needed},
+                    ],
+                    factors_affecting=["Practice frequency", "Session quality", "Consistency"],
+                )
+            )
 
         return predictions
 
@@ -591,9 +633,9 @@ class AdvancedAnalytics:
             confidence=0.7,
             milestones=[
                 {"milestone": "Consistent 80% accuracy", "days": 7},
-                {"milestone": "Complete current level exercises", "days": 14}
+                {"milestone": "Complete current level exercises", "days": 14},
             ],
-            factors_affecting=["Current performance", "Practice consistency"]
+            factors_affecting=["Current performance", "Practice consistency"],
         )
 
     # Helper methods
@@ -634,11 +676,11 @@ class AdvancedAnalytics:
 
     def _get_period_progress_data(self, db: Session, user_id: int, start_date: datetime, end_date: datetime) -> List[Progress]:
         """Get progress data for specified period"""
-        return db.query(Progress).filter(
-            Progress.user_id == user_id,
-            Progress.created_at >= start_date,
-            Progress.created_at <= end_date
-        ).all()
+        return (
+            db.query(Progress)
+            .filter(Progress.user_id == user_id, Progress.created_at >= start_date, Progress.created_at <= end_date)
+            .all()
+        )
 
     def _calculate_consistency_score(self, progress_data: List[Progress]) -> float:
         """Calculate consistency score based on practice patterns"""
@@ -746,22 +788,22 @@ class AdvancedAnalytics:
         if cache_key not in self.analysis_cache:
             return False
 
-        cache_time = self.analysis_cache[cache_key]['timestamp']
+        cache_time = self.analysis_cache[cache_key]["timestamp"]
         return datetime.now() - cache_time < self.cache_duration
 
     def _generate_empty_dashboard(self, user_id: int, period: AnalyticsPeriod) -> Dict:
         """Generate empty dashboard for error cases"""
         return {
-            'user_id': user_id,
-            'period': period.value,
-            'generated_at': datetime.now().isoformat(),
-            'error': 'Unable to generate analytics data',
-            'performance_metrics': [],
-            'learning_insights': [],
-            'practice_patterns': {},
-            'swara_analysis': [],
-            'progress_predictions': [],
-            'recommendations': ["Start practicing regularly to see analytics"]
+            "user_id": user_id,
+            "period": period.value,
+            "generated_at": datetime.now().isoformat(),
+            "error": "Unable to generate analytics data",
+            "performance_metrics": [],
+            "learning_insights": [],
+            "practice_patterns": {},
+            "swara_analysis": [],
+            "progress_predictions": [],
+            "recommendations": ["Start practicing regularly to see analytics"],
         }
 
     async def _analyze_streaks(self, user_id: int, period: AnalyticsPeriod) -> Dict:
@@ -769,9 +811,9 @@ class AdvancedAnalytics:
         try:
             with get_db_session() as db:
                 # Get all practice sessions for the user
-                all_progress = db.query(Progress).filter(
-                    Progress.user_id == user_id
-                ).order_by(Progress.created_at.desc()).all()
+                all_progress = (
+                    db.query(Progress).filter(Progress.user_id == user_id).order_by(Progress.created_at.desc()).all()
+                )
 
                 if not all_progress:
                     return {
@@ -779,7 +821,7 @@ class AdvancedAnalytics:
                         "longest_streak": 0,
                         "streak_insights": ["Start practicing to build your streak!"],
                         "streak_history": [],
-                        "best_streak_dates": None
+                        "best_streak_dates": None,
                     }
 
                 # Extract unique practice dates
@@ -791,7 +833,7 @@ class AdvancedAnalytics:
                         "longest_streak": 0,
                         "streak_insights": [],
                         "streak_history": [],
-                        "best_streak_dates": None
+                        "best_streak_dates": None,
                     }
 
                 # Calculate current streak
@@ -817,9 +859,11 @@ class AdvancedAnalytics:
                     "streak_history": streak_history[::-1],  # Oldest first
                     "best_streak_dates": {
                         "start": best_streak_start.isoformat() if best_streak_start else None,
-                        "end": best_streak_end.isoformat() if best_streak_end else None
-                    } if best_streak_start else None,
-                    "practiced_today": today in practice_dates
+                        "end": best_streak_end.isoformat() if best_streak_end else None,
+                    }
+                    if best_streak_start
+                    else None,
+                    "practiced_today": today in practice_dates,
                 }
 
         except Exception as e:
@@ -837,13 +881,13 @@ class AdvancedAnalytics:
         current_run_start = practice_dates[0] if practice_dates else None
 
         for i in range(1, len(practice_dates)):
-            if practice_dates[i-1] - practice_dates[i] == timedelta(days=1):
+            if practice_dates[i - 1] - practice_dates[i] == timedelta(days=1):
                 current_run += 1
             else:
                 if current_run > longest_streak:
                     longest_streak = current_run
                     best_streak_end = current_run_start
-                    best_streak_start = practice_dates[i-1]
+                    best_streak_start = practice_dates[i - 1]
                 current_run = 1
                 current_run_start = practice_dates[i]
 
@@ -878,14 +922,16 @@ class AdvancedAnalytics:
         # Calculate weekly streak history
         streak_history = []
         for week in range(4):  # Last 4 weeks
-            week_start = today - timedelta(days=today.weekday() + week*7)
+            week_start = today - timedelta(days=today.weekday() + week * 7)
             week_end = week_start + timedelta(days=6)
             week_practices = sum(1 for d in practice_dates if week_start <= d <= week_end)
-            streak_history.append({
-                "week_start": week_start.isoformat(),
-                "days_practiced": week_practices,
-                "percentage": round(week_practices / 7 * 100, 1)
-            })
+            streak_history.append(
+                {
+                    "week_start": week_start.isoformat(),
+                    "days_practiced": week_practices,
+                    "percentage": round(week_practices / 7 * 100, 1),
+                }
+            )
         return streak_history
 
     async def _analyze_accuracy_trends(self, user_id: int, period: AnalyticsPeriod) -> Dict:
@@ -903,7 +949,7 @@ class AdvancedAnalytics:
                         "best_accuracy": 0,
                         "worst_accuracy": 0,
                         "improvement_rate": 0,
-                        "consistency_rating": "N/A"
+                        "consistency_rating": "N/A",
                     }
 
                 # Sort by date
@@ -918,7 +964,7 @@ class AdvancedAnalytics:
                         "best_accuracy": 0,
                         "worst_accuracy": 0,
                         "improvement_rate": 0,
-                        "consistency_rating": "N/A"
+                        "consistency_rating": "N/A",
                     }
 
                 # Calculate trend line
@@ -928,16 +974,18 @@ class AdvancedAnalytics:
                 trend_data = []
                 for i, record in enumerate(sorted_data):
                     if record.average_accuracy is not None:
-                        trend_data.append({
-                            "date": record.created_at.isoformat(),
-                            "accuracy": round(record.average_accuracy, 4),
-                            "trend_value": round(trend_line[i], 4) if i < len(trend_line) else None
-                        })
+                        trend_data.append(
+                            {
+                                "date": record.created_at.isoformat(),
+                                "accuracy": round(record.average_accuracy, 4),
+                                "trend_value": round(trend_line[i], 4) if i < len(trend_line) else None,
+                            }
+                        )
 
                 # Determine overall trend direction
                 if len(accuracies) >= 3:
-                    first_half_avg = np.mean(accuracies[:len(accuracies)//2])
-                    second_half_avg = np.mean(accuracies[len(accuracies)//2:])
+                    first_half_avg = np.mean(accuracies[: len(accuracies) // 2])
+                    second_half_avg = np.mean(accuracies[len(accuracies) // 2 :])
                     improvement = second_half_avg - first_half_avg
 
                     if improvement > 0.05:
@@ -972,7 +1020,7 @@ class AdvancedAnalytics:
                     "improvement_rate": improvement_rate,
                     "consistency_rating": consistency_rating,
                     "standard_deviation": round(std_dev, 4),
-                    "total_sessions": len(accuracies)
+                    "total_sessions": len(accuracies),
                 }
 
         except Exception as e:
@@ -994,7 +1042,7 @@ class AdvancedAnalytics:
                         "peak_days": [],
                         "total_practice_time": 0,
                         "average_session_duration": 0,
-                        "recommendations": ["Start practicing to see your time distribution"]
+                        "recommendations": ["Start practicing to see your time distribution"],
                     }
 
                 # Hourly distribution
@@ -1002,7 +1050,9 @@ class AdvancedAnalytics:
                 hourly_sessions = {str(h).zfill(2): 0 for h in range(24)}
 
                 # Daily distribution (0=Monday, 6=Sunday)
-                daily_distribution = {day: 0 for day in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]}
+                daily_distribution = {
+                    day: 0 for day in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+                }
                 daily_sessions = {day: 0 for day in daily_distribution.keys()}
 
                 total_time = 0
@@ -1023,19 +1073,15 @@ class AdvancedAnalytics:
 
                 # Find peak hours (top 3)
                 peak_hours = sorted(
-                    [(h, t) for h, t in hourly_distribution.items() if t > 0],
-                    key=lambda x: x[1],
-                    reverse=True
+                    [(h, t) for h, t in hourly_distribution.items() if t > 0], key=lambda x: x[1], reverse=True
                 )[:3]
 
                 peak_hours_formatted = self._format_peak_hours(peak_hours, hourly_sessions)
 
                 # Find peak days
-                peak_days = sorted(
-                    [(d, t) for d, t in daily_distribution.items() if t > 0],
-                    key=lambda x: x[1],
-                    reverse=True
-                )[:3]
+                peak_days = sorted([(d, t) for d, t in daily_distribution.items() if t > 0], key=lambda x: x[1], reverse=True)[
+                    :3
+                ]
 
                 peak_days_formatted = [
                     {"day": day, "total_minutes": round(minutes, 1), "sessions": daily_sessions[day]}
@@ -1054,7 +1100,7 @@ class AdvancedAnalytics:
                     "total_practice_time": round(total_time, 1),
                     "average_session_duration": round(avg_duration, 1),
                     "total_sessions": len(progress_data),
-                    "recommendations": recommendations
+                    "recommendations": recommendations,
                 }
 
         except Exception as e:
@@ -1068,13 +1114,17 @@ class AdvancedAnalytics:
         for hour, minutes in peak_hours:
             h = int(hour)
             time_label = f"{h:02d}:00-{(h+1)%24:02d}:00"
-            period_label = "Morning" if 6 <= h < 12 else "Afternoon" if 12 <= h < 17 else "Evening" if 17 <= h < 21 else "Night"
-            peak_hours_formatted.append({
-                "hour": time_label,
-                "period": period_label,
-                "total_minutes": round(minutes, 1),
-                "sessions": hourly_sessions[hour]
-            })
+            period_label = (
+                "Morning" if 6 <= h < 12 else "Afternoon" if 12 <= h < 17 else "Evening" if 17 <= h < 21 else "Night"
+            )
+            peak_hours_formatted.append(
+                {
+                    "hour": time_label,
+                    "period": period_label,
+                    "total_minutes": round(minutes, 1),
+                    "sessions": hourly_sessions[hour],
+                }
+            )
         return peak_hours_formatted
 
     @staticmethod
@@ -1111,16 +1161,11 @@ class AdvancedAnalytics:
                         "level_history": [],
                         "exercises_by_level": {},
                         "ready_for_advancement": False,
-                        "advancement_criteria": {}
+                        "advancement_criteria": {},
                     }
 
                 # Extract difficulty levels from exercise data
-                difficulty_levels = {
-                    "beginner": 1,
-                    "intermediate": 2,
-                    "advanced": 3,
-                    "expert": 4
-                }
+                difficulty_levels = {"beginner": 1, "intermediate": 2, "advanced": 3, "expert": 4}
 
                 level_sessions, level_accuracies = self._bucket_sessions_by_level(progress_data, difficulty_levels)
 
@@ -1140,11 +1185,7 @@ class AdvancedAnalytics:
                 avg_accuracy = float(np.mean(current_accuracies)) if current_accuracies else 0.0
                 session_count = int(len(level_sessions.get(current_level, [])))
 
-                ready_for_advancement = bool(
-                    avg_accuracy >= 0.80 and
-                    session_count >= 5 and
-                    current_level != "expert"
-                )
+                ready_for_advancement = bool(avg_accuracy >= 0.80 and session_count >= 5 and current_level != "expert")
 
                 advancement_criteria = {
                     "accuracy_threshold": 0.80,
@@ -1152,21 +1193,25 @@ class AdvancedAnalytics:
                     "sessions_required": 5,
                     "current_sessions": session_count,
                     "accuracy_met": bool(avg_accuracy >= 0.80),
-                    "sessions_met": bool(session_count >= 5)
+                    "sessions_met": bool(session_count >= 5),
                 }
 
                 # Level history
                 level_history = []
                 for level, sessions in level_sessions.items():
                     if sessions:
-                        level_history.append({
-                            "level": level,
-                            "level_number": int(difficulty_levels[level]),
-                            "sessions_completed": int(len(sessions)),
-                            "average_accuracy": round(float(np.mean(level_accuracies[level])), 4) if level_accuracies[level] else 0.0,
-                            "first_attempt": min(s.created_at for s in sessions).isoformat(),
-                            "last_attempt": max(s.created_at for s in sessions).isoformat()
-                        })
+                        level_history.append(
+                            {
+                                "level": level,
+                                "level_number": int(difficulty_levels[level]),
+                                "sessions_completed": int(len(sessions)),
+                                "average_accuracy": round(float(np.mean(level_accuracies[level])), 4)
+                                if level_accuracies[level]
+                                else 0.0,
+                                "first_attempt": min(s.created_at for s in sessions).isoformat(),
+                                "last_attempt": max(s.created_at for s in sessions).isoformat(),
+                            }
+                        )
 
                 return {
                     "current_level": current_level,
@@ -1175,7 +1220,7 @@ class AdvancedAnalytics:
                     "level_history": sorted(level_history, key=lambda x: x["level_number"]),
                     "exercises_by_level": {level: int(len(sessions)) for level, sessions in level_sessions.items()},
                     "ready_for_advancement": ready_for_advancement,
-                    "advancement_criteria": advancement_criteria
+                    "advancement_criteria": advancement_criteria,
                 }
 
         except Exception as e:
@@ -1195,10 +1240,14 @@ class AdvancedAnalytics:
                     level = record.exercise.content_data.get("difficulty")
                 if not level:
                     lv = record.exercise.difficulty_level or 1
-                    if lv <= 3: level = "beginner"
-                    elif lv <= 6: level = "intermediate"
-                    elif lv <= 8: level = "advanced"
-                    else: level = "expert"
+                    if lv <= 3:
+                        level = "beginner"
+                    elif lv <= 6:
+                        level = "intermediate"
+                    elif lv <= 8:
+                        level = "advanced"
+                    else:
+                        level = "expert"
                 if level in level_sessions:
                     level_sessions[level].append(record)
                     if record.average_accuracy is not None:
@@ -1211,8 +1260,8 @@ class AdvancedAnalytics:
         # Calculate progression rate
         sorted_data = sorted(progress_data, key=lambda x: x.created_at)
         if len(sorted_data) >= 2:
-            first_quarter = sorted_data[:len(sorted_data)//4] if len(sorted_data) >= 4 else sorted_data[:1]
-            last_quarter = sorted_data[-len(sorted_data)//4:] if len(sorted_data) >= 4 else sorted_data[-1:]
+            first_quarter = sorted_data[: len(sorted_data) // 4] if len(sorted_data) >= 4 else sorted_data[:1]
+            last_quarter = sorted_data[-len(sorted_data) // 4 :] if len(sorted_data) >= 4 else sorted_data[-1:]
 
             first_levels = []
             for r in first_quarter:
@@ -1246,7 +1295,7 @@ class AdvancedAnalytics:
                         "peer_comparison": {},
                         "ranking": None,
                         "percentile": None,
-                        "insights": ["Practice more to see how you compare with others"]
+                        "insights": ["Practice more to see how you compare with others"],
                     }
 
                 user_accuracies = [p.average_accuracy for p in user_progress if p.average_accuracy is not None]
@@ -1255,26 +1304,28 @@ class AdvancedAnalytics:
                 user_session_count = len(user_progress)
 
                 # Get all users' aggregated data for the period (anonymized)
-                all_users_data = db.query(
-                    Progress.user_id,
-                    func.avg(Progress.average_accuracy).label('avg_accuracy'),
-                    func.sum(Progress.practice_time).label('total_time'),
-                    func.count(Progress.id).label('session_count')
-                ).filter(
-                    Progress.created_at >= current_start,
-                    Progress.created_at <= current_end
-                ).group_by(Progress.user_id).all()
+                all_users_data = (
+                    db.query(
+                        Progress.user_id,
+                        func.avg(Progress.average_accuracy).label("avg_accuracy"),
+                        func.sum(Progress.practice_time).label("total_time"),
+                        func.count(Progress.id).label("session_count"),
+                    )
+                    .filter(Progress.created_at >= current_start, Progress.created_at <= current_end)
+                    .group_by(Progress.user_id)
+                    .all()
+                )
 
                 if len(all_users_data) < 3:
                     return {
                         "peer_comparison": {
                             "user_accuracy": round(user_avg_accuracy, 4),
                             "user_practice_time": round(user_practice_time, 1),
-                            "user_sessions": user_session_count
+                            "user_sessions": user_session_count,
                         },
                         "ranking": None,
                         "percentile": None,
-                        "insights": ["Not enough peer data for comparison"]
+                        "insights": ["Not enough peer data for comparison"],
                     }
 
                 # Calculate rankings
@@ -1310,24 +1361,39 @@ class AdvancedAnalytics:
                         "user_practice_time": round(user_practice_time, 1),
                         "peer_avg_practice_time": round(np.mean(time_values), 1) if time_values else 0,
                         "user_sessions": user_session_count,
-                        "peer_avg_sessions": round(np.mean(session_values), 1) if session_values else 0
+                        "peer_avg_sessions": round(np.mean(session_values), 1) if session_values else 0,
                     },
                     "accuracy_ranking": {
                         "rank": accuracy_rank,
                         "total_users": len(accuracy_values),
-                        "percentile": accuracy_percentile
+                        "percentile": accuracy_percentile,
                     },
-                    "time_ranking": {
-                        "rank": time_rank,
-                        "total_users": len(time_values),
-                        "percentile": time_percentile
-                    },
-                    "insights": insights
+                    "time_ranking": {"rank": time_rank, "total_users": len(time_values), "percentile": time_percentile},
+                    "insights": insights,
                 }
 
         except Exception as e:
             logger.exception("Error generating comparative analysis: %s", e)
             return {"peer_comparison": {}, "ranking": None, "percentile": None}
+
+    @staticmethod
+    def _weak_swara_recommendation(recent_progress) -> Optional[str]:
+        """Name up to 3 swaras with 3+ scored attempts averaging below 0.7, or None."""
+        swara_performance: Dict[str, List[float]] = {}
+        for record in recent_progress:
+            # Assuming target_swara is stored within accuracy_metrics JSON
+            target_swara = record.accuracy_metrics.get("target_swara")
+            if target_swara:
+                swara = target_swara
+                if swara not in swara_performance:
+                    swara_performance[swara] = []
+                if record.average_accuracy is not None:
+                    swara_performance[swara].append(record.average_accuracy)
+
+        weak_swaras = [swara for swara, scores in swara_performance.items() if len(scores) >= 3 and np.mean(scores) < 0.7]
+        if weak_swaras:
+            return f"Focus extra practice on: {', '.join(weak_swaras[:3])}"
+        return None
 
     async def _generate_personalized_recommendations(self, user_id: int) -> List[str]:
         """Generate personalized recommendations based on user's learning patterns"""
@@ -1337,17 +1403,19 @@ class AdvancedAnalytics:
             with get_db_session() as db:
                 # Get recent progress data (last 30 days)
                 cutoff = datetime.utcnow() - timedelta(days=30)
-                recent_progress = db.query(Progress).filter(
-                    Progress.user_id == user_id,
-                    Progress.created_at >= cutoff
-                ).order_by(Progress.created_at.desc()).all()
+                recent_progress = (
+                    db.query(Progress)
+                    .filter(Progress.user_id == user_id, Progress.created_at >= cutoff)
+                    .order_by(Progress.created_at.desc())
+                    .all()
+                )
 
                 if not recent_progress:
                     return [
                         "Start with basic swara recognition exercises",
                         "Practice Sa-Pa-Sa patterns to build pitch awareness",
                         "Set a daily 10-minute practice goal",
-                        "Use the tanpura drone feature for pitch reference"
+                        "Use the tanpura drone feature for pitch reference",
                     ]
 
                 # Analyze practice frequency
@@ -1380,10 +1448,16 @@ class AdvancedAnalytics:
                         early_avg = np.mean(accuracies[-10:-5])
                         late_avg = np.mean(accuracies[-5:])
                         if late_avg < early_avg - 0.1:
-                            recommendations.append("Recent performance dip detected - review fundamentals and ensure proper warmup")
+                            recommendations.append(
+                                "Recent performance dip detected - review fundamentals and ensure proper warmup"
+                            )
 
                 # Analyze session duration
-                durations = [(p.practice_time / 60) if p.practice_time is not None else 0 for p in recent_progress if p.practice_time is not None]
+                durations = [
+                    (p.practice_time / 60) if p.practice_time is not None else 0
+                    for p in recent_progress
+                    if p.practice_time is not None
+                ]
                 if durations:
                     avg_duration = np.mean(durations)
                     if avg_duration < 10:
@@ -1392,39 +1466,22 @@ class AdvancedAnalytics:
                         recommendations.append("Long sessions are great! Consider breaking into multiple focused sessions")
 
                 # Analyze weak areas from exercise data
-                swara_performance = {}
-                for record in recent_progress:
-                    # Assuming target_swara is stored within accuracy_metrics JSON
-                    target_swara = record.accuracy_metrics.get('target_swara')
-                    if target_swara:
-                        swara = target_swara
-                        if swara not in swara_performance:
-                            swara_performance[swara] = []
-                        if record.average_accuracy is not None:
-                            swara_performance[swara].append(record.average_accuracy)
-
-                if swara_performance:
-                    weak_swaras = [
-                        swara for swara, scores in swara_performance.items()
-                        if len(scores) >= 3 and np.mean(scores) < 0.7
-                    ]
-                    if weak_swaras:
-                        recommendations.append(f"Focus extra practice on: {', '.join(weak_swaras[:3])}")
+                weak_swara_tip = self._weak_swara_recommendation(recent_progress)
+                if weak_swara_tip:
+                    recommendations.append(weak_swara_tip)
 
                 # If we still have room for recommendations
                 if len(recommendations) < 3:
-                    recommendations.extend([
-                        "Record and listen back to your practice sessions",
-                        "Join community challenges to stay motivated",
-                        "Explore different ragas to broaden your musical vocabulary"
-                    ][:3 - len(recommendations)])
+                    recommendations.extend(
+                        [
+                            "Record and listen back to your practice sessions",
+                            "Join community challenges to stay motivated",
+                            "Explore different ragas to broaden your musical vocabulary",
+                        ][: 3 - len(recommendations)]
+                    )
 
                 return recommendations[:6]  # Limit to 6 recommendations
 
         except Exception as e:
             logger.exception("Error generating recommendations: %s", e)
-            return [
-                "Continue regular practice",
-                "Focus on challenging swaras",
-                "Set specific practice goals"
-            ]
+            return ["Continue regular practice", "Focus on challenging swaras", "Set specific practice goals"]

@@ -3,9 +3,9 @@ Carnatic Learning API Package
 Main Flask application with modular blueprints, security, and WebSocket support
 """
 
+import logging
 import os
 import secrets
-import logging
 import sys
 from typing import Tuple
 
@@ -13,15 +13,16 @@ from flask import Flask
 from flask_cors import CORS
 from flask_socketio import SocketIO
 
+from .analytics.routes import analytics_bp
+from .audio.routes import audio_bp
+
 # Import blueprints
 from .auth.routes import auth_bp
 from .learning.routes import learning_bp
-from .audio.routes import audio_bp
 from .social.routes import social_bp
-from .analytics.routes import analytics_bp
 
 
-def create_app(config_name: str = 'development') -> Tuple[Flask, SocketIO]:
+def create_app(config_name: str = "development") -> Tuple[Flask, SocketIO]:
     """
     Flask Application Factory with Security and WebSocket Integration
 
@@ -31,7 +32,7 @@ def create_app(config_name: str = 'development') -> Tuple[Flask, SocketIO]:
     Returns:
         A tuple containing the Flask application instance and the SocketIO instance.
     """
-    static_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static')
+    static_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
     app = Flask(__name__, static_folder=static_folder)
 
     # Configure logging, config, CORS, and security headers
@@ -40,14 +41,14 @@ def create_app(config_name: str = 'development') -> Tuple[Flask, SocketIO]:
     setup_cors(app)
 
     # Initialize SocketIO
-    socketio_instance = SocketIO(app, cors_allowed_origins=app.config.get('ALLOWED_ORIGINS'), async_mode='threading')
+    socketio_instance = SocketIO(app, cors_allowed_origins=app.config.get("ALLOWED_ORIGINS"), async_mode="threading")
 
     # Register blueprints
     register_blueprints(app)
     register_main_routes(app)
     register_cli_commands(app)
     register_socketio_events(socketio_instance)
-    
+
     app.logger.info(f"Carnatic Music Platform v2 initialized in {config_name} mode")
 
     return app, socketio_instance
@@ -56,62 +57,70 @@ def create_app(config_name: str = 'development') -> Tuple[Flask, SocketIO]:
 def setup_logging(app: Flask, config_name: str) -> None:
     """Configure application logging."""
     log_level = logging.INFO
-    if config_name == 'production':
+    if config_name == "production":
         log_level = logging.WARNING
-    elif config_name == 'testing':
+    elif config_name == "testing":
         log_level = logging.ERROR
 
-    logging.basicConfig(level=log_level, format='%(asctime)s %(levelname)s [%(name)s] %(message)s')
+    logging.basicConfig(level=log_level, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
     app.logger.setLevel(log_level)
-    if config_name == 'production':
-        logging.getLogger('werkzeug').setLevel(logging.WARNING)
+    if config_name == "production":
+        logging.getLogger("werkzeug").setLevel(logging.WARNING)
 
 
 def load_config(app: Flask, config_name: str) -> None:
     """Load configuration from environment variables."""
-    app.config.update({
-        'SECRET_KEY': os.environ.get('SECRET_KEY'),
-        'DATABASE_URL': os.environ.get('DATABASE_URL', 'postgresql://localhost/carnatic_music'),
-        'MAX_CONTENT_LENGTH': 2 * 1024 * 1024,
-        'ALLOWED_ORIGINS': os.environ.get('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:3005,http://localhost:3006,http://localhost:3007,http://localhost:3008,http://localhost:5001,http://localhost:5002').split(','),
-    })
-    if config_name == 'development':
-        app.config['DEBUG'] = True
-        if not app.config['SECRET_KEY']:
-            app.config['SECRET_KEY'] = secrets.token_urlsafe(32)
+    app.config.update(
+        {
+            "SECRET_KEY": os.environ.get("SECRET_KEY"),
+            "DATABASE_URL": os.environ.get("DATABASE_URL", "postgresql://localhost/carnatic_music"),
+            "MAX_CONTENT_LENGTH": 2 * 1024 * 1024,
+            "ALLOWED_ORIGINS": os.environ.get(
+                "ALLOWED_ORIGINS",
+                "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:3005,http://localhost:3006,http://localhost:3007,http://localhost:3008,http://localhost:5001,http://localhost:5002",
+            ).split(","),
+        }
+    )
+    if config_name == "development":
+        app.config["DEBUG"] = True
+        if not app.config["SECRET_KEY"]:
+            app.config["SECRET_KEY"] = secrets.token_urlsafe(32)
             app.logger.warning("Using auto-generated SECRET_KEY for development")
-    elif config_name in ('production', 'testing'):
-        app.config['DEBUG'] = False
-        app.config['TESTING'] = config_name == 'testing'
-        if not app.config['SECRET_KEY']:
+    elif config_name in ("production", "testing"):
+        app.config["DEBUG"] = False
+        app.config["TESTING"] = config_name == "testing"
+        if not app.config["SECRET_KEY"]:
             raise RuntimeError("SECRET_KEY environment variable must be set in production/testing")
 
 
 def setup_cors(app: Flask) -> None:
     """Configure CORS and add security headers."""
-    CORS(app,
-         origins=app.config.get('ALLOWED_ORIGINS'),
-         allow_headers=['Content-Type', 'Authorization'],
-         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-         supports_credentials=True)
+    CORS(
+        app,
+        origins=app.config.get("ALLOWED_ORIGINS"),
+        allow_headers=["Content-Type", "Authorization"],
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        supports_credentials=True,
+    )
 
     @app.after_request
     def add_security_headers(response):
-        response.headers['X-Content-Type-Options'] = 'nosniff'
-        response.headers['X-Frame-Options'] = 'DENY'
-        response.headers['X-XSS-Protection'] = '1; mode=block'
-        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
 
 def register_blueprints(app: Flask) -> None:
     """Register API blueprints."""
-    app.register_blueprint(auth_bp, url_prefix='/api/v1/auth')
-    app.register_blueprint(learning_bp, url_prefix='/api/v1/learning')
-    app.register_blueprint(audio_bp, url_prefix='/api/v1/audio')
-    app.register_blueprint(social_bp, url_prefix='/api/v1/social')
-    app.register_blueprint(analytics_bp, url_prefix='/api/v1/analytics')
+    app.register_blueprint(auth_bp, url_prefix="/api/v1/auth")
+    app.register_blueprint(learning_bp, url_prefix="/api/v1/learning")
+    app.register_blueprint(audio_bp, url_prefix="/api/v1/audio")
+    app.register_blueprint(social_bp, url_prefix="/api/v1/social")
+    app.register_blueprint(analytics_bp, url_prefix="/api/v1/analytics")
     app.logger.info("Registered API version 1 blueprints")
+
 
 def register_main_routes(app: Flask) -> None:
     """Register main application routes."""
@@ -123,145 +132,162 @@ def register_main_routes(app: Flask) -> None:
 
 def _register_page_routes(app: Flask) -> None:
     """Register static pages, health check and the Sarali patterns shortcut."""
-    @app.route('/')
+
+    @app.route("/")
     def index():
-        dist = os.environ.get('SPA_DIST_DIR')
-        if dist and os.path.isfile(os.path.join(dist, 'index.html')):
+        dist = os.environ.get("SPA_DIST_DIR")
+        if dist and os.path.isfile(os.path.join(dist, "index.html")):
             from flask import send_from_directory
-            return send_from_directory(dist, 'index.html')
-        return app.send_static_file('index.html')
 
-    @app.route('/carnatic')
+            return send_from_directory(dist, "index.html")
+        return app.send_static_file("index.html")
+
+    @app.route("/carnatic")
     def carnatic():
-        return app.send_static_file('carnatic.html')
+        return app.send_static_file("carnatic.html")
 
-    @app.route('/learning')
+    @app.route("/learning")
     def learning_app():
-        return app.send_static_file('learning.html')
+        return app.send_static_file("learning.html")
 
-    @app.route('/api/v1/health')
+    @app.route("/api/v1/health")
     def health_check():
-        return {'status': 'healthy', 'version': '2.0.0'}
+        return {"status": "healthy", "version": "2.0.0"}
 
-    @app.route('/api/exercises/sarali/patterns', methods=['GET'])
+    @app.route("/api/exercises/sarali/patterns", methods=["GET"])
     def sarali_patterns_shortcut():
         """Shortcut route for Sarali patterns (frontend compatibility)."""
         import json
-        from modules.exercises.sarali.patterns import sarali_generator, get_sarali_pattern
-        from flask import request, jsonify
 
-        level = request.args.get('level', type=int)
+        from flask import jsonify, request
+
+        from modules.exercises.sarali.patterns import get_sarali_pattern, sarali_generator
+
+        level = request.args.get("level", type=int)
 
         if level is not None:
             pattern = get_sarali_pattern(level)
             if not pattern:
-                return jsonify({'error': f'Pattern level {level} not found'}), 404
+                return jsonify({"error": f"Pattern level {level} not found"}), 404
             patterns_json = sarali_generator.export_patterns_json()
             all_patterns = json.loads(patterns_json)
             for p in all_patterns:
-                if p['level'] == level:
+                if p["level"] == level:
                     return jsonify(p)
-            return jsonify({'error': f'Pattern level {level} not found'}), 404
+            return jsonify({"error": f"Pattern level {level} not found"}), 404
 
         patterns_json = sarali_generator.export_patterns_json()
         return jsonify(json.loads(patterns_json))
 
-    @app.route('/favicon.ico')
+    @app.route("/favicon.ico")
     def favicon():
-        return app.send_static_file('favicon.ico')
+        return app.send_static_file("favicon.ico")
 
 
 def _register_practice_routes(app: Flask) -> None:
     """Register practice settings and stats endpoints."""
+
     # Practice endpoints for frontend compatibility
-    @app.route('/api/practice/settings', methods=['GET', 'POST'])
+    @app.route("/api/practice/settings", methods=["GET", "POST"])
     def practice_settings():
         """Get or update practice settings."""
-        from flask import request, jsonify, session
+        from flask import jsonify, request, session
 
-        if request.method == 'GET':
+        if request.method == "GET":
             # Return default settings for now (in production, fetch from DB)
-            return jsonify({
-                'preferredTempo': 60,
-                'showVisualGuides': True,
-                'autoAdvance': False,
-                'metronomeEnabled': True,
-                'feedbackLevel': 'detailed'
-            })
+            return jsonify(
+                {
+                    "preferredTempo": 60,
+                    "showVisualGuides": True,
+                    "autoAdvance": False,
+                    "metronomeEnabled": True,
+                    "feedbackLevel": "detailed",
+                }
+            )
         else:
             # POST - save settings
             data = request.get_json() or {}
             # In production, save to database
-            return jsonify({'success': True, 'settings': data})
+            return jsonify({"success": True, "settings": data})
 
-    @app.route('/api/practice/stats', methods=['GET'])
+    @app.route("/api/practice/stats", methods=["GET"])
     def practice_stats():
         """Get practice statistics."""
         from flask import jsonify
 
         # Return default stats (in production, calculate from DB)
-        return jsonify({
-            'totalSessions': 0,
-            'totalPracticeTime': 0,
-            'currentStreak': 0,
-            'bestStreak': 0,
-            'averageAccuracy': 0,
-            'lastPracticeDate': None,
-            'weeklyGoalProgress': 0
-        })
+        return jsonify(
+            {
+                "totalSessions": 0,
+                "totalPracticeTime": 0,
+                "currentStreak": 0,
+                "bestStreak": 0,
+                "averageAccuracy": 0,
+                "lastPracticeDate": None,
+                "weeklyGoalProgress": 0,
+            }
+        )
 
 
 def _register_alias_routes(app: Flask) -> None:
     """Register /api/* aliases for /api/v1/* routes used by the frontend."""
+
     # Auth alias routes for frontend compatibility (frontend calls /api/auth/*, backend has /api/v1/auth/*)
-    @app.route('/api/auth/guest', methods=['POST'])
+    @app.route("/api/auth/guest", methods=["POST"])
     def auth_guest_alias():
         """Alias for /api/v1/auth/guest"""
         from .auth.routes import create_guest_session
+
         return create_guest_session()
 
-    @app.route('/api/auth/session', methods=['GET'])
+    @app.route("/api/auth/session", methods=["GET"])
     def auth_session_alias():
         """Alias for /api/v1/auth/session"""
         from .auth.routes import get_session_info
+
         return get_session_info()
 
-    @app.route('/api/auth/verify', methods=['GET'])
+    @app.route("/api/auth/verify", methods=["GET"])
     def auth_verify_alias():
         """Alias for /api/v1/auth/verify"""
         from .auth.routes import verify_session
+
         return verify_session()
 
-    @app.route('/api/auth/logout', methods=['POST'])
+    @app.route("/api/auth/logout", methods=["POST"])
     def auth_logout_alias():
         """Alias for /api/v1/auth/logout"""
         from .auth.routes import logout
+
         return logout()
 
     # Audio config alias for frontend compatibility
-    @app.route('/api/audio/config', methods=['GET'])
+    @app.route("/api/audio/config", methods=["GET"])
     def audio_config_alias():
         """Alias for /api/v1/audio/config"""
         from .audio.routes import get_audio_config
+
         return get_audio_config()
 
 
 def _register_spa_route(app: Flask) -> None:
     """Register the SPA catch-all route."""
+
     # Built React SPA — served only when SPA_DIST_DIR is set (production
     # container bundles frontend/dist). Real files (assets, favicon) return
     # directly; unknown non-API paths fall back to index.html for client-side
     # routing. Dev leaves SPA_DIST_DIR unset, so this stays a no-op there.
-    @app.route('/<path:path>')
+    @app.route("/<path:path>")
     def spa_catch_all(path):
-        from flask import send_from_directory, abort
-        dist = os.environ.get('SPA_DIST_DIR')
+        from flask import abort, send_from_directory
+
+        dist = os.environ.get("SPA_DIST_DIR")
         if dist:
             candidate = os.path.join(dist, path)
             if os.path.isfile(candidate):
                 return send_from_directory(dist, path)
-            if not (path.startswith('api/') or path.startswith('socket.io')):
-                return send_from_directory(dist, 'index.html')
+            if not (path.startswith("api/") or path.startswith("socket.io")):
+                return send_from_directory(dist, "index.html")
         abort(404)
 
 
@@ -269,18 +295,21 @@ def register_socketio_events(socketio_instance: SocketIO) -> None:
     """Register WebSocket events."""
     from .audio.websocket import register_audio_events
     from .learning.websocket import register_learning_events
-    
+
     register_audio_events(socketio_instance)
     register_learning_events(socketio_instance)
     logging.getLogger(__name__).info("Registered WebSocket event handlers.")
 
+
 def register_cli_commands(app: Flask) -> None:
     """Register CLI commands."""
+
     @app.cli.command()
     def init_db():
         """Initialize the database."""
         try:
             from migrations.init_db import main
+
             main()
             sys.stdout.write("Database initialized successfully\n")
         except Exception as e:
@@ -291,7 +320,7 @@ def register_cli_commands(app: Flask) -> None:
     def security_check():
         """Run basic security checks."""
         sys.stdout.write("Running security checks...\n")
-        secret_key = app.config.get('SECRET_KEY', '')
+        secret_key = app.config.get("SECRET_KEY", "")
         if len(secret_key) < 32:
             sys.stdout.write("❌ SECRET_KEY should be at least 32 characters\n")
         else:

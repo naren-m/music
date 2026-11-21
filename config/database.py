@@ -11,10 +11,7 @@ from typing import Any, Dict, Optional
 
 import redis
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import (
-    Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, JSON,
-    String, Text, create_engine, text
-)
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text, create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, relationship, sessionmaker
 from sqlalchemy.pool import QueuePool
@@ -24,22 +21,23 @@ logger = logging.getLogger(__name__)
 # Database configuration
 Base = declarative_base()
 
+
 @dataclass
 class DatabaseConfig:
     """Database configuration with environment-based settings"""
 
     # PostgreSQL Configuration - No defaults for sensitive values
-    postgresql_host: str = os.getenv('POSTGRES_HOST', 'localhost')
-    postgresql_port: str = os.getenv('POSTGRES_PORT', '5432')
-    postgresql_db: str = os.getenv('POSTGRES_DB', 'carnatic_learning')
-    postgresql_user: str = os.getenv('POSTGRES_USER')
-    postgresql_password: str = os.getenv('POSTGRES_PASSWORD')
+    postgresql_host: str = os.getenv("POSTGRES_HOST", "localhost")
+    postgresql_port: str = os.getenv("POSTGRES_PORT", "5432")
+    postgresql_db: str = os.getenv("POSTGRES_DB", "carnatic_learning")
+    postgresql_user: str = os.getenv("POSTGRES_USER")
+    postgresql_password: str = os.getenv("POSTGRES_PASSWORD")
 
     def __post_init__(self):
         """Validate required database configuration"""
         # Check for production requirements
-        if os.getenv('FLASK_ENV') == 'production':
-            required_vars = ['postgresql_user', 'postgresql_password']
+        if os.getenv("FLASK_ENV") == "production":
+            required_vars = ["postgresql_user", "postgresql_password"]
             missing = [var for var in required_vars if not getattr(self, var)]
             if missing:
                 raise ValueError(
@@ -49,24 +47,24 @@ class DatabaseConfig:
 
         # Development fallbacks with warnings
         if not self.postgresql_user:
-            self.postgresql_user = 'carnatic_user'
+            self.postgresql_user = "carnatic_user"
             logger.warning("Using default POSTGRES_USER - set environment variable for production")
 
         if not self.postgresql_password:
-            self.postgresql_password = 'carnatic_pass'
+            self.postgresql_password = "carnatic_pass"
             logger.warning("Using default POSTGRES_PASSWORD - set environment variable for production")
 
     # Redis Configuration
-    redis_host: str = os.getenv('REDIS_HOST', 'localhost')
-    redis_port: int = int(os.getenv('REDIS_PORT', '6379'))
-    redis_db: int = int(os.getenv('REDIS_DB', '0'))
-    redis_password: Optional[str] = os.getenv('REDIS_PASSWORD')
+    redis_host: str = os.getenv("REDIS_HOST", "localhost")
+    redis_port: int = int(os.getenv("REDIS_PORT", "6379"))
+    redis_db: int = int(os.getenv("REDIS_DB", "0"))
+    redis_password: Optional[str] = os.getenv("REDIS_PASSWORD")
 
     # Connection Pool Settings
-    pool_size: int = int(os.getenv('DB_POOL_SIZE', '10'))
-    max_overflow: int = int(os.getenv('DB_MAX_OVERFLOW', '20'))
-    pool_timeout: int = int(os.getenv('DB_POOL_TIMEOUT', '30'))
-    pool_recycle: int = int(os.getenv('DB_POOL_RECYCLE', '3600'))
+    pool_size: int = int(os.getenv("DB_POOL_SIZE", "10"))
+    max_overflow: int = int(os.getenv("DB_MAX_OVERFLOW", "20"))
+    pool_timeout: int = int(os.getenv("DB_POOL_TIMEOUT", "30"))
+    pool_recycle: int = int(os.getenv("DB_POOL_RECYCLE", "3600"))
 
     @property
     def postgresql_url(self) -> str:
@@ -80,11 +78,12 @@ class DatabaseConfig:
             return f"redis://:{self.redis_password}@{self.redis_host}:{self.redis_port}/{self.redis_db}"
         return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
 
+
 # Database Models
 class User(Base):
     """User model with comprehensive profile and progress tracking"""
 
-    __tablename__ = 'users'
+    __tablename__ = "users"
 
     # Primary fields
     id = Column(Integer, primary_key=True)
@@ -99,14 +98,16 @@ class User(Base):
     learning_preferences = Column(JSON, default=dict)
 
     # Subscription and access
-    subscription_level = Column(String(50), default='free')
+    subscription_level = Column(String(50), default="free")
     subscription_expires_at = Column(DateTime(timezone=True))
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
 
     # Metadata
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
+    )
     last_login = Column(DateTime(timezone=True))
 
     # Relationships
@@ -116,15 +117,16 @@ class User(Base):
 
     # Indexes for performance
     __table_args__ = (
-        Index('idx_user_email', 'email'),
-        Index('idx_user_subscription', 'subscription_level', 'is_active'),
-        Index('idx_user_created', 'created_at'),
+        Index("idx_user_email", "email"),
+        Index("idx_user_subscription", "subscription_level", "is_active"),
+        Index("idx_user_created", "created_at"),
     )
+
 
 class Exercise(Base):
     """Exercise model for different learning modules"""
 
-    __tablename__ = 'exercises'
+    __tablename__ = "exercises"
 
     id = Column(Integer, primary_key=True)
 
@@ -140,8 +142,8 @@ class Exercise(Base):
     requirements = Column(JSON, default=dict)  # Prerequisites and settings
 
     # Raga and Tala associations
-    raga_id = Column(Integer, ForeignKey('ragas.id'))
-    tala_id = Column(Integer, ForeignKey('talas.id'))
+    raga_id = Column(Integer, ForeignKey("ragas.id"))
+    tala_id = Column(Integer, ForeignKey("talas.id"))
 
     # Performance metrics
     average_accuracy = Column(Float, default=0.0)
@@ -150,7 +152,9 @@ class Exercise(Base):
 
     # Metadata
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
+    )
     is_active = Column(Boolean, default=True)
 
     # Relationships
@@ -159,14 +163,15 @@ class Exercise(Base):
     raga = relationship("Raga", back_populates="exercises")
     tala = relationship("Tala", back_populates="exercises")
 
+
 class Progress(Base):
     """User progress tracking for exercises and modules"""
 
-    __tablename__ = 'progress'
+    __tablename__ = "progress"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
-    exercise_id = Column(Integer, ForeignKey('exercises.id'), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    exercise_id = Column(Integer, ForeignKey("exercises.id"), nullable=False, index=True)
 
     # Progress metrics
     completion_percentage = Column(Float, default=0.0)
@@ -186,7 +191,9 @@ class Progress(Base):
 
     # Metadata
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
+    )
 
     # Relationships
     user = relationship("User", back_populates="progress_records")
@@ -194,19 +201,20 @@ class Progress(Base):
 
     # Composite indexes for queries
     __table_args__ = (
-        Index('idx_progress_user_exercise', 'user_id', 'exercise_id'),
-        Index('idx_progress_updated', 'updated_at'),
-        Index('idx_progress_completion', 'completion_percentage'),
+        Index("idx_progress_user_exercise", "user_id", "exercise_id"),
+        Index("idx_progress_updated", "updated_at"),
+        Index("idx_progress_completion", "completion_percentage"),
     )
+
 
 class Recording(Base):
     """Audio recording storage and analysis results"""
 
-    __tablename__ = 'recordings'
+    __tablename__ = "recordings"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
-    exercise_id = Column(Integer, ForeignKey('exercises.id'), index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    exercise_id = Column(Integer, ForeignKey("exercises.id"), index=True)
 
     # Recording metadata
     filename = Column(String(255), nullable=False)
@@ -217,7 +225,7 @@ class Recording(Base):
     # Audio parameters
     sample_rate = Column(Integer, default=44100)
     channels = Column(Integer, default=1)
-    format = Column(String(20), default='wav')
+    format = Column(String(20), default="wav")
 
     # Analysis results
     analysis_results = Column(JSON, default=dict)  # Pitch detection, accuracy, etc.
@@ -233,10 +241,11 @@ class Recording(Base):
     user = relationship("User", back_populates="recordings")
     exercise = relationship("Exercise", back_populates="recordings")
 
+
 class Raga(Base):
     """Raga information and characteristics"""
 
-    __tablename__ = 'ragas'
+    __tablename__ = "ragas"
 
     id = Column(Integer, primary_key=True)
 
@@ -253,7 +262,7 @@ class Raga(Base):
     # Characteristics
     characteristics = Column(JSON, default=dict)  # Emotional context, time, etc.
     pakad_phrases = Column(JSON, default=list)  # Characteristic phrases
-    parent_raga_id = Column(Integer, ForeignKey('ragas.id'))  # For janya ragas
+    parent_raga_id = Column(Integer, ForeignKey("ragas.id"))  # For janya ragas
 
     # Audio samples and references
     audio_samples = Column(JSON, default=list)  # URLs to audio examples
@@ -261,7 +270,9 @@ class Raga(Base):
 
     # Metadata
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
+    )
     is_active = Column(Boolean, default=True)
 
     # Relationships
@@ -269,10 +280,11 @@ class Raga(Base):
     compositions = relationship("Composition", back_populates="raga")
     child_ragas = relationship("Raga", remote_side=[id])  # Self-referential
 
+
 class Tala(Base):
     """Tala (rhythmic cycle) information"""
 
-    __tablename__ = 'talas'
+    __tablename__ = "talas"
 
     id = Column(Integer, primary_key=True)
 
@@ -297,10 +309,11 @@ class Tala(Base):
     exercises = relationship("Exercise", back_populates="tala")
     compositions = relationship("Composition", back_populates="tala")
 
+
 class Composition(Base):
     """Musical compositions (Geetams, Varnams, Kritis)"""
 
-    __tablename__ = 'compositions'
+    __tablename__ = "compositions"
 
     id = Column(Integer, primary_key=True)
 
@@ -310,8 +323,8 @@ class Composition(Base):
     type = Column(String(50), nullable=False, index=True)  # geetam, varnam, kriti, etc.
 
     # Musical structure
-    raga_id = Column(Integer, ForeignKey('ragas.id'), nullable=False)
-    tala_id = Column(Integer, ForeignKey('talas.id'), nullable=False)
+    raga_id = Column(Integer, ForeignKey("ragas.id"), nullable=False)
+    tala_id = Column(Integer, ForeignKey("talas.id"), nullable=False)
     difficulty = Column(Integer, nullable=False, index=True)  # 1-10 scale
 
     # Content
@@ -326,20 +339,23 @@ class Composition(Base):
 
     # Metadata
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
+    )
     is_active = Column(Boolean, default=True)
 
     # Relationships
     raga = relationship("Raga", back_populates="compositions")
     tala = relationship("Tala", back_populates="compositions")
 
+
 class Achievement(Base):
     """User achievement and badge system"""
 
-    __tablename__ = 'achievements'
+    __tablename__ = "achievements"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
 
     # Achievement details
     badge_type = Column(String(100), nullable=False, index=True)
@@ -348,10 +364,10 @@ class Achievement(Base):
 
     # Scoring
     points_awarded = Column(Integer, default=0)
-    rarity_level = Column(String(20), default='common')  # common, rare, epic, legendary
+    rarity_level = Column(String(20), default="common")  # common, rare, epic, legendary
 
     # Context
-    related_exercise_id = Column(Integer, ForeignKey('exercises.id'))
+    related_exercise_id = Column(Integer, ForeignKey("exercises.id"))
     achievement_data = Column(JSON, default=dict)  # Context-specific data
 
     # Metadata
@@ -361,10 +377,11 @@ class Achievement(Base):
     # Relationships
     user = relationship("User", back_populates="achievements")
 
+
 class Group(Base):
     """Learning groups and collaborative sessions"""
 
-    __tablename__ = 'groups'
+    __tablename__ = "groups"
 
     id = Column(Integer, primary_key=True)
 
@@ -374,8 +391,8 @@ class Group(Base):
     type = Column(String(50), nullable=False, index=True)  # study_group, class, etc.
 
     # Management
-    created_by = Column(Integer, ForeignKey('users.id'), nullable=False)
-    instructor_id = Column(Integer, ForeignKey('users.id'))
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    instructor_id = Column(Integer, ForeignKey("users.id"))
     member_count = Column(Integer, default=0)
     max_members = Column(Integer, default=50)
 
@@ -386,18 +403,21 @@ class Group(Base):
 
     # Metadata
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
+    )
     is_active = Column(Boolean, default=True)
+
 
 class FriendRequest(Base):
     """Model for tracking friend requests between users"""
 
-    __tablename__ = 'friend_requests'
+    __tablename__ = "friend_requests"
 
     id = Column(Integer, primary_key=True)
-    sender_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
-    receiver_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
-    status = Column(String(20), default='pending', nullable=False) # pending, accepted, rejected
+    sender_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    receiver_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    status = Column(String(20), default="pending", nullable=False)  # pending, accepted, rejected
     sent_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     responded_at = Column(DateTime(timezone=True))
 
@@ -406,9 +426,10 @@ class FriendRequest(Base):
     receiver = relationship("User", foreign_keys=[receiver_id], backref="received_friend_requests")
 
     __table_args__ = (
-        Index('idx_friend_request_sender_receiver', 'sender_id', 'receiver_id', unique=True),
-        Index('idx_friend_request_receiver_status', 'receiver_id', 'status'),
+        Index("idx_friend_request_sender_receiver", "sender_id", "receiver_id", unique=True),
+        Index("idx_friend_request_receiver_status", "receiver_id", "status"),
     )
+
 
 # Database initialization and connection management
 class DatabaseManager:
@@ -430,7 +451,7 @@ class DatabaseManager:
                 max_overflow=self.config.max_overflow,
                 pool_timeout=self.config.pool_timeout,
                 pool_recycle=self.config.pool_recycle,
-                echo=False  # Set to True for SQL debugging
+                echo=False,  # Set to True for SQL debugging
             )
 
             self.session_factory = sessionmaker(bind=self.engine)
@@ -444,17 +465,17 @@ class DatabaseManager:
         """Initialize Redis connection"""
         try:
             redis_kwargs = {
-                'host': self.config.redis_host,
-                'port': self.config.redis_port,
-                'db': self.config.redis_db,
-                'decode_responses': True,
-                'socket_timeout': 5,
-                'socket_connect_timeout': 5,
-                'retry_on_timeout': True
+                "host": self.config.redis_host,
+                "port": self.config.redis_port,
+                "db": self.config.redis_db,
+                "decode_responses": True,
+                "socket_timeout": 5,
+                "socket_connect_timeout": 5,
+                "retry_on_timeout": True,
             }
 
             if self.config.redis_password:
-                redis_kwargs['password'] = self.config.redis_password
+                redis_kwargs["password"] = self.config.redis_password
 
             self.redis_client = redis.Redis(**redis_kwargs)
 
@@ -493,20 +514,20 @@ class DatabaseManager:
 
     def health_check(self) -> Dict[str, bool]:
         """Check health of database connections"""
-        health = {'postgresql': False, 'redis': False}
+        health = {"postgresql": False, "redis": False}
 
         # Check PostgreSQL
         try:
             with self.get_session() as session:
-                session.execute(text('SELECT 1'))
-                health['postgresql'] = True
+                session.execute(text("SELECT 1"))
+                health["postgresql"] = True
         except Exception as e:
             logger.error(f"PostgreSQL health check failed: {e}")
 
         # Check Redis
         try:
             self.redis_client.ping()
-            health['redis'] = True
+            health["redis"] = True
         except Exception as e:
             logger.error(f"Redis health check failed: {e}")
 
@@ -520,33 +541,36 @@ class DatabaseManager:
             self.redis_client.close()
         logger.info("Database connections closed")
 
+
 # Global database manager instance
 db_manager = DatabaseManager()
+
 
 # Flask-SQLAlchemy integration
 def init_db_with_flask(app) -> SQLAlchemy:
     """Initialize database with Flask app"""
-    if app.config.get('TESTING'):
-        app.config['SQLALCHEMY_DATABASE_URI'] = app.config.get('SQLALCHEMY_DATABASE_URI', 'sqlite:///:memory:')
+    if app.config.get("TESTING"):
+        app.config["SQLALCHEMY_DATABASE_URI"] = app.config.get("SQLALCHEMY_DATABASE_URI", "sqlite:///:memory:")
     else:
-        app.config['SQLALCHEMY_DATABASE_URI'] = db_manager.config.postgresql_url
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    
-    uri = app.config['SQLALCHEMY_DATABASE_URI']
-    if uri and uri.startswith('sqlite:'):
-        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-            'pool_recycle': db_manager.config.pool_recycle,
+        app.config["SQLALCHEMY_DATABASE_URI"] = db_manager.config.postgresql_url
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+    uri = app.config["SQLALCHEMY_DATABASE_URI"]
+    if uri and uri.startswith("sqlite:"):
+        app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+            "pool_recycle": db_manager.config.pool_recycle,
         }
     else:
-        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-            'pool_size': db_manager.config.pool_size,
-            'max_overflow': db_manager.config.max_overflow,
-            'pool_timeout': db_manager.config.pool_timeout,
-            'pool_recycle': db_manager.config.pool_recycle,
+        app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+            "pool_size": db_manager.config.pool_size,
+            "max_overflow": db_manager.config.max_overflow,
+            "pool_timeout": db_manager.config.pool_timeout,
+            "pool_recycle": db_manager.config.pool_recycle,
         }
 
     db = SQLAlchemy(app)
     return db
+
 
 # Database utility functions
 def seed_initial_data(session: Session) -> None:
@@ -555,45 +579,35 @@ def seed_initial_data(session: Session) -> None:
         # Create basic ragas
         basic_ragas = [
             {
-                'name': 'Mayamalavagowla',
-                'melakarta_number': 15,
-                'arohanam': 'S R1 G3 M1 P D1 N3 S',
-                'avarohanam': 'S N3 D1 P M1 G3 R1 S',
-                'characteristics': {'time': 'morning', 'emotion': 'devotional'}
+                "name": "Mayamalavagowla",
+                "melakarta_number": 15,
+                "arohanam": "S R1 G3 M1 P D1 N3 S",
+                "avarohanam": "S N3 D1 P M1 G3 R1 S",
+                "characteristics": {"time": "morning", "emotion": "devotional"},
             },
             {
-                'name': 'Sankarabharanam',
-                'melakarta_number': 29,
-                'arohanam': 'S R2 G3 M1 P D2 N3 S',
-                'avarohanam': 'S N3 D2 P M1 G3 R2 S',
-                'characteristics': {'time': 'evening', 'emotion': 'peaceful'}
-            }
+                "name": "Sankarabharanam",
+                "melakarta_number": 29,
+                "arohanam": "S R2 G3 M1 P D2 N3 S",
+                "avarohanam": "S N3 D2 P M1 G3 R2 S",
+                "characteristics": {"time": "evening", "emotion": "peaceful"},
+            },
         ]
 
         for raga_data in basic_ragas:
-            existing = session.query(Raga).filter_by(name=raga_data['name']).first()
+            existing = session.query(Raga).filter_by(name=raga_data["name"]).first()
             if not existing:
                 raga = Raga(**raga_data)
                 session.add(raga)
 
         # Create basic talas
         basic_talas = [
-            {
-                'name': 'Adi',
-                'beats_per_cycle': 8,
-                'subdivisions': [4, 2, 2],
-                'pattern': '| | O |'
-            },
-            {
-                'name': 'Rupaka',
-                'beats_per_cycle': 6,
-                'subdivisions': [2, 4],
-                'pattern': 'O | |'
-            }
+            {"name": "Adi", "beats_per_cycle": 8, "subdivisions": [4, 2, 2], "pattern": "| | O |"},
+            {"name": "Rupaka", "beats_per_cycle": 6, "subdivisions": [2, 4], "pattern": "O | |"},
         ]
 
         for tala_data in basic_talas:
-            existing = session.query(Tala).filter_by(name=tala_data['name']).first()
+            existing = session.query(Tala).filter_by(name=tala_data["name"]).first()
             if not existing:
                 tala = Tala(**tala_data)
                 session.add(tala)
@@ -605,6 +619,7 @@ def seed_initial_data(session: Session) -> None:
         session.rollback()
         logger.error(f"Failed to seed initial data: {e}")
         raise
+
 
 # Session context manager
 @contextmanager

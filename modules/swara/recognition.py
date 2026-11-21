@@ -4,19 +4,21 @@ Phase 2: Carnatic Music Learning Platform
 """
 
 import logging
-import numpy as np
-import librosa
-from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Tuple
+
+import joblib
+import librosa
+import numpy as np
 import tensorflow as tf
 from scipy import signal
 from sklearn.preprocessing import StandardScaler
-import joblib
 
 from core.models.shruti import ShrutiSystem, SwaraName
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class SwaraRecognitionConfig:
@@ -42,6 +44,7 @@ class SwaraRecognitionConfig:
     # Training data
     training_samples_per_swara: int = 1000
     validation_split: float = 0.2
+
 
 class SwaraFeatureExtractor:
     """Extract features for swara classification"""
@@ -100,35 +103,37 @@ class SwaraFeatureExtractor:
         try:
             # Fundamental frequency
             f0, voiced_flag, voiced_probs = librosa.pyin(
-                audio, fmin=80, fmax=800, sr=sr,
-                frame_length=self.config.frame_size,
-                hop_length=self.config.hop_length
+                audio, fmin=80, fmax=800, sr=sr, frame_length=self.config.frame_size, hop_length=self.config.hop_length
             )
 
             # Remove unvoiced segments
             f0_voiced = f0[voiced_flag]
 
             if len(f0_voiced) > 0:
-                features.extend([
-                    np.nanmean(f0_voiced),              # Mean F0
-                    np.nanstd(f0_voiced),               # F0 stability
-                    np.nanmedian(f0_voiced),            # Median F0
-                    np.nanpercentile(f0_voiced, 25),    # Q1 F0
-                    np.nanpercentile(f0_voiced, 75),    # Q3 F0
-                    np.mean(voiced_flag),               # Voicing probability
-                    np.mean(voiced_probs[voiced_flag])  # Confidence
-                ])
+                features.extend(
+                    [
+                        np.nanmean(f0_voiced),  # Mean F0
+                        np.nanstd(f0_voiced),  # F0 stability
+                        np.nanmedian(f0_voiced),  # Median F0
+                        np.nanpercentile(f0_voiced, 25),  # Q1 F0
+                        np.nanpercentile(f0_voiced, 75),  # Q3 F0
+                        np.mean(voiced_flag),  # Voicing probability
+                        np.mean(voiced_probs[voiced_flag]),  # Confidence
+                    ]
+                )
             else:
                 features.extend([0.0] * 7)
 
             # Pitch contour features
             if len(f0_voiced) > 1:
                 pitch_diff = np.diff(f0_voiced)
-                features.extend([
-                    np.mean(np.abs(pitch_diff)),        # Average pitch change
-                    np.std(pitch_diff),                 # Pitch variation
-                    np.sum(pitch_diff > 0) / len(pitch_diff),  # Ascending ratio
-                ])
+                features.extend(
+                    [
+                        np.mean(np.abs(pitch_diff)),  # Average pitch change
+                        np.std(pitch_diff),  # Pitch variation
+                        np.sum(pitch_diff > 0) / len(pitch_diff),  # Ascending ratio
+                    ]
+                )
             else:
                 features.extend([0.0] * 3)
 
@@ -145,31 +150,19 @@ class SwaraFeatureExtractor:
         try:
             # Spectral centroid
             spectral_centroids = librosa.feature.spectral_centroid(y=audio, sr=sr)
-            features.extend([
-                np.mean(spectral_centroids),
-                np.std(spectral_centroids)
-            ])
+            features.extend([np.mean(spectral_centroids), np.std(spectral_centroids)])
 
             # Spectral rolloff
             spectral_rolloff = librosa.feature.spectral_rolloff(y=audio, sr=sr)
-            features.extend([
-                np.mean(spectral_rolloff),
-                np.std(spectral_rolloff)
-            ])
+            features.extend([np.mean(spectral_rolloff), np.std(spectral_rolloff)])
 
             # Spectral bandwidth
             spectral_bandwidth = librosa.feature.spectral_bandwidth(y=audio, sr=sr)
-            features.extend([
-                np.mean(spectral_bandwidth),
-                np.std(spectral_bandwidth)
-            ])
+            features.extend([np.mean(spectral_bandwidth), np.std(spectral_bandwidth)])
 
             # Zero crossing rate
             zcr = librosa.feature.zero_crossing_rate(audio)
-            features.extend([
-                np.mean(zcr),
-                np.std(zcr)
-            ])
+            features.extend([np.mean(zcr), np.std(zcr)])
 
         except Exception:
             logger.debug("spectral features failed; padding with zeros", exc_info=True)
@@ -184,29 +177,25 @@ class SwaraFeatureExtractor:
         try:
             # MFCC coefficients
             mfccs = librosa.feature.mfcc(
-                y=audio, sr=sr,
-                n_mfcc=self.config.n_mfcc,
-                n_fft=self.config.frame_size,
-                hop_length=self.config.hop_length
+                y=audio, sr=sr, n_mfcc=self.config.n_mfcc, n_fft=self.config.frame_size, hop_length=self.config.hop_length
             )
 
             # Statistical measures of MFCCs
             for i in range(self.config.n_mfcc):
-                features.extend([
-                    np.mean(mfccs[i]),
-                    np.std(mfccs[i])
-                ])
+                features.extend([np.mean(mfccs[i]), np.std(mfccs[i])])
 
             # Delta and delta-delta MFCCs
             mfcc_delta = librosa.feature.delta(mfccs)
             mfcc_delta2 = librosa.feature.delta(mfccs, order=2)
 
-            features.extend([
-                np.mean(np.mean(mfcc_delta, axis=1)),
-                np.mean(np.std(mfcc_delta, axis=1)),
-                np.mean(np.mean(mfcc_delta2, axis=1)),
-                np.mean(np.std(mfcc_delta2, axis=1))
-            ])
+            features.extend(
+                [
+                    np.mean(np.mean(mfcc_delta, axis=1)),
+                    np.mean(np.std(mfcc_delta, axis=1)),
+                    np.mean(np.mean(mfcc_delta2, axis=1)),
+                    np.mean(np.std(mfcc_delta2, axis=1)),
+                ]
+            )
 
         except Exception:
             logger.debug("MFCC features failed; padding with zeros", exc_info=True)
@@ -223,8 +212,8 @@ class SwaraFeatureExtractor:
             harmonic, percussive = librosa.effects.hpss(audio)
 
             # Harmonic ratio
-            harmonic_energy = np.sum(harmonic ** 2)
-            total_energy = np.sum(audio ** 2)
+            harmonic_energy = np.sum(harmonic**2)
+            total_energy = np.sum(audio**2)
             harmonic_ratio = harmonic_energy / (total_energy + 1e-8)
             features.append(harmonic_ratio)
 
@@ -232,18 +221,13 @@ class SwaraFeatureExtractor:
             if np.sum(np.abs(harmonic)) > 0:
                 harm_centroid = librosa.feature.spectral_centroid(y=harmonic, sr=sr)
                 harm_bandwidth = librosa.feature.spectral_bandwidth(y=harmonic, sr=sr)
-                features.extend([
-                    np.mean(harm_centroid),
-                    np.mean(harm_bandwidth)
-                ])
+                features.extend([np.mean(harm_centroid), np.mean(harm_bandwidth)])
             else:
                 features.extend([0.0, 0.0])
 
             # Chroma features (pitch class profile)
             chroma = librosa.feature.chroma_stft(y=audio, sr=sr)
-            features.extend([
-                np.mean(chroma, axis=1).tolist()
-            ][0])
+            features.extend([np.mean(chroma, axis=1).tolist()][0])
 
         except Exception:
             logger.debug("harmonic features failed; padding with zeros", exc_info=True)
@@ -258,25 +242,21 @@ class SwaraFeatureExtractor:
         try:
             # RMS energy
             rms = librosa.feature.rms(y=audio, frame_length=self.config.frame_size)
-            features.extend([
-                np.mean(rms),
-                np.std(rms)
-            ])
+            features.extend([np.mean(rms), np.std(rms)])
 
             # Onset detection
-            onset_frames = librosa.onset.onset_detect(
-                y=audio, sr=sr,
-                hop_length=self.config.hop_length
-            )
+            onset_frames = librosa.onset.onset_detect(y=audio, sr=sr, hop_length=self.config.hop_length)
 
             if len(onset_frames) > 1:
                 onset_times = librosa.frames_to_time(onset_frames, sr=sr)
                 onset_intervals = np.diff(onset_times)
-                features.extend([
-                    len(onset_frames) / (len(audio) / sr),  # Onset rate
-                    np.mean(onset_intervals),               # Average interval
-                    np.std(onset_intervals)                 # Interval variation
-                ])
+                features.extend(
+                    [
+                        len(onset_frames) / (len(audio) / sr),  # Onset rate
+                        np.mean(onset_intervals),  # Average interval
+                        np.std(onset_intervals),  # Interval variation
+                    ]
+                )
             else:
                 features.extend([0.0, 0.0, 0.0])
 
@@ -297,9 +277,7 @@ class SwaraFeatureExtractor:
         try:
             # Gamaka detection (pitch oscillations)
             f0, _, _ = librosa.pyin(
-                audio, fmin=80, fmax=800, sr=sr,
-                frame_length=self.config.frame_size,
-                hop_length=self.config.hop_length
+                audio, fmin=80, fmax=800, sr=sr, frame_length=self.config.frame_size, hop_length=self.config.hop_length
             )
 
             # Remove NaN values
@@ -311,11 +289,7 @@ class SwaraFeatureExtractor:
                 oscillation_magnitude = np.std(pitch_diff)
                 oscillation_frequency = len(signal.find_peaks(pitch_diff)[0]) / (len(f0_clean) / sr * self.config.hop_length)
 
-                features.extend([
-                    oscillation_magnitude,
-                    oscillation_frequency,
-                    np.mean(np.abs(pitch_diff))
-                ])
+                features.extend([oscillation_magnitude, oscillation_frequency, np.mean(np.abs(pitch_diff))])
 
                 # Microtonal deviation from Western semitones
                 if len(f0_clean) > 0:
@@ -336,11 +310,13 @@ class SwaraFeatureExtractor:
                 shruti_info = self.shruti_system.detect_shruti(avg_freq)
 
                 if shruti_info:
-                    features.extend([
-                        shruti_info.get('cent_deviation', 0),
-                        shruti_info.get('confidence', 0),
-                        float(shruti_info.get('shruti_index', 0))
-                    ])
+                    features.extend(
+                        [
+                            shruti_info.get("cent_deviation", 0),
+                            shruti_info.get("confidence", 0),
+                            float(shruti_info.get("shruti_index", 0)),
+                        ]
+                    )
                 else:
                     features.extend([0.0] * 3)
             else:
@@ -356,6 +332,7 @@ class SwaraFeatureExtractor:
         """Get total feature dimension"""
         return 10 + 8 + 26 + 4 + 15 + 6 + 7  # Sum of all feature groups
 
+
 class SwaraClassifier:
     """Deep learning model for swara classification"""
 
@@ -368,35 +345,31 @@ class SwaraClassifier:
 
     def build_model(self, input_dim: int, num_classes: int = 7) -> tf.keras.Model:
         """Build neural network model for swara classification"""
-        model = tf.keras.Sequential([
-            tf.keras.layers.InputLayer(input_shape=(input_dim,)),
-
-            # Feature normalization
-            tf.keras.layers.BatchNormalization(),
-
-            # Dense layers with dropout
-            tf.keras.layers.Dense(256, activation='relu'),
-            tf.keras.layers.Dropout(0.3),
-            tf.keras.layers.BatchNormalization(),
-
-            tf.keras.layers.Dense(128, activation='relu'),
-            tf.keras.layers.Dropout(0.3),
-            tf.keras.layers.BatchNormalization(),
-
-            tf.keras.layers.Dense(64, activation='relu'),
-            tf.keras.layers.Dropout(0.2),
-
-            tf.keras.layers.Dense(32, activation='relu'),
-            tf.keras.layers.Dropout(0.2),
-
-            # Output layer
-            tf.keras.layers.Dense(num_classes, activation='softmax')
-        ])
+        model = tf.keras.Sequential(
+            [
+                tf.keras.layers.InputLayer(input_shape=(input_dim,)),
+                # Feature normalization
+                tf.keras.layers.BatchNormalization(),
+                # Dense layers with dropout
+                tf.keras.layers.Dense(256, activation="relu"),
+                tf.keras.layers.Dropout(0.3),
+                tf.keras.layers.BatchNormalization(),
+                tf.keras.layers.Dense(128, activation="relu"),
+                tf.keras.layers.Dropout(0.3),
+                tf.keras.layers.BatchNormalization(),
+                tf.keras.layers.Dense(64, activation="relu"),
+                tf.keras.layers.Dropout(0.2),
+                tf.keras.layers.Dense(32, activation="relu"),
+                tf.keras.layers.Dropout(0.2),
+                # Output layer
+                tf.keras.layers.Dense(num_classes, activation="softmax"),
+            ]
+        )
 
         model.compile(
             optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-            loss='sparse_categorical_crossentropy',
-            metrics=['accuracy']
+            loss="sparse_categorical_crossentropy",
+            metrics=["accuracy"],
         )
 
         return model
@@ -424,6 +397,7 @@ class SwaraClassifier:
 
             # Split data
             from sklearn.model_selection import train_test_split
+
             X_train_split, X_val_split, y_train_split, y_val_split = train_test_split(
                 X_train, y_train, test_size=self.config.validation_split, stratify=y_train
             )
@@ -438,26 +412,19 @@ class SwaraClassifier:
 
             # Training callbacks
             callbacks = [
-                tf.keras.callbacks.EarlyStopping(
-                    monitor='val_accuracy',
-                    patience=10,
-                    restore_best_weights=True
-                ),
-                tf.keras.callbacks.ReduceLROnPlateau(
-                    monitor='val_loss',
-                    factor=0.5,
-                    patience=5
-                )
+                tf.keras.callbacks.EarlyStopping(monitor="val_accuracy", patience=10, restore_best_weights=True),
+                tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=5),
             ]
 
             # Train model
             history = self.model.fit(
-                X_train_scaled, y_train_split,
+                X_train_scaled,
+                y_train_split,
                 validation_data=(X_val_scaled, y_val_split),
                 epochs=100,
                 batch_size=32,
                 callbacks=callbacks,
-                verbose=1
+                verbose=1,
             )
 
             # Save model and scaler
@@ -467,19 +434,16 @@ class SwaraClassifier:
             self.is_trained = True
 
             return {
-                'success': True,
-                'final_accuracy': max(history.history['val_accuracy']),
-                'final_loss': min(history.history['val_loss']),
-                'training_samples': len(X_train),
-                'feature_dimension': X_train_scaled.shape[1]
+                "success": True,
+                "final_accuracy": max(history.history["val_accuracy"]),
+                "final_loss": min(history.history["val_loss"]),
+                "training_samples": len(X_train),
+                "feature_dimension": X_train_scaled.shape[1],
             }
 
         except Exception as e:
             logger.warning("swara model training failed", exc_info=True)
-            return {
-                'success': False,
-                'error': str(e)
-            }
+            return {"success": False, "error": str(e)}
 
     def load_model(self) -> bool:
         """Load trained model and scaler"""
@@ -501,20 +465,14 @@ class SwaraClassifier:
         """Predict swara from audio"""
         if not self.is_trained:
             if not self.load_model():
-                return {
-                    'success': False,
-                    'error': 'Model not trained or loaded'
-                }
+                return {"success": False, "error": "Model not trained or loaded"}
 
         try:
             # Extract features
             features = self.feature_extractor.extract_features(audio, sr)
 
             if self.scaler is None:
-                return {
-                    'success': False,
-                    'error': 'Feature scaler not available'
-                }
+                return {"success": False, "error": "Feature scaler not available"}
 
             # Scale features
             features_scaled = self.scaler.transform(features.reshape(1, -1))
@@ -526,35 +484,30 @@ class SwaraClassifier:
 
             # Convert to swara name
             index_to_swara = {i: swara.name for i, swara in enumerate(SwaraName)}
-            predicted_swara = index_to_swara.get(predicted_class, 'Unknown')
+            predicted_swara = index_to_swara.get(predicted_class, "Unknown")
 
             # Get top predictions
             top_indices = np.argsort(predictions[0])[::-1][:3]
             top_predictions = []
 
             for idx in top_indices:
-                swara_name = index_to_swara.get(idx, 'Unknown')
+                swara_name = index_to_swara.get(idx, "Unknown")
                 prob = predictions[0][idx]
-                top_predictions.append({
-                    'swara': swara_name,
-                    'confidence': float(prob)
-                })
+                top_predictions.append({"swara": swara_name, "confidence": float(prob)})
 
             return {
-                'success': True,
-                'predicted_swara': predicted_swara,
-                'confidence': float(confidence),
-                'meets_threshold': confidence >= self.config.confidence_threshold,
-                'top_predictions': top_predictions,
-                'features': features.tolist()
+                "success": True,
+                "predicted_swara": predicted_swara,
+                "confidence": float(confidence),
+                "meets_threshold": confidence >= self.config.confidence_threshold,
+                "top_predictions": top_predictions,
+                "features": features.tolist(),
             }
 
         except Exception as e:
             logger.warning("swara prediction failed", exc_info=True)
-            return {
-                'success': False,
-                'error': str(e)
-            }
+            return {"success": False, "error": str(e)}
+
 
 class SwaraRecognitionEngine:
     """Complete swara recognition system with temporal stability"""
@@ -562,7 +515,6 @@ class SwaraRecognitionEngine:
     def __init__(self, config: SwaraRecognitionConfig = None):
         self.config = config or SwaraRecognitionConfig()
         self.classifier = SwaraClassifier(self.config)
-
 
         # Temporal tracking
         self.recent_predictions = []
@@ -573,98 +525,90 @@ class SwaraRecognitionEngine:
         try:
             # Combine results
             result = {
-                'timestamp': datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
             # Add pitch information
             if pitch_data:
-                result.update({
-                    'fundamental_frequency': pitch_data.get('frequency'),
-                    'pitch_confidence': pitch_data.get('confidence'),
-                    'voiced_probability': pitch_data.get('voiced_probability', 0)
-                })
+                result.update(
+                    {
+                        "fundamental_frequency": pitch_data.get("frequency"),
+                        "pitch_confidence": pitch_data.get("confidence"),
+                        "voiced_probability": pitch_data.get("voiced_probability", 0),
+                    }
+                )
 
             # Add ML classification results
-            if ml_result['success']:
-                result.update({
-                    'predicted_swara': ml_result['predicted_swara'],
-                    'classification_confidence': ml_result['confidence'],
-                    'meets_threshold': ml_result['meets_threshold'],
-                    'top_predictions': ml_result['top_predictions']
-                })
+            if ml_result["success"]:
+                result.update(
+                    {
+                        "predicted_swara": ml_result["predicted_swara"],
+                        "classification_confidence": ml_result["confidence"],
+                        "meets_threshold": ml_result["meets_threshold"],
+                        "top_predictions": ml_result["top_predictions"],
+                    }
+                )
 
                 # Temporal stability analysis
                 stability_info = self._analyze_temporal_stability(ml_result)
                 result.update(stability_info)
 
             else:
-                result.update({
-                    'predicted_swara': None,
-                    'classification_confidence': 0.0,
-                    'meets_threshold': False,
-                    'error': ml_result.get('error')
-                })
+                result.update(
+                    {
+                        "predicted_swara": None,
+                        "classification_confidence": 0.0,
+                        "meets_threshold": False,
+                        "error": ml_result.get("error"),
+                    }
+                )
 
             # Overall assessment
-            result['overall_confidence'] = self._calculate_overall_confidence(result)
-            result['recommendation'] = self._generate_recommendation(result)
+            result["overall_confidence"] = self._calculate_overall_confidence(result)
+            result["recommendation"] = self._generate_recommendation(result)
 
             return result
 
         except Exception as e:
             logger.warning("swara analysis failed", exc_info=True)
-            return {
-                'success': False,
-                'error': str(e),
-                'timestamp': datetime.now(timezone.utc).isoformat()
-            }
+            return {"success": False, "error": str(e), "timestamp": datetime.now(timezone.utc).isoformat()}
 
     def _analyze_temporal_stability(self, ml_result: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze temporal stability of predictions"""
-        predicted_swara = ml_result['predicted_swara']
-        confidence = ml_result['confidence']
+        predicted_swara = ml_result["predicted_swara"]
+        confidence = ml_result["confidence"]
 
         # Add to recent predictions
-        self.recent_predictions.append({
-            'swara': predicted_swara,
-            'confidence': confidence,
-            'timestamp': datetime.now(timezone.utc)
-        })
+        self.recent_predictions.append(
+            {"swara": predicted_swara, "confidence": confidence, "timestamp": datetime.now(timezone.utc)}
+        )
 
         # Keep only recent predictions
         cutoff_time = datetime.now(timezone.utc).timestamp() - 5  # 5 seconds
-        self.recent_predictions = [
-            p for p in self.recent_predictions
-            if p['timestamp'].timestamp() > cutoff_time
-        ]
+        self.recent_predictions = [p for p in self.recent_predictions if p["timestamp"].timestamp() > cutoff_time]
 
         if len(self.recent_predictions) < 2:
-            return {
-                'temporal_stability': 0.0,
-                'consistent_swara': None,
-                'stability_confidence': 0.0
-            }
+            return {"temporal_stability": 0.0, "consistent_swara": None, "stability_confidence": 0.0}
 
         # Analyze consistency
-        recent_swaras = [p['swara'] for p in self.recent_predictions[-self.config.context_frames:]]
+        recent_swaras = [p["swara"] for p in self.recent_predictions[-self.config.context_frames :]]
         most_common_swara = max(set(recent_swaras), key=recent_swaras.count)
         consistency_ratio = recent_swaras.count(most_common_swara) / len(recent_swaras)
 
         # Calculate average confidence for the consistent swara
         consistent_confidences = [
-            p['confidence'] for p in self.recent_predictions[-self.config.context_frames:]
-            if p['swara'] == most_common_swara
+            p["confidence"] for p in self.recent_predictions[-self.config.context_frames :] if p["swara"] == most_common_swara
         ]
         avg_confidence = np.mean(consistent_confidences) if consistent_confidences else 0.0
 
         stability_score = consistency_ratio * avg_confidence
 
         return {
-            'temporal_stability': stability_score,
-            'consistent_swara': most_common_swara if stability_score > self.config.stability_threshold else None,
-            'stability_confidence': avg_confidence,
-            'consistency_ratio': consistency_ratio,
-            'recent_predictions_count': len(recent_swaras)
+            "temporal_stability": stability_score,
+            "consistent_swara": most_common_swara if stability_score > self.config.stability_threshold else None,
+            "stability_confidence": avg_confidence,
+            "consistency_ratio": consistency_ratio,
+            "recent_predictions_count": len(recent_swaras),
         }
 
     def _calculate_overall_confidence(self, result: Dict[str, Any]) -> float:
@@ -672,28 +616,28 @@ class SwaraRecognitionEngine:
         factors = []
 
         # Classification confidence
-        if 'classification_confidence' in result:
-            factors.append(result['classification_confidence'])
+        if "classification_confidence" in result:
+            factors.append(result["classification_confidence"])
 
         # Pitch confidence
-        if 'pitch_confidence' in result:
-            factors.append(result['pitch_confidence'])
+        if "pitch_confidence" in result:
+            factors.append(result["pitch_confidence"])
 
         # Temporal stability
-        if 'temporal_stability' in result:
-            factors.append(result['temporal_stability'])
+        if "temporal_stability" in result:
+            factors.append(result["temporal_stability"])
 
         # Voiced probability
-        if 'voiced_probability' in result:
-            factors.append(result['voiced_probability'])
+        if "voiced_probability" in result:
+            factors.append(result["voiced_probability"])
 
         return float(np.mean(factors)) if factors else 0.0
 
     def _generate_recommendation(self, result: Dict[str, Any]) -> str:
         """Generate user-friendly recommendation"""
-        overall_confidence = result.get('overall_confidence', 0)
-        predicted_swara = result.get('predicted_swara')
-        temporal_stability = result.get('temporal_stability', 0)
+        overall_confidence = result.get("overall_confidence", 0)
+        predicted_swara = result.get("predicted_swara")
+        temporal_stability = result.get("temporal_stability", 0)
 
         if not predicted_swara:
             return "Could not detect swara. Ensure clear vocal tone."

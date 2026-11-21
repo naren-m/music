@@ -3,24 +3,20 @@ Unit Tests for Core Models
 Tests for shruti system, user models, and data structures
 """
 
-import pytest
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
-from core.models.shruti import (
-    Shruti,
-    SHRUTI_SYSTEM,
-    calculate_shruti_frequency,
-    find_closest_shruti,
-    analyze_pitch_deviation
-)
+
+import pytest
+
+from core.models.shruti import SHRUTI_SYSTEM, Shruti, analyze_pitch_deviation, calculate_shruti_frequency, find_closest_shruti
 from core.models.user import (
-    UserProfile,
-    SubscriptionTier,
-    ModuleProgress,
     Achievement,
-    PracticeSession,
     LearningGoal,
+    ModuleProgress,
+    PracticeSession,
     SkillLevel,
+    SubscriptionTier,
+    UserProfile,
 )
 
 
@@ -29,13 +25,7 @@ class TestShrutiModel:
 
     def test_shruti_creation(self):
         """Test Shruti dataclass creation."""
-        shruti = Shruti(
-            name="Shadja",
-            western_equiv="C",
-            cent_value=0,
-            frequency_ratio=1.0,
-            raga_usage=["All ragas"]
-        )
+        shruti = Shruti(name="Shadja", western_equiv="C", cent_value=0, frequency_ratio=1.0, raga_usage=["All ragas"])
 
         assert shruti.name == "Shadja"
         assert shruti.western_equiv == "C"
@@ -45,13 +35,7 @@ class TestShrutiModel:
 
     def test_frequency_calculation(self):
         """Test frequency calculation from ratio."""
-        shruti = Shruti(
-            name="Shadja",
-            western_equiv="C",
-            cent_value=0,
-            frequency_ratio=1.0,
-            raga_usage=[]
-        )
+        shruti = Shruti(name="Shadja", western_equiv="C", cent_value=0, frequency_ratio=1.0, raga_usage=[])
 
         base_sa = 261.63
         frequency = shruti.calculate_frequency(base_sa)
@@ -95,13 +79,13 @@ class TestShrutiModel:
 
         # Test exact Sa frequency
         closest = find_closest_shruti(base_sa, base_sa)
-        assert closest['shruti_index'] == 0
-        assert abs(closest['deviation_cents']) < 5
+        assert closest["shruti_index"] == 0
+        assert abs(closest["deviation_cents"]) < 5
 
         # Test frequency between shrutis
         between_freq = base_sa * 1.1  # Between Sa and Ri
         closest = find_closest_shruti(between_freq, base_sa)
-        assert closest['shruti_index'] >= 0  # Should find a valid shruti
+        assert closest["shruti_index"] >= 0  # Should find a valid shruti
 
     def test_analyze_pitch_deviation(self):
         """Test pitch deviation analysis."""
@@ -110,15 +94,15 @@ class TestShrutiModel:
 
         # Test perfect pitch
         analysis = analyze_pitch_deviation(target_freq, base_sa)
-        assert abs(analysis['deviation_cents']) < 5
-        assert analysis['accuracy_score'] > 0.95
-        assert analysis['direction'] in ['sharp', 'flat', 'perfect']
+        assert abs(analysis["deviation_cents"]) < 5
+        assert analysis["accuracy_score"] > 0.95
+        assert analysis["direction"] in ["sharp", "flat", "perfect"]
 
         # Test sharp pitch
         sharp_freq = base_sa * 1.02  # About 34 cents sharp
         analysis = analyze_pitch_deviation(sharp_freq, base_sa)
-        assert analysis['deviation_cents'] > 0
-        assert analysis['direction'] == 'sharp'
+        assert analysis["deviation_cents"] > 0
+        assert analysis["direction"] == "sharp"
 
     def test_analyze_pitch_deviation_flat(self):
         """Test pitch deviation analysis for flat pitch."""
@@ -126,17 +110,20 @@ class TestShrutiModel:
         flat_freq = base_sa * 0.98  # About 35 cents flat
 
         analysis = analyze_pitch_deviation(flat_freq, base_sa)
-        assert analysis['deviation_cents'] < 0
-        assert analysis['direction'] == 'flat'
+        assert analysis["deviation_cents"] < 0
+        assert analysis["direction"] == "flat"
 
-    @pytest.mark.parametrize("frequency, expected", [
-        (440.0, "A4"),
-        (261.63, "C4"),
-        (0.0, ""),
-        (-5.0, ""),
-        (float('nan'), ""),
-        (float('inf'), ""),
-    ])
+    @pytest.mark.parametrize(
+        "frequency, expected",
+        [
+            (440.0, "A4"),
+            (261.63, "C4"),
+            (0.0, ""),
+            (-5.0, ""),
+            (float("nan"), ""),
+            (float("inf"), ""),
+        ],
+    )
     def test_freq_to_note_name(self, frequency, expected):
         """Non-finite frequencies fall back to '' via the narrowed except."""
         assert Shruti._freq_to_note_name(frequency) == expected
@@ -152,7 +139,7 @@ class TestUserProfile:
             email="test@example.com",
             username="testuser",
             full_name="Test User",
-            created_at=datetime.utcnow()
+            created_at=datetime.utcnow(),
         )
 
         assert user.user_id == "test_123"
@@ -193,7 +180,7 @@ class TestUserProfile:
             username="freeuser",
             full_name="Free User",
             created_at=datetime.utcnow(),
-            subscription_tier=SubscriptionTier.FREE
+            subscription_tier=SubscriptionTier.FREE,
         )
 
         assert user.is_premium is False
@@ -207,7 +194,7 @@ class TestUserProfile:
             full_name="Premium User",
             created_at=datetime.utcnow(),
             subscription_tier=SubscriptionTier.PROFESSIONAL,
-            subscription_expires=datetime.utcnow() + timedelta(days=30)
+            subscription_expires=datetime.utcnow() + timedelta(days=30),
         )
 
         assert user.is_premium is True
@@ -221,7 +208,7 @@ class TestUserProfile:
             full_name="Expired User",
             created_at=datetime.utcnow(),
             subscription_tier=SubscriptionTier.PROFESSIONAL,
-            subscription_expires=datetime.utcnow() - timedelta(days=1)
+            subscription_expires=datetime.utcnow() - timedelta(days=1),
         )
 
         assert user.is_premium is False
@@ -233,7 +220,7 @@ class TestUserProfile:
             email="session@example.com",
             username="sessionuser",
             full_name="Session User",
-            created_at=datetime.utcnow()
+            created_at=datetime.utcnow(),
         )
 
         session = PracticeSession(
@@ -244,7 +231,7 @@ class TestUserProfile:
             start_time=datetime.utcnow() - timedelta(minutes=30),
             end_time=datetime.utcnow(),
             duration_minutes=30.0,
-            accuracy_score=85.0
+            accuracy_score=85.0,
         )
 
         user.add_practice_session(session)
@@ -260,7 +247,7 @@ class TestUserProfile:
             email="weekly@example.com",
             username="weeklyuser",
             full_name="Weekly User",
-            created_at=datetime.utcnow()
+            created_at=datetime.utcnow(),
         )
 
         # Add sessions from this week
@@ -273,7 +260,7 @@ class TestUserProfile:
                 start_time=datetime.utcnow() - timedelta(days=i),
                 end_time=datetime.utcnow() - timedelta(days=i) + timedelta(minutes=20),
                 duration_minutes=20.0,
-                accuracy_score=80.0
+                accuracy_score=80.0,
             )
             user.add_practice_session(session)
 
@@ -287,16 +274,16 @@ class TestUserProfile:
             email="dict@example.com",
             username="dictuser",
             full_name="Dict User",
-            created_at=datetime.utcnow()
+            created_at=datetime.utcnow(),
         )
 
         user_dict = user.to_dict()
 
-        assert user_dict['user_id'] == "dict_test"
-        assert user_dict['email'] == "dict@example.com"
-        assert user_dict['username'] == "dictuser"
-        assert 'created_at' in user_dict
-        assert 'subscription_tier' in user_dict
+        assert user_dict["user_id"] == "dict_test"
+        assert user_dict["email"] == "dict@example.com"
+        assert user_dict["username"] == "dictuser"
+        assert "created_at" in user_dict
+        assert "subscription_tier" in user_dict
 
 
 class TestModuleProgress:
@@ -304,11 +291,7 @@ class TestModuleProgress:
 
     def test_module_progress_creation(self):
         """Test ModuleProgress creation."""
-        progress = ModuleProgress(
-            module_name="raga_recognition",
-            skill_level=SkillLevel.BEGINNER,
-            completion_percentage=45.5
-        )
+        progress = ModuleProgress(module_name="raga_recognition", skill_level=SkillLevel.BEGINNER, completion_percentage=45.5)
 
         assert progress.module_name == "raga_recognition"
         assert progress.completion_percentage == 45.5
@@ -316,10 +299,7 @@ class TestModuleProgress:
 
     def test_update_progress(self):
         """Test updating progress with a session."""
-        progress = ModuleProgress(
-            module_name="swara_recognition",
-            skill_level=SkillLevel.BEGINNER
-        )
+        progress = ModuleProgress(module_name="swara_recognition", skill_level=SkillLevel.BEGINNER)
 
         session = PracticeSession(
             session_id="update_test",
@@ -329,7 +309,7 @@ class TestModuleProgress:
             start_time=datetime.utcnow() - timedelta(minutes=30),
             end_time=datetime.utcnow(),
             duration_minutes=30.0,
-            accuracy_score=85.0
+            accuracy_score=85.0,
         )
 
         progress.update_progress(session)
@@ -350,7 +330,7 @@ class TestAchievement:
             category="pitch_accuracy",
             icon="🎯",
             points=250,
-            earned_date=datetime.utcnow()
+            earned_date=datetime.utcnow(),
         )
 
         assert achievement.achievement_id == "pitch_perfect"
@@ -372,7 +352,7 @@ class TestAchievement:
                 icon="🏆",
                 points=100,
                 earned_date=datetime.utcnow(),
-                rarity=rarity
+                rarity=rarity,
             )
             assert achievement.rarity == rarity
 
@@ -390,7 +370,7 @@ class TestPracticeSession:
             exercise_type="pitch_matching",
             start_time=start_time,
             duration_minutes=30.0,
-            accuracy_score=87.5
+            accuracy_score=87.5,
         )
 
         assert session.session_id == "session_123"
@@ -408,7 +388,7 @@ class TestPracticeSession:
             user_id="user_test",
             module="swara_recognition",
             exercise_type="pitch_matching",
-            start_time=start_time
+            start_time=start_time,
         )
 
         assert session.is_active is True
@@ -430,7 +410,7 @@ class TestModelIntegration:
             email="integration@example.com",
             username="integrationuser",
             full_name="Integration User",
-            created_at=datetime.utcnow()
+            created_at=datetime.utcnow(),
         )
 
         # Add practice session
@@ -442,7 +422,7 @@ class TestModelIntegration:
             start_time=datetime.utcnow() - timedelta(minutes=20),
             end_time=datetime.utcnow(),
             duration_minutes=20.0,
-            accuracy_score=92.0
+            accuracy_score=92.0,
         )
 
         user.add_practice_session(session)
@@ -456,7 +436,7 @@ class TestModelIntegration:
                 category="accuracy",
                 icon="🎯",
                 points=150,
-                earned_date=datetime.utcnow()
+                earned_date=datetime.utcnow(),
             )
             user.achievements.append(achievement)
 

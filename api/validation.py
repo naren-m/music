@@ -11,7 +11,7 @@ from functools import wraps
 from typing import Any, Dict, Optional
 
 import numpy as np
-from flask import request, jsonify
+from flask import jsonify, request
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,7 @@ MAX_JSON_SIZE = 1024 * 1024  # 1MB max JSON payload
 
 class ValidationError(Exception):
     """Raised when input validation fails"""
+
     def __init__(self, message: str, status_code: int = 400, field: str = None):
         self.message = message
         self.status_code = status_code
@@ -53,15 +54,12 @@ def validate_audio_data(audio_b64: str) -> np.ndarray:
     # Check base64 string length (approximate size check)
     estimated_size = len(audio_b64) * 0.75  # Base64 is ~1.33x larger than original
     if estimated_size > MAX_AUDIO_SIZE:
-        raise ValidationError(
-            f"Audio data too large (max {MAX_AUDIO_SIZE//1024//1024}MB)",
-            field="audio_data"
-        )
+        raise ValidationError(f"Audio data too large (max {MAX_AUDIO_SIZE//1024//1024}MB)", field="audio_data")
 
     # Validate base64 format
     try:
         # Check if it's valid base64
-        if not audio_b64.replace('+', '').replace('/', '').replace('=', '').isalnum():
+        if not audio_b64.replace("+", "").replace("/", "").replace("=", "").isalnum():
             raise ValidationError("Invalid base64 characters", field="audio_data")
 
         audio_bytes = base64.b64decode(audio_b64, validate=True)
@@ -71,10 +69,7 @@ def validate_audio_data(audio_b64: str) -> np.ndarray:
 
     # Check decoded size
     if len(audio_bytes) > MAX_AUDIO_SIZE:
-        raise ValidationError(
-            f"Audio file too large (max {MAX_AUDIO_SIZE//1024//1024}MB)",
-            field="audio_data"
-        )
+        raise ValidationError(f"Audio file too large (max {MAX_AUDIO_SIZE//1024//1024}MB)", field="audio_data")
 
     # Minimum size check (at least 100 bytes)
     if len(audio_bytes) < 100:
@@ -99,10 +94,7 @@ def validate_audio_data(audio_b64: str) -> np.ndarray:
     # Validate audio duration
     duration = len(audio_array) / SAMPLE_RATE
     if duration > MAX_AUDIO_DURATION:
-        raise ValidationError(
-            f"Audio duration too long (max {MAX_AUDIO_DURATION}s)",
-            field="audio_data"
-        )
+        raise ValidationError(f"Audio duration too long (max {MAX_AUDIO_DURATION}s)", field="audio_data")
 
     if duration < 0.1:  # Minimum 100ms
         raise ValidationError("Audio duration too short (min 0.1s)", field="audio_data")
@@ -128,36 +120,34 @@ def validate_json_request(f):
     """
     Decorator to validate JSON requests with size and format checks
     """
+
     @wraps(f)
     def decorated_function(*args, **kwargs):
         # Check Content-Type
         if not request.is_json:
-            return jsonify({
-                'error': 'Content-Type must be application/json'
-            }), 400
+            return jsonify({"error": "Content-Type must be application/json"}), 400
 
         # Check content length
         content_length = request.content_length
         if content_length and content_length > MAX_JSON_SIZE:
-            return jsonify({
-                'error': f'Request too large (max {MAX_JSON_SIZE//1024}KB)'
-            }), 413
+            return jsonify({"error": f"Request too large (max {MAX_JSON_SIZE//1024}KB)"}), 413
 
         # Parse and validate JSON
         try:
             data = request.get_json()
             if data is None:
-                return jsonify({'error': 'Invalid JSON data'}), 400
+                return jsonify({"error": "Invalid JSON data"}), 400
 
             # Basic structure validation
             if not isinstance(data, dict):
-                return jsonify({'error': 'JSON must be an object'}), 400
+                return jsonify({"error": "JSON must be an object"}), 400
 
         except Exception as e:
             logger.warning(f"JSON parsing failed: {e}")
-            return jsonify({'error': 'Malformed JSON'}), 400
+            return jsonify({"error": "Malformed JSON"}), 400
 
         return f(*args, **kwargs)
+
     return decorated_function
 
 
@@ -185,10 +175,7 @@ def validate_frequency_parameter(frequency: Any) -> float:
 
     # Validate range (reasonable musical frequencies)
     if not (80.0 <= freq_value <= 800.0):
-        raise ValidationError(
-            "Frequency must be between 80Hz and 800Hz",
-            field="frequency"
-        )
+        raise ValidationError("Frequency must be between 80Hz and 800Hz", field="frequency")
 
     return freq_value
 
@@ -216,9 +203,7 @@ def validate_user_input(data: Dict[str, Any], required_fields: list = None) -> D
     # Check required fields
     missing_fields = [field for field in required_fields if field not in data]
     if missing_fields:
-        raise ValidationError(
-            f"Missing required fields: {', '.join(missing_fields)}"
-        )
+        raise ValidationError(f"Missing required fields: {', '.join(missing_fields)}")
 
     # Validate each field
     for key, value in data.items():
@@ -229,7 +214,7 @@ def validate_user_input(data: Dict[str, Any], required_fields: list = None) -> D
                 raise ValidationError(f"Field '{key}' too long (max 1000 chars)")
 
             # Basic XSS prevention
-            if any(char in value for char in ['<', '>', '"', "'"]):
+            if any(char in value for char in ["<", ">", '"', "'"]):
                 logger.warning(f"Potentially unsafe characters in field '{key}': {value}")
                 # You might want to sanitize or reject based on your needs
 
@@ -274,11 +259,11 @@ def sanitize_filename(filename: str) -> str:
     filename = os.path.basename(filename)
 
     # Remove or replace dangerous characters
-    filename = re.sub(r'[^\w\-_.]', '_', filename)
+    filename = re.sub(r"[^\w\-_.]", "_", filename)
 
     # Prevent hidden files
-    if filename.startswith('.'):
-        filename = '_' + filename[1:]
+    if filename.startswith("."):
+        filename = "_" + filename[1:]
 
     # Limit length
     if len(filename) > 255:

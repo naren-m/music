@@ -5,55 +5,63 @@ Complete implementation of Carnatic tala system with visual beat representation,
 interactive tala keeper, polyrhythmic training, and synchronization assessment.
 """
 
-from typing import List, Dict, Optional, Any, Tuple
-from dataclasses import dataclass, asdict
-from enum import Enum
-import numpy as np
-import json
-from datetime import datetime, timedelta
 import asyncio
+import json
+from dataclasses import asdict, dataclass
+from datetime import datetime, timedelta
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
+
 
 class TalaCategory(Enum):
-    SULADI = "suladi"          # 7 basic talas
-    CHAPU = "chapu"            # Chapu talas (irregular)
-    DESHADI = "deshadi"        # Regional talas
-    ADVANCED = "advanced"      # Complex talas
+    SULADI = "suladi"  # 7 basic talas
+    CHAPU = "chapu"  # Chapu talas (irregular)
+    DESHADI = "deshadi"  # Regional talas
+    ADVANCED = "advanced"  # Complex talas
+
 
 class Jati(Enum):
-    TISRA = 3      # 3 beats per unit
+    TISRA = 3  # 3 beats per unit
     CHATHUSRA = 4  # 4 beats per unit
-    KHANDA = 5     # 5 beats per unit
-    MISRA = 7      # 7 beats per unit
-    SANKIRNA = 9   # 9 beats per unit
+    KHANDA = 5  # 5 beats per unit
+    MISRA = 7  # 7 beats per unit
+    SANKIRNA = 9  # 9 beats per unit
+
 
 class Gati(Enum):
-    TISRA_GATI = 3     # 3 subdivisions per beat
-    CHATHUSRA_GATI = 4 # 4 subdivisions per beat
-    KHANDA_GATI = 5    # 5 subdivisions per beat
-    MISRA_GATI = 7     # 7 subdivisions per beat
+    TISRA_GATI = 3  # 3 subdivisions per beat
+    CHATHUSRA_GATI = 4  # 4 subdivisions per beat
+    KHANDA_GATI = 5  # 5 subdivisions per beat
+    MISRA_GATI = 7  # 7 subdivisions per beat
     SANKIRNA_GATI = 9  # 9 subdivisions per beat
 
+
 class Nadai(Enum):
-    FIRST_SPEED = 1    # Original tempo
-    SECOND_SPEED = 2   # Double tempo
-    THIRD_SPEED = 4    # Quadruple tempo
-    FOURTH_SPEED = 8   # Eight times tempo
+    FIRST_SPEED = 1  # Original tempo
+    SECOND_SPEED = 2  # Double tempo
+    THIRD_SPEED = 4  # Quadruple tempo
+    FOURTH_SPEED = 8  # Eight times tempo
+
 
 class BeatType(Enum):
-    ANUDRUTHAM = "0"   # Wave (empty beat)
-    DRUTHAM = "1"      # Clap once
-    LAGHU = "X"        # Clap + finger counts
-    GURU = "8"         # Long beat (8 counts)
-    PLUTHAM = "+"      # Extended beat
+    ANUDRUTHAM = "0"  # Wave (empty beat)
+    DRUTHAM = "1"  # Clap once
+    LAGHU = "X"  # Clap + finger counts
+    GURU = "8"  # Long beat (8 counts)
+    PLUTHAM = "+"  # Extended beat
+
 
 @dataclass
 class BeatPattern:
     beat_type: BeatType
-    duration: int              # Number of counts
-    hand_gesture: str          # Physical gesture description
-    sound_syllable: str        # Vocal representation
-    visual_symbol: str         # Display symbol
-    emphasis_level: int        # 1-5 importance
+    duration: int  # Number of counts
+    hand_gesture: str  # Physical gesture description
+    sound_syllable: str  # Vocal representation
+    visual_symbol: str  # Display symbol
+    emphasis_level: int  # 1-5 importance
+
 
 @dataclass
 class TalaDefinition:
@@ -61,8 +69,8 @@ class TalaDefinition:
     name: str
     category: TalaCategory
     structure: List[BeatPattern]  # Beat pattern sequence
-    total_beats: int             # Total beats in cycle
-    total_counts: int            # Total counts (including subdivisions)
+    total_beats: int  # Total beats in cycle
+    total_counts: int  # Total counts (including subdivisions)
 
     # Jati and Gati specifications
     default_jati: Jati
@@ -75,12 +83,12 @@ class TalaDefinition:
     common_nadais: List[Nadai]
 
     # Learning metadata
-    difficulty_level: int        # 1-5 scale
-    learning_order: int          # Recommended sequence
+    difficulty_level: int  # 1-5 scale
+    learning_order: int  # Recommended sequence
     prerequisite_talas: List[str]
 
     # Cultural context
-    common_usage: List[str]      # Where it's typically used
+    common_usage: List[str]  # Where it's typically used
     famous_compositions: List[Dict[str, str]]
     regional_variations: List[str]
 
@@ -93,30 +101,32 @@ class TalaDefinition:
     description: str
     historical_background: str
 
+
 @dataclass
 class RhythmicExercise:
     id: int
     name: str
     tala: str
-    exercise_type: str           # "basic", "polyrhythmic", "speed", "pattern"
+    exercise_type: str  # "basic", "polyrhythmic", "speed", "pattern"
     description: str
 
     # Exercise structure
     patterns: List[Dict[str, Any]]  # Rhythm patterns to practice
-    tempo_progression: List[int]     # BPM progression
+    tempo_progression: List[int]  # BPM progression
     duration_minutes: int
 
     # Difficulty and learning
-    difficulty_rating: float     # 0.0-1.0
+    difficulty_rating: float  # 0.0-1.0
     learning_objectives: List[str]
     prerequisites: List[str]
 
     # Assessment criteria
-    timing_tolerance: float      # Allowed deviation in milliseconds
-    success_threshold: float     # Required accuracy percentage
+    timing_tolerance: float  # Allowed deviation in milliseconds
+    success_threshold: float  # Required accuracy percentage
 
     instructions: List[str]
     practice_tips: List[str]
+
 
 @dataclass
 class RhythmAnalysis:
@@ -125,13 +135,13 @@ class RhythmAnalysis:
     timestamp: datetime
 
     # Timing analysis
-    beat_accuracy: List[float]   # Accuracy for each beat
-    overall_accuracy: float      # Overall timing accuracy
-    tempo_consistency: float     # Tempo stability
+    beat_accuracy: List[float]  # Accuracy for each beat
+    overall_accuracy: float  # Overall timing accuracy
+    tempo_consistency: float  # Tempo stability
     timing_deviations: List[float]  # Millisecond deviations
 
     # Pattern analysis
-    pattern_recognition: float   # How well user follows patterns
+    pattern_recognition: float  # How well user follows patterns
     synchronization_quality: float
     rhythm_stability: float
 
@@ -140,8 +150,9 @@ class RhythmAnalysis:
     improvement_areas: List[str]
     specific_recommendations: List[str]
 
-    score: float                 # Overall performance score
-    grade: str                   # Letter grade
+    score: float  # Overall performance score
+    grade: str  # Letter grade
+
 
 class TalaTrainingSystem:
     """
@@ -177,7 +188,7 @@ class TalaTrainingSystem:
             structure=[
                 BeatPattern(BeatType.LAGHU, 4, "Clap + 3 finger counts", "Ta Ki Ta Ka", "| 2 3 4", 5),
                 BeatPattern(BeatType.DRUTHAM, 2, "Clap + clap", "Ta Ka", "| |", 4),
-                BeatPattern(BeatType.DRUTHAM, 2, "Clap + clap", "Ta Ka", "| |", 4)
+                BeatPattern(BeatType.DRUTHAM, 2, "Clap + clap", "Ta Ka", "| |", 4),
             ],
             total_beats=8,
             total_counts=8,
@@ -191,29 +202,19 @@ class TalaTrainingSystem:
             learning_order=1,
             prerequisite_talas=[],
             common_usage=["Kritis", "Varnams", "Most compositions"],
-            famous_compositions=[
-                {"title": "Vatapi Ganapatim", "composer": "Dikshitar", "raga": "Hamsadhvani"}
-            ],
+            famous_compositions=[{"title": "Vatapi Ganapatim", "composer": "Dikshitar", "raga": "Hamsadhvani"}],
             regional_variations=["Standard across South India"],
             hand_pattern_description="Right hand: Clap on 1, count 2-3-4 on fingers, clap on 5, clap on 6, clap on 7, clap on 8",
-            common_mistakes=[
-                "Rushing through finger counts",
-                "Uneven beat spacing",
-                "Poor clap clarity"
-            ],
+            common_mistakes=["Rushing through finger counts", "Uneven beat spacing", "Poor clap clarity"],
             practice_tips=[
                 "Start very slowly with metronome",
                 "Practice hand pattern without singing",
                 "Count aloud initially",
-                "Maintain consistent clap volume"
+                "Maintain consistent clap volume",
             ],
-            mastery_indicators=[
-                "Steady tempo maintenance",
-                "Clear hand gestures",
-                "Ability to maintain while singing"
-            ],
+            mastery_indicators=["Steady tempo maintenance", "Clear hand gestures", "Ability to maintain while singing"],
             description="Most fundamental and commonly used tala in Carnatic music",
-            historical_background="Ancient tala mentioned in classical treatises, foundation for most compositions"
+            historical_background="Ancient tala mentioned in classical treatises, foundation for most compositions",
         )
 
         # Rupaka Tala (3 beats)
@@ -223,7 +224,7 @@ class TalaTrainingSystem:
             category=TalaCategory.SULADI,
             structure=[
                 BeatPattern(BeatType.DRUTHAM, 2, "Clap + clap", "Ta Ka", "| |", 5),
-                BeatPattern(BeatType.LAGHU, 4, "Clap + 3 finger counts", "Ta Ki Ta Ka", "| 2 3 4", 4)
+                BeatPattern(BeatType.LAGHU, 4, "Clap + 3 finger counts", "Ta Ki Ta Ka", "| 2 3 4", 4),
             ],
             total_beats=6,
             total_counts=6,
@@ -237,28 +238,22 @@ class TalaTrainingSystem:
             learning_order=3,
             prerequisite_talas=["Adi"],
             common_usage=["Light classical", "Semi-classical", "Film songs"],
-            famous_compositions=[
-                {"title": "Jaya Jaya", "composer": "Traditional", "raga": "Kambhoji"}
-            ],
+            famous_compositions=[{"title": "Jaya Jaya", "composer": "Traditional", "raga": "Kambhoji"}],
             regional_variations=["Popular in film music"],
             hand_pattern_description="Right hand: Clap on 1, clap on 2, clap on 3, count 4-5-6 on fingers",
             common_mistakes=[
                 "Starting with laghu instead of drutham",
                 "Inconsistent drutham timing",
-                "Confusion with beat emphasis"
+                "Confusion with beat emphasis",
             ],
             practice_tips=[
                 "Emphasize the first beat strongly",
                 "Practice drutham-laghu transition",
-                "Use with familiar songs initially"
+                "Use with familiar songs initially",
             ],
-            mastery_indicators=[
-                "Smooth drutham-laghu transition",
-                "Proper beat emphasis",
-                "Comfortable at various tempos"
-            ],
+            mastery_indicators=["Smooth drutham-laghu transition", "Proper beat emphasis", "Comfortable at various tempos"],
             description="Six-beat tala starting with drutham, popular in lighter forms",
-            historical_background="Classical tala adapted for modern compositions and film music"
+            historical_background="Classical tala adapted for modern compositions and film music",
         )
 
     @staticmethod
@@ -271,7 +266,7 @@ class TalaTrainingSystem:
             category=TalaCategory.CHAPU,
             structure=[
                 BeatPattern(BeatType.LAGHU, 2, "Clap + finger", "Ta Ki", "| 2", 5),
-                BeatPattern(BeatType.LAGHU, 3, "Clap + 2 fingers", "Ta Ka Dhi", "| 2 3", 4)
+                BeatPattern(BeatType.LAGHU, 3, "Clap + 2 fingers", "Ta Ka Dhi", "| 2 3", 4),
             ],
             total_beats=5,
             total_counts=5,
@@ -285,28 +280,18 @@ class TalaTrainingSystem:
             learning_order=5,
             prerequisite_talas=["Adi", "Rupaka"],
             common_usage=["Film songs", "Light music", "Devotional songs"],
-            famous_compositions=[
-                {"title": "Jagadananda Karaka", "composer": "Tyagaraja", "raga": "Nata"}
-            ],
+            famous_compositions=[{"title": "Jagadananda Karaka", "composer": "Tyagaraja", "raga": "Nata"}],
             regional_variations=["Common in Tamil film music"],
             hand_pattern_description="Right hand: Clap-finger (2 beats), clap-finger-finger (3 beats)",
-            common_mistakes=[
-                "Equal emphasis on all beats",
-                "Difficulty with 2+3 grouping",
-                "Tempo acceleration in groups"
-            ],
+            common_mistakes=["Equal emphasis on all beats", "Difficulty with 2+3 grouping", "Tempo acceleration in groups"],
             practice_tips=[
                 "Practice 2+3 grouping separately",
                 "Use 'Ta-Ki Ta-Ka-Dhi' syllables",
-                "Emphasize first beat of each group"
+                "Emphasize first beat of each group",
             ],
-            mastery_indicators=[
-                "Natural 2+3 feel",
-                "Consistent tempo across groups",
-                "Comfortable with asymmetric pattern"
-            ],
+            mastery_indicators=["Natural 2+3 feel", "Consistent tempo across groups", "Comfortable with asymmetric pattern"],
             description="Five-beat irregular tala with 2+3 grouping",
-            historical_background="Popular chapu tala used extensively in modern compositions"
+            historical_background="Popular chapu tala used extensively in modern compositions",
         )
 
         # Misra Chapu (7 beats) - Complex irregular
@@ -316,7 +301,7 @@ class TalaTrainingSystem:
             category=TalaCategory.CHAPU,
             structure=[
                 BeatPattern(BeatType.LAGHU, 3, "Clap + 2 fingers", "Ta Ki Ta", "| 2 3", 5),
-                BeatPattern(BeatType.LAGHU, 4, "Clap + 3 fingers", "Ta Ka Dhi Mi", "| 2 3 4", 4)
+                BeatPattern(BeatType.LAGHU, 4, "Clap + 3 fingers", "Ta Ka Dhi Mi", "| 2 3 4", 4),
             ],
             total_beats=7,
             total_counts=7,
@@ -330,29 +315,19 @@ class TalaTrainingSystem:
             learning_order=7,
             prerequisite_talas=["Adi", "Rupaka", "Khanda Chapu"],
             common_usage=["Complex compositions", "Advanced pieces", "Experimental music"],
-            famous_compositions=[
-                {"title": "Marugelara", "composer": "Tyagaraja", "raga": "Jayantasri"}
-            ],
+            famous_compositions=[{"title": "Marugelara", "composer": "Tyagaraja", "raga": "Jayantasri"}],
             regional_variations=["Less common in folk traditions"],
             hand_pattern_description="Right hand: Clap-finger-finger (3 beats), clap-finger-finger-finger (4 beats)",
-            common_mistakes=[
-                "Losing track of 3+4 grouping",
-                "Uneven emphasis patterns",
-                "Tempo inconsistency"
-            ],
+            common_mistakes=["Losing track of 3+4 grouping", "Uneven emphasis patterns", "Tempo inconsistency"],
             practice_tips=[
                 "Practice very slowly initially",
                 "Use strong metronome reference",
                 "Count 3+4 grouping aloud",
-                "Practice with simple melodies first"
+                "Practice with simple melodies first",
             ],
-            mastery_indicators=[
-                "Effortless 3+4 grouping",
-                "Steady tempo maintenance",
-                "Natural phrase feeling"
-            ],
+            mastery_indicators=["Effortless 3+4 grouping", "Steady tempo maintenance", "Natural phrase feeling"],
             description="Seven-beat complex tala with 3+4 asymmetric grouping",
-            historical_background="Advanced tala for sophisticated musical expression"
+            historical_background="Advanced tala for sophisticated musical expression",
         )
 
     def _create_rhythmic_exercises(self) -> List[RhythmicExercise]:
@@ -362,51 +337,48 @@ class TalaTrainingSystem:
         exercises.extend(self._clapping_and_polyrhythm_exercises())
 
         # Speed exercise (Nadai changes)
-        exercises.append(RhythmicExercise(
-            id=3,
-            name="Adi Tala Speed Variations",
-            tala="Adi",
-            exercise_type="speed",
-            description="Practice Adi tala at different nadais (speed variations)",
-            patterns=[
-                {
-                    "name": "First Speed",
-                    "nadai": 1,
-                    "subdivisions_per_beat": 1,
-                    "syllables": ["Ta", "", "", "", "Ta", "Ta", "Ta", "Ta"]
-                },
-                {
-                    "name": "Second Speed",
-                    "nadai": 2,
-                    "subdivisions_per_beat": 2,
-                    "syllables": ["Ta Ka", "Di Mi", "Ta Ka", "Jha Nu",
-                                 "Ta Ka", "Ta Ka", "Ta Ka", "Ta Ka"]
-                }
-            ],
-            tempo_progression=[80, 100, 120, 140],
-            duration_minutes=12,
-            difficulty_rating=0.7,
-            learning_objectives=[
-                "Master nadai concept",
-                "Develop speed control",
-                "Practice tempo transitions"
-            ],
-            prerequisites=["Basic Adi Tala Clapping"],
-            timing_tolerance=25.0,
-            success_threshold=0.85,
-            instructions=[
-                "Start with first speed (one syllable per beat)",
-                "Progress to second speed (two syllables per beat)",
-                "Maintain same hand pattern throughout",
-                "Keep transitions smooth"
-            ],
-            practice_tips=[
-                "Practice each speed separately first",
-                "Use clear syllable pronunciation",
-                "Maintain hand pattern accuracy",
-                "Build speed gradually"
-            ]
-        ))
+        exercises.append(
+            RhythmicExercise(
+                id=3,
+                name="Adi Tala Speed Variations",
+                tala="Adi",
+                exercise_type="speed",
+                description="Practice Adi tala at different nadais (speed variations)",
+                patterns=[
+                    {
+                        "name": "First Speed",
+                        "nadai": 1,
+                        "subdivisions_per_beat": 1,
+                        "syllables": ["Ta", "", "", "", "Ta", "Ta", "Ta", "Ta"],
+                    },
+                    {
+                        "name": "Second Speed",
+                        "nadai": 2,
+                        "subdivisions_per_beat": 2,
+                        "syllables": ["Ta Ka", "Di Mi", "Ta Ka", "Jha Nu", "Ta Ka", "Ta Ka", "Ta Ka", "Ta Ka"],
+                    },
+                ],
+                tempo_progression=[80, 100, 120, 140],
+                duration_minutes=12,
+                difficulty_rating=0.7,
+                learning_objectives=["Master nadai concept", "Develop speed control", "Practice tempo transitions"],
+                prerequisites=["Basic Adi Tala Clapping"],
+                timing_tolerance=25.0,
+                success_threshold=0.85,
+                instructions=[
+                    "Start with first speed (one syllable per beat)",
+                    "Progress to second speed (two syllables per beat)",
+                    "Maintain same hand pattern throughout",
+                    "Keep transitions smooth",
+                ],
+                practice_tips=[
+                    "Practice each speed separately first",
+                    "Use clear syllable pronunciation",
+                    "Maintain hand pattern accuracy",
+                    "Build speed gradually",
+                ],
+            )
+        )
 
         return exercises
 
@@ -415,94 +387,102 @@ class TalaTrainingSystem:
         """Basic Adi clapping and polyrhythm exercises."""
         exercises = []
         # Basic Adi Tala clapping
-        exercises.append(RhythmicExercise(
-            id=1,
-            name="Basic Adi Tala Clapping",
-            tala="Adi",
-            exercise_type="basic",
-            description="Learn fundamental Adi tala hand pattern with steady tempo",
-            patterns=[
-                {
-                    "name": "Basic Pattern",
-                    "beats": [1, 2, 3, 4, 5, 6, 7, 8],
-                    "actions": ["clap", "2", "3", "4", "clap", "clap", "clap", "clap"],
-                    "emphasis": [5, 1, 1, 1, 4, 4, 4, 4]
-                }
-            ],
-            tempo_progression=[60, 80, 100, 120],
-            duration_minutes=10,
-            difficulty_rating=0.2,
-            learning_objectives=[
-                "Master basic Adi tala hand pattern",
-                "Develop steady tempo maintenance",
-                "Build muscle memory for clap-count sequence"
-            ],
-            prerequisites=[],
-            timing_tolerance=50.0,  # 50ms tolerance
-            success_threshold=0.85,
-            instructions=[
-                "Sit comfortably with hands ready to clap",
-                "Start with slow tempo (60 BPM)",
-                "Clap on beat 1, count 2-3-4 on fingers",
-                "Clap beats 5, 6, 7, 8 clearly",
-                "Maintain consistent tempo throughout"
-            ],
-            practice_tips=[
-                "Use metronome for tempo reference",
-                "Count aloud initially",
-                "Focus on clear, distinct claps",
-                "Practice daily for muscle memory"
-            ]
-        ))
+        exercises.append(
+            RhythmicExercise(
+                id=1,
+                name="Basic Adi Tala Clapping",
+                tala="Adi",
+                exercise_type="basic",
+                description="Learn fundamental Adi tala hand pattern with steady tempo",
+                patterns=[
+                    {
+                        "name": "Basic Pattern",
+                        "beats": [1, 2, 3, 4, 5, 6, 7, 8],
+                        "actions": ["clap", "2", "3", "4", "clap", "clap", "clap", "clap"],
+                        "emphasis": [5, 1, 1, 1, 4, 4, 4, 4],
+                    }
+                ],
+                tempo_progression=[60, 80, 100, 120],
+                duration_minutes=10,
+                difficulty_rating=0.2,
+                learning_objectives=[
+                    "Master basic Adi tala hand pattern",
+                    "Develop steady tempo maintenance",
+                    "Build muscle memory for clap-count sequence",
+                ],
+                prerequisites=[],
+                timing_tolerance=50.0,  # 50ms tolerance
+                success_threshold=0.85,
+                instructions=[
+                    "Sit comfortably with hands ready to clap",
+                    "Start with slow tempo (60 BPM)",
+                    "Clap on beat 1, count 2-3-4 on fingers",
+                    "Clap beats 5, 6, 7, 8 clearly",
+                    "Maintain consistent tempo throughout",
+                ],
+                practice_tips=[
+                    "Use metronome for tempo reference",
+                    "Count aloud initially",
+                    "Focus on clear, distinct claps",
+                    "Practice daily for muscle memory",
+                ],
+            )
+        )
 
         # Polyrhythmic exercise
-        exercises.append(RhythmicExercise(
-            id=2,
-            name="Adi Tala with Tisra Gati",
-            tala="Adi",
-            exercise_type="polyrhythmic",
-            description="Advanced exercise combining Adi tala structure with Tisra gati subdivisions",
-            patterns=[
-                {
-                    "name": "Tisra Pattern",
-                    "beats": [1, 2, 3, 4, 5, 6, 7, 8],
-                    "subdivisions": [3, 3, 3, 3, 3, 3, 3, 3],
-                    "syllables": ["Ta Ki Da", "Ta Ki Da", "Ta Ki Da", "Ta Ki Da",
-                                 "Ta Ki Da", "Ta Ki Da", "Ta Ki Da", "Ta Ki Da"]
-                }
-            ],
-            tempo_progression=[50, 70, 90],
-            duration_minutes=15,
-            difficulty_rating=0.6,
-            learning_objectives=[
-                "Understand gati concept",
-                "Practice polyrhythmic coordination",
-                "Develop advanced timing skills"
-            ],
-            prerequisites=["Basic Adi Tala Clapping"],
-            timing_tolerance=30.0,
-            success_threshold=0.80,
-            instructions=[
-                "Maintain Adi tala hand pattern",
-                "Subdivide each beat into 3 equal parts",
-                "Use Ta-Ki-Da syllables for subdivisions",
-                "Keep hand pattern steady while vocalizing"
-            ],
-            practice_tips=[
-                "Practice hand pattern first",
-                "Add vocal subdivisions gradually",
-                "Use slower tempo initially",
-                "Focus on coordination between hands and voice"
-            ]
-        ))
+        exercises.append(
+            RhythmicExercise(
+                id=2,
+                name="Adi Tala with Tisra Gati",
+                tala="Adi",
+                exercise_type="polyrhythmic",
+                description="Advanced exercise combining Adi tala structure with Tisra gati subdivisions",
+                patterns=[
+                    {
+                        "name": "Tisra Pattern",
+                        "beats": [1, 2, 3, 4, 5, 6, 7, 8],
+                        "subdivisions": [3, 3, 3, 3, 3, 3, 3, 3],
+                        "syllables": [
+                            "Ta Ki Da",
+                            "Ta Ki Da",
+                            "Ta Ki Da",
+                            "Ta Ki Da",
+                            "Ta Ki Da",
+                            "Ta Ki Da",
+                            "Ta Ki Da",
+                            "Ta Ki Da",
+                        ],
+                    }
+                ],
+                tempo_progression=[50, 70, 90],
+                duration_minutes=15,
+                difficulty_rating=0.6,
+                learning_objectives=[
+                    "Understand gati concept",
+                    "Practice polyrhythmic coordination",
+                    "Develop advanced timing skills",
+                ],
+                prerequisites=["Basic Adi Tala Clapping"],
+                timing_tolerance=30.0,
+                success_threshold=0.80,
+                instructions=[
+                    "Maintain Adi tala hand pattern",
+                    "Subdivide each beat into 3 equal parts",
+                    "Use Ta-Ki-Da syllables for subdivisions",
+                    "Keep hand pattern steady while vocalizing",
+                ],
+                practice_tips=[
+                    "Practice hand pattern first",
+                    "Add vocal subdivisions gradually",
+                    "Use slower tempo initially",
+                    "Focus on coordination between hands and voice",
+                ],
+            )
+        )
         return exercises
 
     async def start_tala_practice_session(
-        self,
-        user_id: int,
-        tala_name: str,
-        exercise_id: Optional[int] = None,
-        tempo: int = 80
+        self, user_id: int, tala_name: str, exercise_id: Optional[int] = None, tempo: int = 80
     ) -> Dict[str, Any]:
         """Start interactive tala practice session"""
 
@@ -525,7 +505,7 @@ class TalaTrainingSystem:
             "cycle_count": 0,
             "beat_timestamps": [],
             "user_input_timestamps": [],
-            "status": "active"
+            "status": "active",
         }
 
         # Store session for tracking
@@ -544,22 +524,16 @@ class TalaTrainingSystem:
                         "duration": pattern.duration,
                         "gesture": pattern.hand_gesture,
                         "syllable": pattern.sound_syllable,
-                        "symbol": pattern.visual_symbol
+                        "symbol": pattern.visual_symbol,
                     }
                     for pattern in tala.structure
-                ]
+                ],
             },
             "tempo": tempo,
-            "instructions": exercise.instructions if exercise else tala.practice_tips
+            "instructions": exercise.instructions if exercise else tala.practice_tips,
         }
 
-    def record_beat_input(
-        self,
-        session_id: str,
-        user_id: int,
-        timestamp: datetime,
-        beat_number: int
-    ) -> Dict[str, Any]:
+    def record_beat_input(self, session_id: str, user_id: int, timestamp: datetime, beat_number: int) -> Dict[str, Any]:
         """Record user's beat input and provide feedback"""
 
         if user_id not in self.user_progress or "current_session" not in self.user_progress[user_id]:
@@ -579,21 +553,21 @@ class TalaTrainingSystem:
         deviation_ms = (actual_timestamp - expected_timestamp).total_seconds() * 1000
 
         # Store the input
-        session["user_input_timestamps"].append({
-            "beat": beat_number,
-            "expected": expected_timestamp,
-            "actual": actual_timestamp,
-            "deviation_ms": deviation_ms
-        })
+        session["user_input_timestamps"].append(
+            {"beat": beat_number, "expected": expected_timestamp, "actual": actual_timestamp, "deviation_ms": deviation_ms}
+        )
 
         # Provide immediate feedback
         tolerance = 50.0  # milliseconds
         feedback = {
             "beat_number": beat_number,
             "deviation_ms": deviation_ms,
-            "accuracy": "excellent" if abs(deviation_ms) < 20 else
-                       "good" if abs(deviation_ms) < tolerance else "needs_improvement",
-            "timing_feedback": self._generate_timing_feedback(deviation_ms)
+            "accuracy": "excellent"
+            if abs(deviation_ms) < 20
+            else "good"
+            if abs(deviation_ms) < tolerance
+            else "needs_improvement",
+            "timing_feedback": self._generate_timing_feedback(deviation_ms),
         }
 
         return feedback
@@ -613,11 +587,7 @@ class TalaTrainingSystem:
         else:
             return "Good timing!"
 
-    async def analyze_rhythm_performance(
-        self,
-        session_id: str,
-        user_id: int
-    ) -> RhythmAnalysis:
+    async def analyze_rhythm_performance(self, session_id: str, user_id: int) -> RhythmAnalysis:
         """Analyze user's rhythm performance after session"""
 
         if user_id not in self.user_progress or "current_session" not in self.user_progress[user_id]:
@@ -681,8 +651,7 @@ class TalaTrainingSystem:
             recommendations.append("Focus on maintaining steady tempo")
 
         # Calculate overall score and grade
-        score = (overall_accuracy * 0.4 + tempo_consistency * 0.3 +
-                synchronization_quality * 0.3)
+        score = overall_accuracy * 0.4 + tempo_consistency * 0.3 + synchronization_quality * 0.3
 
         if score >= 0.9:
             grade = "A"
@@ -710,7 +679,7 @@ class TalaTrainingSystem:
             improvement_areas=improvement_areas,
             specific_recommendations=recommendations,
             score=score,
-            grade=grade
+            grade=grade,
         )
 
     def get_tala_learning_path(self, user_level: str = "beginner") -> List[Dict[str, Any]]:
@@ -738,29 +707,29 @@ class TalaTrainingSystem:
                         "phase": "Recognition",
                         "description": "Listen and identify tala pattern",
                         "duration": "1-2 days",
-                        "exercises": ["Pattern listening", "Beat identification"]
+                        "exercises": ["Pattern listening", "Beat identification"],
                     },
                     {
                         "phase": "Basic Clapping",
                         "description": "Learn hand pattern at slow tempo",
                         "duration": "3-5 days",
-                        "exercises": ["Hand pattern practice", "Tempo building"]
+                        "exercises": ["Hand pattern practice", "Tempo building"],
                     },
                     {
                         "phase": "Vocal Integration",
                         "description": "Add vocal syllables while clapping",
                         "duration": "3-4 days",
-                        "exercises": ["Syllable practice", "Coordination"]
+                        "exercises": ["Syllable practice", "Coordination"],
                     },
                     {
                         "phase": "Musical Application",
                         "description": "Practice with songs and compositions",
                         "duration": "1-2 weeks",
-                        "exercises": ["Song practice", "Performance"]
-                    }
+                        "exercises": ["Song practice", "Performance"],
+                    },
                 ],
                 "estimated_total_time": "2-3 weeks",
-                "success_criteria": tala.mastery_indicators
+                "success_criteria": tala.mastery_indicators,
             }
 
             learning_path.append(stage)
@@ -777,10 +746,7 @@ class TalaTrainingSystem:
 
     def export_tala_data(self) -> str:
         """Export all tala data as JSON"""
-        export_data = {
-            "talas": {},
-            "exercises": []
-        }
+        export_data = {"talas": {}, "exercises": []}
 
         # Export tala definitions
         for name, tala in self.tala_definitions.items():
@@ -801,7 +767,7 @@ class TalaTrainingSystem:
                     "hand_gesture": pattern.hand_gesture,
                     "sound_syllable": pattern.sound_syllable,
                     "visual_symbol": pattern.visual_symbol,
-                    "emphasis_level": pattern.emphasis_level
+                    "emphasis_level": pattern.emphasis_level,
                 }
                 for pattern in tala.structure
             ]
@@ -814,34 +780,38 @@ class TalaTrainingSystem:
 
         return json.dumps(export_data, indent=2, ensure_ascii=False)
 
+
 # Initialize the system
 tala_system = TalaTrainingSystem()
+
 
 # Export functions for API use
 def get_all_talas() -> List[TalaDefinition]:
     """Get all tala definitions"""
     return list(tala_system.tala_definitions.values())
 
+
 def get_tala(name: str) -> Optional[TalaDefinition]:
     """Get specific tala"""
     return tala_system.get_tala_by_name(name)
+
 
 def get_tala_exercises(tala_name: str) -> List[RhythmicExercise]:
     """Get exercises for tala"""
     return tala_system.get_exercises_for_tala(tala_name)
 
+
 def get_learning_path_api(level: str = "beginner") -> List[Dict[str, Any]]:
     """Get tala learning path"""
     return tala_system.get_tala_learning_path(level)
 
+
 async def start_practice_session_api(
-    user_id: int,
-    tala_name: str,
-    exercise_id: Optional[int] = None,
-    tempo: int = 80
+    user_id: int, tala_name: str, exercise_id: Optional[int] = None, tempo: int = 80
 ) -> Dict[str, Any]:
     """Start tala practice session"""
     return await tala_system.start_tala_practice_session(user_id, tala_name, exercise_id, tempo)
+
 
 async def analyze_performance_api(session_id: str, user_id: int) -> Optional[RhythmAnalysis]:
     """Analyze rhythm performance"""

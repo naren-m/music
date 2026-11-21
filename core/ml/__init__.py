@@ -7,15 +7,15 @@ Provides adaptive learning algorithms and AI-powered personalization.
 from .adaptive_engine import (
     AdaptiveLearningEngine,
     AdaptiveRecommendation,
-    UserPerformanceMetrics,
     LearningStyle,
     SkillLevel,
+    UserPerformanceMetrics,
 )
 
 __all__ = [
-    'AdaptiveLearningEngine',
-    'AdaptiveRecommendation',
-    'UserPerformanceMetrics',
-    'LearningStyle',
-    'SkillLevel',
+    "AdaptiveLearningEngine",
+    "AdaptiveRecommendation",
+    "UserPerformanceMetrics",
+    "LearningStyle",
+    "SkillLevel",
 ]

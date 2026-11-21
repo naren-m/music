@@ -5,14 +5,16 @@ Tests all key functionality including UI components, API health checks, WebSocke
 error handling, status indicators, and user experience improvements.
 """
 
-import pytest
 import asyncio
 import json
 import time
-from playwright.async_api import async_playwright, Page, expect, Browser, BrowserContext
+
+import pytest
+from playwright.async_api import Browser, BrowserContext, Page, async_playwright, expect
 
 BASE_URL = "http://localhost:5002"
 CARNATIC_URL = f"{BASE_URL}/carnatic"
+
 
 class TestCarnaticUI:
     """Comprehensive test suite for the Carnatic Music Learning interface."""
@@ -116,7 +118,7 @@ class TestCarnaticUI:
         await page.wait_for_timeout(3000)
 
         # Look for WebSocket initialization in console
-        ws_messages = [msg for msg in console_messages if 'websocket' in msg.lower() or 'socket' in msg.lower()]
+        ws_messages = [msg for msg in console_messages if "websocket" in msg.lower() or "socket" in msg.lower()]
         print(f"WebSocket console messages: {ws_messages}")
 
         print("✅ WebSocket connection handling validated")
@@ -136,7 +138,7 @@ class TestCarnaticUI:
             "#ws-status",
             "#microphone-status",
             "#mic-status",
-            ".status-indicator"
+            ".status-indicator",
         ]
 
         found_indicators = []
@@ -154,12 +156,14 @@ class TestCarnaticUI:
         assert len(found_indicators) > 0, "At least one status indicator should be present"
 
         # Test error state simulation
-        await page.evaluate("""
+        await page.evaluate(
+            """
             // Simulate connection error
             if (window.showError) {
                 window.showError('Test error message');
             }
-        """)
+        """
+        )
 
         await page.wait_for_timeout(1000)
 
@@ -178,9 +182,9 @@ class TestCarnaticUI:
         # Test responsive design at different viewport sizes
         viewports = [
             {"width": 1920, "height": 1080},  # Desktop
-            {"width": 1024, "height": 768},   # Tablet landscape
-            {"width": 768, "height": 1024},   # Tablet portrait
-            {"width": 375, "height": 667}     # Mobile
+            {"width": 1024, "height": 768},  # Tablet landscape
+            {"width": 768, "height": 1024},  # Tablet portrait
+            {"width": 375, "height": 667},  # Mobile
         ]
 
         for viewport in viewports:
@@ -226,13 +230,7 @@ class TestCarnaticUI:
         await page.wait_for_load_state("networkidle")
 
         # Look for navigation elements
-        nav_selectors = [
-            "nav a",
-            ".nav-link",
-            ".navigation a",
-            "a[href]",
-            ".menu a"
-        ]
+        nav_selectors = ["nav a", ".nav-link", ".navigation a", "a[href]", ".menu a"]
 
         all_links = []
         for selector in nav_selectors:
@@ -259,7 +257,7 @@ class TestCarnaticUI:
             print(f"Testing link: '{text}' -> {href}")
 
             # Test internal links
-            if href.startswith('/') or 'localhost:5002' in href:
+            if href.startswith("/") or "localhost:5002" in href:
                 try:
                     # Click link and verify navigation
                     await link_info["element"].click()
@@ -277,7 +275,7 @@ class TestCarnaticUI:
                     print(f"Link test failed for '{text}': {str(e)}")
 
             # Test external links (just verify they exist)
-            elif href.startswith('http'):
+            elif href.startswith("http"):
                 await expect(link_info["element"]).to_have_attribute("href", href)
                 print(f"External link verified: {href}")
 
@@ -298,7 +296,7 @@ class TestCarnaticUI:
             "#start-btn",
             "#stop-btn",
             ".audio-controls",
-            ".microphone-controls"
+            ".microphone-controls",
         ]
 
         found_audio_controls = []
@@ -311,14 +309,7 @@ class TestCarnaticUI:
         print(f"Found audio controls: {found_audio_controls}")
 
         # Check for audio visualization elements
-        viz_elements = [
-            "canvas",
-            "#frequency-display",
-            "#note-display",
-            ".visualization",
-            ".frequency-viz",
-            "#output"
-        ]
+        viz_elements = ["canvas", "#frequency-display", "#note-display", ".visualization", ".frequency-viz", "#output"]
 
         found_viz_elements = []
         for selector in viz_elements:
@@ -330,12 +321,14 @@ class TestCarnaticUI:
         print(f"Found visualization elements: {found_viz_elements}")
 
         # Test microphone permission handling (simulate)
-        await page.evaluate("""
+        await page.evaluate(
+            """
             // Mock navigator.mediaDevices for testing
             if (typeof navigator !== 'undefined' && navigator.mediaDevices) {
                 console.log('MediaDevices API available');
             }
-        """)
+        """
+        )
 
         # Check for output display area
         output_area = page.locator("#output, .output-section, .results")
@@ -363,19 +356,23 @@ class TestCarnaticUI:
         await page.wait_for_timeout(3000)  # Allow status updates
 
         # Step 3: Check JavaScript initialization
-        js_ready = await page.evaluate("""
+        js_ready = await page.evaluate(
+            """
             () => {
                 return typeof window !== 'undefined' &&
                        document.readyState === 'complete';
             }
-        """)
+        """
+        )
         assert js_ready, "JavaScript should be properly initialized"
 
         # Step 4: Test error recovery
-        await page.evaluate("""
+        await page.evaluate(
+            """
             // Simulate error and recovery
             console.log('Testing error handling...');
-        """)
+        """
+        )
 
         # Step 5: UI interaction test
         buttons = page.locator("button")

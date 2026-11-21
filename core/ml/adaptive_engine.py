@@ -5,13 +5,15 @@ Implements intelligent difficulty progression, performance prediction,
 and personalized learning path optimization using machine learning.
 """
 
-import numpy as np
-from typing import Dict, List, Optional, Tuple, Any
-from dataclasses import dataclass, field
-from enum import Enum
 import json
-from datetime import datetime, timedelta
 import logging
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
+
 
 class LearningStyle(Enum):
     VISUAL = "visual"
@@ -19,12 +21,14 @@ class LearningStyle(Enum):
     KINESTHETIC = "kinesthetic"
     ANALYTICAL = "analytical"
 
+
 class SkillLevel(Enum):
     BEGINNER = 0
     NOVICE = 1
     INTERMEDIATE = 2
     ADVANCED = 3
     EXPERT = 4
+
 
 @dataclass
 class UserPerformanceMetrics:
@@ -41,6 +45,7 @@ class UserPerformanceMetrics:
     retention_rate: float = 0.0
     last_updated: datetime = field(default_factory=datetime.now)
 
+
 @dataclass
 class AdaptiveRecommendation:
     exercise_type: str
@@ -52,6 +57,7 @@ class AdaptiveRecommendation:
     reasoning: str
     cultural_context: Optional[str] = None
 
+
 class AdaptiveLearningEngine:
     """
     AI-powered adaptive learning engine that personalizes the Carnatic music
@@ -61,41 +67,31 @@ class AdaptiveLearningEngine:
     def __init__(self):
         self.user_profiles: Dict[int, UserPerformanceMetrics] = {}
         self.performance_weights = {
-            'accuracy': 0.35,
-            'consistency': 0.25,
-            'progress_rate': 0.20,
-            'retention': 0.15,
-            'engagement': 0.05
+            "accuracy": 0.35,
+            "consistency": 0.25,
+            "progress_rate": 0.20,
+            "retention": 0.15,
+            "engagement": 0.05,
         }
         self.difficulty_thresholds = {
-            SkillLevel.BEGINNER: {'accuracy': 0.6, 'consistency': 0.5},
-            SkillLevel.NOVICE: {'accuracy': 0.7, 'consistency': 0.6},
-            SkillLevel.INTERMEDIATE: {'accuracy': 0.8, 'consistency': 0.7},
-            SkillLevel.ADVANCED: {'accuracy': 0.85, 'consistency': 0.8},
-            SkillLevel.EXPERT: {'accuracy': 0.9, 'consistency': 0.85}
+            SkillLevel.BEGINNER: {"accuracy": 0.6, "consistency": 0.5},
+            SkillLevel.NOVICE: {"accuracy": 0.7, "consistency": 0.6},
+            SkillLevel.INTERMEDIATE: {"accuracy": 0.8, "consistency": 0.7},
+            SkillLevel.ADVANCED: {"accuracy": 0.85, "consistency": 0.8},
+            SkillLevel.EXPERT: {"accuracy": 0.9, "consistency": 0.85},
         }
 
         # Exercise complexity mappings
         self.exercise_complexity = {
-            'sarali_varisai': {
-                'basic_arohanam': 1,
-                'basic_avarohanam': 1,
-                'combined_sequences': 2,
-                'tempo_variations': 3,
-                'rhythmic_patterns': 4
+            "sarali_varisai": {
+                "basic_arohanam": 1,
+                "basic_avarohanam": 1,
+                "combined_sequences": 2,
+                "tempo_variations": 3,
+                "rhythmic_patterns": 4,
             },
-            'janta_varisai': {
-                'simple_doubles': 2,
-                'transition_focus': 3,
-                'complex_patterns': 4,
-                'speed_building': 5
-            },
-            'alankaram': {
-                'basic_patterns': 3,
-                'ornamentation': 4,
-                'raga_specific': 5,
-                'advanced_combinations': 6
-            }
+            "janta_varisai": {"simple_doubles": 2, "transition_focus": 3, "complex_patterns": 4, "speed_building": 5},
+            "alankaram": {"basic_patterns": 3, "ornamentation": 4, "raga_specific": 5, "advanced_combinations": 6},
         }
 
         self.logger = logging.getLogger(__name__)
@@ -114,7 +110,7 @@ class AdaptiveLearningEngine:
             skill_level=initial_skill,
             learning_style=learning_style,
             engagement_score=0.7,  # Neutral starting engagement
-            retention_rate=0.5     # Will be updated as user practices
+            retention_rate=0.5,  # Will be updated as user practices
         )
 
         self.user_profiles[user_id] = profile
@@ -129,23 +125,23 @@ class AdaptiveLearningEngine:
         max_score = 0
 
         # Basic pitch recognition (25 points)
-        pitch_accuracy = assessment.get('pitch_accuracy', 0.5)
+        pitch_accuracy = assessment.get("pitch_accuracy", 0.5)
         total_score += pitch_accuracy * 25
         max_score += 25
 
         # Rhythm sense (25 points)
-        rhythm_score = assessment.get('rhythm_accuracy', 0.5)
+        rhythm_score = assessment.get("rhythm_accuracy", 0.5)
         total_score += rhythm_score * 25
         max_score += 25
 
         # Prior musical experience (25 points)
-        experience_years = assessment.get('musical_experience_years', 0)
+        experience_years = assessment.get("musical_experience_years", 0)
         experience_score = min(experience_years / 5, 1.0) * 25
         total_score += experience_score
         max_score += 25
 
         # Cultural familiarity with Carnatic music (25 points)
-        cultural_familiarity = assessment.get('carnatic_familiarity', 0.3)
+        cultural_familiarity = assessment.get("carnatic_familiarity", 0.3)
         total_score += cultural_familiarity * 25
         max_score += 25
 
@@ -169,36 +165,32 @@ class AdaptiveLearningEngine:
             LearningStyle.VISUAL: 0,
             LearningStyle.AUDITORY: 0,
             LearningStyle.KINESTHETIC: 0,
-            LearningStyle.ANALYTICAL: 0
+            LearningStyle.ANALYTICAL: 0,
         }
 
         # Learning preference questions
-        preferences = assessment.get('learning_preferences', {})
+        preferences = assessment.get("learning_preferences", {})
 
-        if preferences.get('prefers_visual_notation', False):
+        if preferences.get("prefers_visual_notation", False):
             style_scores[LearningStyle.VISUAL] += 2
-        if preferences.get('learns_by_listening', False):
+        if preferences.get("learns_by_listening", False):
             style_scores[LearningStyle.AUDITORY] += 2
-        if preferences.get('needs_physical_practice', False):
+        if preferences.get("needs_physical_practice", False):
             style_scores[LearningStyle.KINESTHETIC] += 2
-        if preferences.get('likes_theory_explanations', False):
+        if preferences.get("likes_theory_explanations", False):
             style_scores[LearningStyle.ANALYTICAL] += 2
 
         # Performance patterns
-        if assessment.get('visual_memory_strong', False):
+        if assessment.get("visual_memory_strong", False):
             style_scores[LearningStyle.VISUAL] += 1
-        if assessment.get('audio_memory_strong', False):
+        if assessment.get("audio_memory_strong", False):
             style_scores[LearningStyle.AUDITORY] += 1
-        if assessment.get('motor_memory_strong', False):
+        if assessment.get("motor_memory_strong", False):
             style_scores[LearningStyle.KINESTHETIC] += 1
 
         return max(style_scores, key=style_scores.get)
 
-    def update_performance_metrics(
-        self,
-        user_id: int,
-        session_data: Dict[str, Any]
-    ) -> None:
+    def update_performance_metrics(self, user_id: int, session_data: Dict[str, Any]) -> None:
         """Update user performance metrics after a practice session"""
 
         if user_id not in self.user_profiles:
@@ -208,25 +200,25 @@ class AdaptiveLearningEngine:
         profile = self.user_profiles[user_id]
 
         # Update accuracy history
-        session_accuracy = session_data.get('accuracy', 0.0)
+        session_accuracy = session_data.get("accuracy", 0.0)
         profile.accuracy_history.append(session_accuracy)
         if len(profile.accuracy_history) > 50:  # Keep last 50 sessions
             profile.accuracy_history = profile.accuracy_history[-50:]
 
         # Update tempo progress
-        session_tempo = session_data.get('tempo', 60)
+        session_tempo = session_data.get("tempo", 60)
         profile.tempo_progress.append(session_tempo)
         if len(profile.tempo_progress) > 50:
             profile.tempo_progress = profile.tempo_progress[-50:]
 
         # Update practice duration
-        duration = session_data.get('duration_minutes', 0)
+        duration = session_data.get("duration_minutes", 0)
         profile.practice_duration.append(duration)
         if len(profile.practice_duration) > 50:
             profile.practice_duration = profile.practice_duration[-50:]
 
         # Update mistake patterns
-        mistakes = session_data.get('mistakes', {})
+        mistakes = session_data.get("mistakes", {})
         for mistake_type, count in mistakes.items():
             if mistake_type in profile.mistake_patterns:
                 profile.mistake_patterns[mistake_type] += count
@@ -252,9 +244,9 @@ class AdaptiveLearningEngine:
         current_engagement = profile.engagement_score
 
         # Factors that increase engagement
-        duration = session_data.get('duration_minutes', 0)
-        completed_exercises = session_data.get('completed_exercises', 0)
-        voluntary_extra_practice = session_data.get('extra_practice', False)
+        duration = session_data.get("duration_minutes", 0)
+        completed_exercises = session_data.get("completed_exercises", 0)
+        voluntary_extra_practice = session_data.get("extra_practice", False)
 
         engagement_delta = 0
 
@@ -302,18 +294,17 @@ class AdaptiveLearningEngine:
         current_thresholds = self.difficulty_thresholds[profile.skill_level]
 
         # Check if ready to advance
-        if (recent_avg_accuracy >= current_thresholds['accuracy'] and
-            consistency >= current_thresholds['consistency']):
-
+        if recent_avg_accuracy >= current_thresholds["accuracy"] and consistency >= current_thresholds["consistency"]:
             if profile.skill_level.value < SkillLevel.EXPERT.value:
                 new_level = SkillLevel(profile.skill_level.value + 1)
                 profile.skill_level = new_level
                 self.logger.info(f"User {profile.user_id} advanced to {new_level}")
 
         # Check if needs to step back (struggling consistently)
-        elif (recent_avg_accuracy < current_thresholds['accuracy'] * 0.8 and
-              profile.skill_level.value > SkillLevel.BEGINNER.value):
-
+        elif (
+            recent_avg_accuracy < current_thresholds["accuracy"] * 0.8
+            and profile.skill_level.value > SkillLevel.BEGINNER.value
+        ):
             new_level = SkillLevel(profile.skill_level.value - 1)
             profile.skill_level = new_level
             self.logger.info(f"User {profile.user_id} adjusted to {new_level}")
@@ -325,11 +316,11 @@ class AdaptiveLearningEngine:
         weaknesses = []
 
         # Analyze by exercise type performance
-        exercise_performance = session_data.get('exercise_performance', {})
+        exercise_performance = session_data.get("exercise_performance", {})
 
         for exercise_type, metrics in exercise_performance.items():
-            accuracy = metrics.get('accuracy', 0)
-            consistency = metrics.get('consistency', 0)
+            accuracy = metrics.get("accuracy", 0)
+            consistency = metrics.get("consistency", 0)
 
             combined_score = (accuracy + consistency) / 2
 
@@ -383,7 +374,7 @@ class AdaptiveLearningEngine:
             estimated_duration=estimated_duration,
             confidence_score=self._calculate_confidence(profile),
             reasoning=reasoning,
-            cultural_context=cultural_context
+            cultural_context=cultural_context,
         )
 
         self.logger.info(f"Generated recommendation for user {user_id}: {exercise_type} at level {difficulty_level}")
@@ -405,14 +396,14 @@ class AdaptiveLearningEngine:
 
         # Priority 3: Based on skill level progression
         skill_based_focus = {
-            SkillLevel.BEGINNER: ['pitch_accuracy', 'basic_rhythm'],
-            SkillLevel.NOVICE: ['swara_transitions', 'tempo_control'],
-            SkillLevel.INTERMEDIATE: ['ornamentation', 'raga_understanding'],
-            SkillLevel.ADVANCED: ['complex_patterns', 'improvisation'],
-            SkillLevel.EXPERT: ['advanced_techniques', 'composition']
+            SkillLevel.BEGINNER: ["pitch_accuracy", "basic_rhythm"],
+            SkillLevel.NOVICE: ["swara_transitions", "tempo_control"],
+            SkillLevel.INTERMEDIATE: ["ornamentation", "raga_understanding"],
+            SkillLevel.ADVANCED: ["complex_patterns", "improvisation"],
+            SkillLevel.EXPERT: ["advanced_techniques", "composition"],
         }
 
-        skill_areas = skill_based_focus.get(profile.skill_level, ['general_practice'])
+        skill_areas = skill_based_focus.get(profile.skill_level, ["general_practice"])
         for area in skill_areas:
             if area not in focus_areas:
                 focus_areas.append(area)
@@ -426,22 +417,22 @@ class AdaptiveLearningEngine:
 
         # Exercise type priorities based on skill level
         skill_exercises = {
-            SkillLevel.BEGINNER: ['sarali_varisai'],
-            SkillLevel.NOVICE: ['sarali_varisai', 'janta_varisai'],
-            SkillLevel.INTERMEDIATE: ['janta_varisai', 'alankaram'],
-            SkillLevel.ADVANCED: ['alankaram', 'raga_exercises'],
-            SkillLevel.EXPERT: ['advanced_alankaram', 'composition_practice']
+            SkillLevel.BEGINNER: ["sarali_varisai"],
+            SkillLevel.NOVICE: ["sarali_varisai", "janta_varisai"],
+            SkillLevel.INTERMEDIATE: ["janta_varisai", "alankaram"],
+            SkillLevel.ADVANCED: ["alankaram", "raga_exercises"],
+            SkillLevel.EXPERT: ["advanced_alankaram", "composition_practice"],
         }
 
-        available_exercises = skill_exercises.get(profile.skill_level, ['sarali_varisai'])
+        available_exercises = skill_exercises.get(profile.skill_level, ["sarali_varisai"])
 
         # Consider focus areas and weaknesses
-        if 'basic_rhythm' in focus_areas or 'pitch_accuracy' in focus_areas:
-            return 'sarali_varisai'
-        elif 'swara_transitions' in focus_areas:
-            return 'janta_varisai'
-        elif 'ornamentation' in focus_areas or 'raga_understanding' in focus_areas:
-            return 'alankaram'
+        if "basic_rhythm" in focus_areas or "pitch_accuracy" in focus_areas:
+            return "sarali_varisai"
+        elif "swara_transitions" in focus_areas:
+            return "janta_varisai"
+        elif "ornamentation" in focus_areas or "raga_understanding" in focus_areas:
+            return "alankaram"
 
         # Default to most appropriate for skill level
         return available_exercises[0]
@@ -454,7 +445,7 @@ class AdaptiveLearningEngine:
             SkillLevel.NOVICE: 2,
             SkillLevel.INTERMEDIATE: 3,
             SkillLevel.ADVANCED: 4,
-            SkillLevel.EXPERT: 5
+            SkillLevel.EXPERT: 5,
         }
 
         difficulty = base_difficulty.get(profile.skill_level, 1)
@@ -482,7 +473,7 @@ class AdaptiveLearningEngine:
             SkillLevel.NOVICE: 70,
             SkillLevel.INTERMEDIATE: 80,
             SkillLevel.ADVANCED: 90,
-            SkillLevel.EXPERT: 100
+            SkillLevel.EXPERT: 100,
         }
 
         tempo = base_tempo.get(profile.skill_level, 60)
@@ -508,7 +499,7 @@ class AdaptiveLearningEngine:
             SkillLevel.NOVICE: 20,
             SkillLevel.INTERMEDIATE: 25,
             SkillLevel.ADVANCED: 30,
-            SkillLevel.EXPERT: 35
+            SkillLevel.EXPERT: 35,
         }
 
         duration = base_duration.get(profile.skill_level, 20)
@@ -532,9 +523,7 @@ class AdaptiveLearningEngine:
 
         skill_level_desc = profile.skill_level.name.lower()
 
-        reasoning_parts = [
-            f"Based on your {skill_level_desc} level proficiency"
-        ]
+        reasoning_parts = [f"Based on your {skill_level_desc} level proficiency"]
 
         if profile.weakness_areas:
             reasoning_parts.append(f"focusing on improving {', '.join(profile.weakness_areas[:2])}")
@@ -550,7 +539,7 @@ class AdaptiveLearningEngine:
             LearningStyle.VISUAL: "including visual notation support",
             LearningStyle.AUDITORY: "emphasizing listening and repetition",
             LearningStyle.KINESTHETIC: "with hands-on practice focus",
-            LearningStyle.ANALYTICAL: "with detailed theoretical explanations"
+            LearningStyle.ANALYTICAL: "with detailed theoretical explanations",
         }
 
         reasoning_parts.append(learning_style_msg.get(profile.learning_style, ""))
@@ -561,21 +550,21 @@ class AdaptiveLearningEngine:
         """Provide cultural context for the recommended exercise"""
 
         cultural_contexts = {
-            'sarali_varisai': {
+            "sarali_varisai": {
                 1: "Begin with the foundational practice that every Carnatic musician learns - the simple ascent and descent of swaras.",
                 2: "Explore the beauty of swara sequences that form the backbone of Carnatic music tradition.",
-                3: "Practice with the devotion and precision that characterizes traditional Carnatic pedagogy."
+                3: "Practice with the devotion and precision that characterizes traditional Carnatic pedagogy.",
             },
-            'janta_varisai': {
+            "janta_varisai": {
                 1: "Experience the doubled swara patterns that develop clarity in Carnatic pronunciation.",
                 2: "Master the transitions that create the flowing nature of Carnatic melody.",
-                3: "Embrace the rhythmic emphasis that brings life to each swara combination."
+                3: "Embrace the rhythmic emphasis that brings life to each swara combination.",
             },
-            'alankaram': {
+            "alankaram": {
                 1: "Begin exploring the ornamental patterns that beautify Carnatic music.",
                 2: "Develop the aesthetic sense that distinguishes accomplished Carnatic musicians.",
-                3: "Practice the sophisticated embellishments that express the raga's character."
-            }
+                3: "Practice the sophisticated embellishments that express the raga's character.",
+            },
         }
 
         return cultural_contexts.get(exercise_type, {}).get(difficulty_level)
@@ -619,24 +608,19 @@ class AdaptiveLearningEngine:
         insights = self._generate_performance_insights(profile)
 
         analytics = {
-            'user_id': user_id,
-            'current_skill_level': profile.skill_level.name,
-            'learning_style': profile.learning_style.name,
-            'engagement_score': profile.engagement_score,
-            'retention_rate': profile.retention_rate,
-            'performance_trends': {
-                'accuracy': accuracy_trend,
-                'tempo': tempo_trend,
-                'practice_duration': duration_trend
-            },
-            'strengths': profile.strength_areas,
-            'areas_for_improvement': profile.weakness_areas,
-            'common_mistakes': dict(sorted(profile.mistake_patterns.items(),
-                                         key=lambda x: x[1], reverse=True)[:5]),
-            'insights': insights,
-            'total_sessions': len(profile.accuracy_history),
-            'average_accuracy': np.mean(profile.accuracy_history) if profile.accuracy_history else 0,
-            'last_updated': profile.last_updated.isoformat()
+            "user_id": user_id,
+            "current_skill_level": profile.skill_level.name,
+            "learning_style": profile.learning_style.name,
+            "engagement_score": profile.engagement_score,
+            "retention_rate": profile.retention_rate,
+            "performance_trends": {"accuracy": accuracy_trend, "tempo": tempo_trend, "practice_duration": duration_trend},
+            "strengths": profile.strength_areas,
+            "areas_for_improvement": profile.weakness_areas,
+            "common_mistakes": dict(sorted(profile.mistake_patterns.items(), key=lambda x: x[1], reverse=True)[:5]),
+            "insights": insights,
+            "total_sessions": len(profile.accuracy_history),
+            "average_accuracy": np.mean(profile.accuracy_history) if profile.accuracy_history else 0,
+            "last_updated": profile.last_updated.isoformat(),
         }
 
         return analytics
@@ -645,7 +629,7 @@ class AdaptiveLearningEngine:
         """Calculate trend analysis for a metric"""
 
         if len(data) < 2:
-            return {'direction': 'insufficient_data', 'magnitude': 0}
+            return {"direction": "insufficient_data", "magnitude": 0}
 
         # Simple linear trend calculation
         x = np.arange(len(data))
@@ -653,14 +637,14 @@ class AdaptiveLearningEngine:
 
         slope = np.corrcoef(x, y)[0, 1] if len(data) > 2 else (y[-1] - y[0]) / len(data)
 
-        direction = 'improving' if slope > 0.1 else 'declining' if slope < -0.1 else 'stable'
+        direction = "improving" if slope > 0.1 else "declining" if slope < -0.1 else "stable"
         magnitude = abs(slope)
 
         return {
-            'direction': direction,
-            'magnitude': magnitude,
-            'recent_average': np.mean(data[-5:]) if len(data) >= 5 else np.mean(data),
-            'overall_average': np.mean(data)
+            "direction": direction,
+            "magnitude": magnitude,
+            "recent_average": np.mean(data[-5:]) if len(data) >= 5 else np.mean(data),
+            "overall_average": np.mean(data),
         }
 
     def _generate_performance_insights(self, profile: UserPerformanceMetrics) -> List[str]:
@@ -695,7 +679,7 @@ class AdaptiveLearningEngine:
             LearningStyle.VISUAL: "Incorporate more visual notation and pattern recognition",
             LearningStyle.AUDITORY: "Emphasize listening exercises and repetitive practice",
             LearningStyle.KINESTHETIC: "Include more interactive and hands-on practice elements",
-            LearningStyle.ANALYTICAL: "Provide detailed theoretical explanations and structure"
+            LearningStyle.ANALYTICAL: "Provide detailed theoretical explanations and structure",
         }
 
         insights.append(style_recommendations[profile.learning_style])
@@ -712,18 +696,18 @@ class AdaptiveLearningEngine:
 
         # Convert to serializable format
         data = {
-            'user_id': profile.user_id,
-            'skill_level': profile.skill_level.value,
-            'learning_style': profile.learning_style.value,
-            'accuracy_history': profile.accuracy_history,
-            'tempo_progress': profile.tempo_progress,
-            'practice_duration': profile.practice_duration,
-            'mistake_patterns': profile.mistake_patterns,
-            'strength_areas': profile.strength_areas,
-            'weakness_areas': profile.weakness_areas,
-            'engagement_score': profile.engagement_score,
-            'retention_rate': profile.retention_rate,
-            'last_updated': profile.last_updated.isoformat()
+            "user_id": profile.user_id,
+            "skill_level": profile.skill_level.value,
+            "learning_style": profile.learning_style.value,
+            "accuracy_history": profile.accuracy_history,
+            "tempo_progress": profile.tempo_progress,
+            "practice_duration": profile.practice_duration,
+            "mistake_patterns": profile.mistake_patterns,
+            "strength_areas": profile.strength_areas,
+            "weakness_areas": profile.weakness_areas,
+            "engagement_score": profile.engagement_score,
+            "retention_rate": profile.retention_rate,
+            "last_updated": profile.last_updated.isoformat(),
         }
 
         return json.dumps(data, indent=2)

@@ -5,20 +5,22 @@ Comprehensive system for user engagement through achievements, badges,
 streaks, leaderboards, and progressive challenges in Carnatic music learning.
 """
 
-import logging
-from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass, asdict
-from enum import Enum
-from datetime import datetime, timedelta
 import json
+import logging
 import math
-from sqlalchemy.orm import Session
+from dataclasses import asdict, dataclass
+from datetime import datetime, timedelta
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
+
 from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 from ..database import get_db_session
-from ..models import User, Progress, Achievement, UserAchievement
+from ..models import Achievement, Progress, User, UserAchievement
 
 logger = logging.getLogger(__name__)
+
 
 class AchievementType(Enum):
     PRACTICE = "practice"
@@ -30,6 +32,7 @@ class AchievementType(Enum):
     MASTERY = "mastery"
     SOCIAL = "social"
 
+
 class BadgeRarity(Enum):
     COMMON = "common"
     UNCOMMON = "uncommon"
@@ -37,12 +40,14 @@ class BadgeRarity(Enum):
     EPIC = "epic"
     LEGENDARY = "legendary"
 
+
 class ChallengeType(Enum):
     DAILY = "daily"
     WEEKLY = "weekly"
     MONTHLY = "monthly"
     SEASONAL = "seasonal"
     SPECIAL = "special"
+
 
 @dataclass
 class Badge:
@@ -56,6 +61,7 @@ class Badge:
     category: AchievementType
     hidden: bool = False
     seasonal: bool = False
+
 
 @dataclass
 class UserStats:
@@ -73,6 +79,7 @@ class UserStats:
     badges_earned: int
     achievements_unlocked: int
 
+
 @dataclass
 class Challenge:
     id: str
@@ -87,6 +94,7 @@ class Challenge:
     difficulty: float
     participants: int = 0
 
+
 @dataclass
 class LeaderboardEntry:
     user_id: int
@@ -96,6 +104,7 @@ class LeaderboardEntry:
     rank: int
     level: int
     change_from_previous: int  # +/- rank change
+
 
 class GamificationEngine:
     """
@@ -132,7 +141,7 @@ class GamificationEngine:
                 rarity=BadgeRarity.COMMON,
                 points=50,
                 requirements={"sessions_completed": 1},
-                category=AchievementType.PRACTICE
+                category=AchievementType.PRACTICE,
             ),
             Badge(
                 id="daily_warrior",
@@ -142,7 +151,7 @@ class GamificationEngine:
                 rarity=BadgeRarity.UNCOMMON,
                 points=250,
                 requirements={"streak_days": 7},
-                category=AchievementType.STREAK
+                category=AchievementType.STREAK,
             ),
             Badge(
                 id="week_champion",
@@ -152,7 +161,7 @@ class GamificationEngine:
                 rarity=BadgeRarity.RARE,
                 points=750,
                 requirements={"streak_days": 30},
-                category=AchievementType.STREAK
+                category=AchievementType.STREAK,
             ),
             Badge(
                 id="marathon_monk",
@@ -162,9 +171,8 @@ class GamificationEngine:
                 rarity=BadgeRarity.EPIC,
                 points=2000,
                 requirements={"streak_days": 100},
-                category=AchievementType.STREAK
+                category=AchievementType.STREAK,
             ),
-
             # Accuracy achievements
             Badge(
                 id="perfect_pitch",
@@ -174,7 +182,7 @@ class GamificationEngine:
                 rarity=BadgeRarity.UNCOMMON,
                 points=300,
                 requirements={"session_accuracy": 0.95},
-                category=AchievementType.ACCURACY
+                category=AchievementType.ACCURACY,
             ),
             Badge(
                 id="precision_master",
@@ -184,7 +192,7 @@ class GamificationEngine:
                 rarity=BadgeRarity.RARE,
                 points=500,
                 requirements={"consecutive_high_accuracy": 10, "min_accuracy": 0.90},
-                category=AchievementType.CONSISTENCY
+                category=AchievementType.CONSISTENCY,
             ),
         ]
 
@@ -201,7 +209,7 @@ class GamificationEngine:
                 rarity=BadgeRarity.COMMON,
                 points=100,
                 requirements={"swara_mastery": ["Sa"], "min_accuracy": 0.85},
-                category=AchievementType.MASTERY
+                category=AchievementType.MASTERY,
             ),
             Badge(
                 id="saptak_explorer",
@@ -211,7 +219,7 @@ class GamificationEngine:
                 rarity=BadgeRarity.UNCOMMON,
                 points=400,
                 requirements={"swaras_practiced": 7, "min_accuracy": 0.80},
-                category=AchievementType.EXPLORATION
+                category=AchievementType.EXPLORATION,
             ),
             Badge(
                 id="swara_sage",
@@ -221,9 +229,8 @@ class GamificationEngine:
                 rarity=BadgeRarity.EPIC,
                 points=1500,
                 requirements={"swaras_mastered": 7, "min_accuracy": 0.90},
-                category=AchievementType.MASTERY
+                category=AchievementType.MASTERY,
             ),
-
             # Time-based achievements
             Badge(
                 id="dedicated_learner",
@@ -233,7 +240,7 @@ class GamificationEngine:
                 rarity=BadgeRarity.UNCOMMON,
                 points=350,
                 requirements={"total_practice_minutes": 600},
-                category=AchievementType.PRACTICE
+                category=AchievementType.PRACTICE,
             ),
             Badge(
                 id="time_traveler",
@@ -243,7 +250,7 @@ class GamificationEngine:
                 rarity=BadgeRarity.RARE,
                 points=1000,
                 requirements={"total_practice_minutes": 6000},
-                category=AchievementType.PRACTICE
+                category=AchievementType.PRACTICE,
             ),
             Badge(
                 id="lifetime_devotee",
@@ -253,9 +260,8 @@ class GamificationEngine:
                 rarity=BadgeRarity.LEGENDARY,
                 points=10000,
                 requirements={"total_practice_minutes": 60000},
-                category=AchievementType.PRACTICE
+                category=AchievementType.PRACTICE,
             ),
-
             # Raga exploration achievements
             Badge(
                 id="raga_explorer",
@@ -265,7 +271,7 @@ class GamificationEngine:
                 rarity=BadgeRarity.UNCOMMON,
                 points=400,
                 requirements={"ragas_practiced": 5},
-                category=AchievementType.EXPLORATION
+                category=AchievementType.EXPLORATION,
             ),
             Badge(
                 id="raga_connoisseur",
@@ -275,7 +281,7 @@ class GamificationEngine:
                 rarity=BadgeRarity.RARE,
                 points=1200,
                 requirements={"ragas_practiced": 25},
-                category=AchievementType.EXPLORATION
+                category=AchievementType.EXPLORATION,
             ),
         ]
 
@@ -292,7 +298,7 @@ class GamificationEngine:
                 rarity=BadgeRarity.COMMON,
                 points=200,
                 requirements={"sarali_levels_completed": 3},
-                category=AchievementType.MILESTONE
+                category=AchievementType.MILESTONE,
             ),
             Badge(
                 id="sarali_intermediate",
@@ -302,7 +308,7 @@ class GamificationEngine:
                 rarity=BadgeRarity.UNCOMMON,
                 points=500,
                 requirements={"sarali_levels_completed": 6},
-                category=AchievementType.MILESTONE
+                category=AchievementType.MILESTONE,
             ),
             Badge(
                 id="sarali_advanced",
@@ -312,7 +318,7 @@ class GamificationEngine:
                 rarity=BadgeRarity.RARE,
                 points=1000,
                 requirements={"sarali_levels_completed": 9},
-                category=AchievementType.MILESTONE
+                category=AchievementType.MILESTONE,
             ),
             Badge(
                 id="sarali_master",
@@ -322,7 +328,7 @@ class GamificationEngine:
                 rarity=BadgeRarity.EPIC,
                 points=2500,
                 requirements={"sarali_levels_completed": 12},
-                category=AchievementType.MASTERY
+                category=AchievementType.MASTERY,
             ),
         ]
 
@@ -340,7 +346,7 @@ class GamificationEngine:
                 points=300,
                 requirements={"help_given": 10},
                 category=AchievementType.SOCIAL,
-                hidden=True
+                hidden=True,
             ),
             Badge(
                 id="community_leader",
@@ -350,9 +356,8 @@ class GamificationEngine:
                 rarity=BadgeRarity.RARE,
                 points=800,
                 requirements={"monthly_leaderboard_rank": 10},
-                category=AchievementType.SOCIAL
+                category=AchievementType.SOCIAL,
             ),
-
             # Special seasonal achievements
             Badge(
                 id="diwali_celebration",
@@ -363,7 +368,7 @@ class GamificationEngine:
                 points=600,
                 requirements={"seasonal_practice": "diwali", "sessions": 5},
                 category=AchievementType.PRACTICE,
-                seasonal=True
+                seasonal=True,
             ),
             Badge(
                 id="new_year_resolution",
@@ -374,8 +379,8 @@ class GamificationEngine:
                 points=400,
                 requirements={"january_streak": 10},
                 category=AchievementType.STREAK,
-                seasonal=True
-            )
+                seasonal=True,
+            ),
         ]
 
     def _load_badge_definitions(self) -> Dict[str, Badge]:
@@ -404,7 +409,7 @@ class GamificationEngine:
 
             # Get user's existing achievements
             existing_achievements = await self.get_user_achievements(user_id)
-            existing_ids = {ach['badge_id'] for ach in existing_achievements}
+            existing_ids = {ach["badge_id"] for ach in existing_achievements}
 
             # Check each achievement definition
             for badge in self.achievement_definitions:
@@ -427,7 +432,7 @@ class GamificationEngine:
 
         # Check session-specific requirements
         if "session_accuracy" in requirements:
-            session_accuracy = session_data.get('accuracy', 0)
+            session_accuracy = session_data.get("accuracy", 0)
             if session_accuracy < requirements["session_accuracy"]:
                 return False
 
@@ -454,14 +459,14 @@ class GamificationEngine:
 
         # Check Sarali Varisai progress
         if "sarali_levels_completed" in requirements:
-            sarali_completed = session_data.get('sarali_completed', 0)
+            sarali_completed = session_data.get("sarali_completed", 0)
             if sarali_completed < requirements["sarali_levels_completed"]:
                 return False
 
         # Check specific swara mastery
         if "swara_mastery" in requirements:
             required_swaras = set(requirements["swara_mastery"])
-            mastered_swaras = set(session_data.get('mastered_swaras', []))
+            mastered_swaras = set(session_data.get("mastered_swaras", []))
             if not required_swaras.issubset(mastered_swaras):
                 return False
 
@@ -478,7 +483,7 @@ class GamificationEngine:
                     badge_name=badge.name,
                     points_awarded=badge.points,
                     earned_at=datetime.now(),
-                    badge_data=asdict(badge)
+                    badge_data=asdict(badge),
                 )
                 db.add(user_achievement)
 
@@ -510,13 +515,9 @@ class GamificationEngine:
                     return self._create_empty_user_stats(user_id)
 
                 # Get practice statistics
-                progress_records = db.query(Progress).filter(
-                    Progress.user_id == user_id
-                ).all()
+                progress_records = db.query(Progress).filter(Progress.user_id == user_id).all()
 
-                total_practice_time = sum(
-                    (p.session_duration or 0) for p in progress_records
-                )
+                total_practice_time = sum((p.session_duration or 0) for p in progress_records)
                 sessions_completed = len(progress_records)
 
                 # Calculate streak
@@ -531,13 +532,13 @@ class GamificationEngine:
                 ragas_explored = self._count_explored_ragas(progress_records)
 
                 # Get achievements count
-                achievements = db.query(UserAchievement).filter(
-                    UserAchievement.user_id == user_id
-                ).count()
+                achievements = db.query(UserAchievement).filter(UserAchievement.user_id == user_id).count()
 
                 total_points = user.total_points or 0
                 level = self._calculate_level(total_points)
-                next_level_points = self.level_thresholds[level + 1] if level + 1 < len(self.level_thresholds) else total_points
+                next_level_points = (
+                    self.level_thresholds[level + 1] if level + 1 < len(self.level_thresholds) else total_points
+                )
                 current_level_points = self.level_thresholds[level]
                 next_level_progress = (total_points - current_level_points) / (next_level_points - current_level_points)
 
@@ -554,7 +555,7 @@ class GamificationEngine:
                     level=level,
                     next_level_progress=next_level_progress,
                     badges_earned=achievements,
-                    achievements_unlocked=achievements
+                    achievements_unlocked=achievements,
                 )
 
         except Exception as e:
@@ -576,7 +577,7 @@ class GamificationEngine:
             level=0,
             next_level_progress=0.0,
             badges_earned=0,
-            achievements_unlocked=0
+            achievements_unlocked=0,
         )
 
     def _calculate_streaks(self, progress_records: List[Progress]) -> Tuple[int, int]:
@@ -605,7 +606,7 @@ class GamificationEngine:
         temp_streak = 1
 
         for i in range(1, len(sorted_dates)):
-            if sorted_dates[i] - sorted_dates[i-1] == timedelta(days=1):
+            if sorted_dates[i] - sorted_dates[i - 1] == timedelta(days=1):
                 temp_streak += 1
             else:
                 longest_streak = max(longest_streak, temp_streak)
@@ -620,8 +621,8 @@ class GamificationEngine:
         swara_accuracy = {}
 
         for record in progress_records:
-            if record.exercise_data and 'target_swara' in record.exercise_data:
-                swara = record.exercise_data['target_swara']
+            if record.exercise_data and "target_swara" in record.exercise_data:
+                swara = record.exercise_data["target_swara"]
                 if swara not in swara_accuracy:
                     swara_accuracy[swara] = []
                 swara_accuracy[swara].append(record.accuracy_score)
@@ -637,25 +638,23 @@ class GamificationEngine:
         """Count number of different ragas practiced"""
         ragas = set()
         for record in progress_records:
-            if record.exercise_data and 'raga' in record.exercise_data:
-                ragas.add(record.exercise_data['raga'])
+            if record.exercise_data and "raga" in record.exercise_data:
+                ragas.add(record.exercise_data["raga"])
         return len(ragas)
 
     async def get_user_achievements(self, user_id: int) -> List[Dict]:
         """Get all achievements earned by user"""
         try:
             with get_db_session() as db:
-                achievements = db.query(UserAchievement).filter(
-                    UserAchievement.user_id == user_id
-                ).all()
+                achievements = db.query(UserAchievement).filter(UserAchievement.user_id == user_id).all()
 
                 return [
                     {
-                        'badge_id': ach.badge_id,
-                        'badge_name': ach.badge_name,
-                        'points_awarded': ach.points_awarded,
-                        'earned_at': ach.earned_at.isoformat(),
-                        'badge_data': ach.badge_data
+                        "badge_id": ach.badge_id,
+                        "badge_name": ach.badge_name,
+                        "points_awarded": ach.points_awarded,
+                        "earned_at": ach.earned_at.isoformat(),
+                        "badge_data": ach.badge_data,
                     }
                     for ach in achievements
                 ]
@@ -683,32 +682,29 @@ class GamificationEngine:
 
                 # Get users with their points in the period
                 if period == "all_time":
-                    leaderboard_data = db.query(
-                        User.id,
-                        User.username,
-                        User.avatar,
-                        func.coalesce(User.total_points, 0).label('score')
-                    ).filter(
-                        User.total_points.isnot(None)
-                    ).order_by(
-                        User.total_points.desc()
-                    ).limit(limit).all()
+                    leaderboard_data = (
+                        db.query(User.id, User.username, User.avatar, func.coalesce(User.total_points, 0).label("score"))
+                        .filter(User.total_points.isnot(None))
+                        .order_by(User.total_points.desc())
+                        .limit(limit)
+                        .all()
+                    )
                 else:
                     # For period-based leaderboards, sum points from achievements in that period
-                    leaderboard_data = db.query(
-                        User.id,
-                        User.username,
-                        User.avatar,
-                        func.coalesce(func.sum(UserAchievement.points_awarded), 0).label('score')
-                    ).join(
-                        UserAchievement, User.id == UserAchievement.user_id
-                    ).filter(
-                        UserAchievement.earned_at >= start_date
-                    ).group_by(
-                        User.id, User.username, User.avatar
-                    ).order_by(
-                        func.sum(UserAchievement.points_awarded).desc()
-                    ).limit(limit).all()
+                    leaderboard_data = (
+                        db.query(
+                            User.id,
+                            User.username,
+                            User.avatar,
+                            func.coalesce(func.sum(UserAchievement.points_awarded), 0).label("score"),
+                        )
+                        .join(UserAchievement, User.id == UserAchievement.user_id)
+                        .filter(UserAchievement.earned_at >= start_date)
+                        .group_by(User.id, User.username, User.avatar)
+                        .order_by(func.sum(UserAchievement.points_awarded).desc())
+                        .limit(limit)
+                        .all()
+                    )
 
                 # Get previous ranks for this period
                 previous_ranks = self._previous_ranks.get(period, {})
@@ -726,15 +722,17 @@ class GamificationEngine:
                     change = (prev_rank - rank) if prev_rank is not None else 0
 
                     current_ranks[user_id] = rank
-                    entries.append(LeaderboardEntry(
-                        user_id=user_id,
-                        username=username or f"User{user_id}",
-                        avatar=avatar,
-                        score=float(score),
-                        rank=rank,
-                        level=level,
-                        change_from_previous=change
-                    ))
+                    entries.append(
+                        LeaderboardEntry(
+                            user_id=user_id,
+                            username=username or f"User{user_id}",
+                            avatar=avatar,
+                            score=float(score),
+                            rank=rank,
+                            level=level,
+                            change_from_previous=change,
+                        )
+                    )
 
                 # Store current ranks for next comparison
                 self._previous_ranks[period] = current_ranks
@@ -748,16 +746,16 @@ class GamificationEngine:
     async def create_challenge(self, challenge_data: Dict) -> Challenge:
         """Create a new challenge"""
         challenge = Challenge(
-            id=challenge_data['id'],
-            name=challenge_data['name'],
-            description=challenge_data['description'],
-            type=ChallengeType(challenge_data['type']),
-            start_date=datetime.fromisoformat(challenge_data['start_date']),
-            end_date=datetime.fromisoformat(challenge_data['end_date']),
-            requirements=challenge_data['requirements'],
-            rewards=challenge_data['rewards'],
-            progress_tracking=challenge_data.get('progress_tracking', {}),
-            difficulty=challenge_data.get('difficulty', 0.5)
+            id=challenge_data["id"],
+            name=challenge_data["name"],
+            description=challenge_data["description"],
+            type=ChallengeType(challenge_data["type"]),
+            start_date=datetime.fromisoformat(challenge_data["start_date"]),
+            end_date=datetime.fromisoformat(challenge_data["end_date"]),
+            requirements=challenge_data["requirements"],
+            rewards=challenge_data["rewards"],
+            progress_tracking=challenge_data.get("progress_tracking", {}),
+            difficulty=challenge_data.get("difficulty", 0.5),
         )
 
         self.active_challenges.append(challenge)
@@ -766,8 +764,7 @@ class GamificationEngine:
     async def get_active_challenges(self) -> List[Challenge]:
         """Get all currently active challenges"""
         now = datetime.now()
-        return [c for c in self.active_challenges
-                if c.start_date <= now <= c.end_date]
+        return [c for c in self.active_challenges if c.start_date <= now <= c.end_date]
 
     def get_badge_by_id(self, badge_id: str) -> Optional[Badge]:
         """Get badge definition by ID"""
@@ -779,11 +776,11 @@ class GamificationEngine:
         import random
 
         session_data = {
-            'accuracy': random.uniform(0.7, 0.98),
-            'duration_minutes': random.randint(10, 45),
-            'target_swara': random.choice(['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni']),
-            'mastered_swaras': ['Sa', 'Ri'],
-            'sarali_completed': random.randint(0, 5)
+            "accuracy": random.uniform(0.7, 0.98),
+            "duration_minutes": random.randint(10, 45),
+            "target_swara": random.choice(["Sa", "Ri", "Ga", "Ma", "Pa", "Da", "Ni"]),
+            "mastered_swaras": ["Sa", "Ri"],
+            "sarali_completed": random.randint(0, 5),
         }
 
         # Check for new achievements
@@ -793,19 +790,22 @@ class GamificationEngine:
         updated_stats = await self.get_user_stats(user_id)
 
         return {
-            'session_data': session_data,
-            'new_badges': [asdict(badge) for badge in new_badges],
-            'updated_stats': asdict(updated_stats),
-            'level_up': len(new_badges) > 0  # Simplified level up check
+            "session_data": session_data,
+            "new_badges": [asdict(badge) for badge in new_badges],
+            "updated_stats": asdict(updated_stats),
+            "level_up": len(new_badges) > 0,  # Simplified level up check
         }
+
 
 # Initialize the gamification engine
 gamification_engine = GamificationEngine()
+
 
 # Export functions for API use
 async def check_user_achievements(user_id: int, session_data: Dict) -> List[Badge]:
     """Check and award new achievements for user"""
     return await gamification_engine.check_achievements(user_id, session_data)
+
 
 async def get_user_gamification_data(user_id: int) -> Dict:
     """Get comprehensive gamification data for user"""
@@ -814,15 +814,17 @@ async def get_user_gamification_data(user_id: int) -> Dict:
     active_challenges = await gamification_engine.get_active_challenges()
 
     return {
-        'stats': asdict(stats),
-        'achievements': achievements,
-        'active_challenges': [asdict(c) for c in active_challenges],
-        'available_badges': [asdict(b) for b in gamification_engine.achievement_definitions if not b.hidden]
+        "stats": asdict(stats),
+        "achievements": achievements,
+        "active_challenges": [asdict(c) for c in active_challenges],
+        "available_badges": [asdict(b) for b in gamification_engine.achievement_definitions if not b.hidden],
     }
+
 
 async def get_global_leaderboard(period: str = "monthly") -> List[LeaderboardEntry]:
     """Get global leaderboard"""
     return await gamification_engine.get_leaderboard(period)
+
 
 def get_level_info(total_points: int) -> Dict:
     """Get level information for given points"""
@@ -833,9 +835,9 @@ def get_level_info(total_points: int) -> Dict:
     next_threshold = engine.level_thresholds[level + 1] if level + 1 < len(engine.level_thresholds) else total_points
 
     return {
-        'current_level': level,
-        'current_points': total_points,
-        'points_in_level': total_points - current_threshold,
-        'points_to_next_level': next_threshold - total_points,
-        'progress_to_next_level': (total_points - current_threshold) / (next_threshold - current_threshold)
+        "current_level": level,
+        "current_points": total_points,
+        "points_in_level": total_points - current_threshold,
+        "points_to_next_level": next_threshold - total_points,
+        "progress_to_next_level": (total_points - current_threshold) / (next_threshold - current_threshold),
     }

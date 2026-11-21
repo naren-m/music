@@ -4,24 +4,22 @@ Core service for audio processing, pitch detection, and shruti analysis.
 """
 
 import logging
-import numpy as np
-from typing import Dict, Optional, Tuple, List, Union
-from dataclasses import dataclass
 import time
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Tuple, Union
 
-from core.models.shruti import (
-    ShrutiSystem, 
-    Shruti, 
-    find_closest_shruti, 
-    analyze_pitch_deviation
-)
+import numpy as np
+
+from core.models.shruti import Shruti, ShrutiSystem, analyze_pitch_deviation, find_closest_shruti
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class AudioConfig:
     """Configuration for audio processing (optimized for keyboard/instruments)"""
+
     sample_rate: int = 44100
     buffer_size: int = 2048
     hop_length: int = 512
@@ -36,9 +34,11 @@ class AudioConfig:
     enable_parallel_processing: bool = False
     max_worker_threads: int = 2
 
+
 @dataclass
 class PitchDetectionResult:
     """Result of a pitch detection operation"""
+
     timestamp: float
     detected_frequency: float
     confidence: float
@@ -46,6 +46,7 @@ class PitchDetectionResult:
     cent_deviation: float = 0.0
     note_name: str = ""
     is_voiced: bool = False
+
 
 class CarnaticAudioEngine:
     """
@@ -57,14 +58,14 @@ class CarnaticAudioEngine:
         self.config = config or AudioConfig()
         self.shruti_system = ShrutiSystem()
         self.base_sa = 261.63  # Default C4, can be updated per session
-        
+
         # Initialize processing buffers
         self._window = np.hanning(self.config.buffer_size)
-        
+
         # Performance metrics
         self._last_process_time = 0
         self._avg_latency = 0
-        
+
         logger.info(f"CarnaticAudioEngine initialized with sample_rate={self.config.sample_rate}")
 
     def set_base_frequency(self, frequency: float):
@@ -147,7 +148,7 @@ class CarnaticAudioEngine:
             filtered = np.zeros_like(audio_data)
             filtered[0] = audio_data[0]
             for i in range(1, len(audio_data)):
-                filtered[i] = alpha * (filtered[i-1] + audio_data[i] - audio_data[i-1])
+                filtered[i] = alpha * (filtered[i - 1] + audio_data[i] - audio_data[i - 1])
             audio_data = filtered
 
         # Normalize to [-1, 1] range while preserving relative amplitude
@@ -166,9 +167,11 @@ class CarnaticAudioEngine:
 
         # Debug: Log audio data statistics
         if len(audio_data) > 0:
-            logger.debug(f"Audio data stats: len={len(audio_data)}, min={np.min(audio_data):.4f}, "
-                        f"max={np.max(audio_data):.4f}, mean={np.mean(audio_data):.4f}, "
-                        f"std={np.std(audio_data):.4f}")
+            logger.debug(
+                f"Audio data stats: len={len(audio_data)}, min={np.min(audio_data):.4f}, "
+                f"max={np.max(audio_data):.4f}, mean={np.mean(audio_data):.4f}, "
+                f"std={np.std(audio_data):.4f}"
+            )
 
         # Basic validation
         if len(audio_data) < self.config.buffer_size:
@@ -177,7 +180,7 @@ class CarnaticAudioEngine:
             audio_data = np.pad(audio_data, (0, pad_len))
         elif len(audio_data) > self.config.buffer_size:
             # Truncate if too long
-            audio_data = audio_data[:self.config.buffer_size]
+            audio_data = audio_data[: self.config.buffer_size]
 
         # Pre-process audio for better pitch detection
         audio_data = self._preprocess_audio(audio_data)
@@ -191,13 +194,15 @@ class CarnaticAudioEngine:
         # 2. Spectral flatness check - noise has flat spectrum, music has peaks
         spectral_flatness = self._calculate_spectral_flatness(audio_data)
         if spectral_flatness > self.config.spectral_flatness_threshold:
-            logger.debug(f"Rejected as noise: spectral_flatness={spectral_flatness:.3f} > {self.config.spectral_flatness_threshold}")
+            logger.debug(
+                f"Rejected as noise: spectral_flatness={spectral_flatness:.3f} > {self.config.spectral_flatness_threshold}"
+            )
             return None
 
         # 3. Pitch Detection (Simplified Autocorrelation for now)
         # In a real implementation, this would use a more robust algorithm like YIN or CREPE
         frequency, confidence = self._detect_pitch_autocorr(audio_data)
-        
+
         if confidence < self.config.confidence_threshold or frequency < self.config.min_frequency:
             logger.debug(f"Rejected: confidence={confidence:.2f} or freq={frequency:.1f}Hz below thresholds")
             return None
@@ -209,30 +214,34 @@ class CarnaticAudioEngine:
         match = find_closest_shruti(normalized_freq, self.base_sa)
 
         # 5. Maximum deviation filter - reject wild detections that don't match any shruti well
-        if abs(match['deviation_cents']) > self.config.max_deviation_cents:
-            logger.debug(f"Rejected: deviation={match['deviation_cents']:.1f}¢ > max {self.config.max_deviation_cents}¢ "
-                        f"(freq={frequency:.1f}Hz matched={match['shruti_name']})")
+        if abs(match["deviation_cents"]) > self.config.max_deviation_cents:
+            logger.debug(
+                f"Rejected: deviation={match['deviation_cents']:.1f}¢ > max {self.config.max_deviation_cents}¢ "
+                f"(freq={frequency:.1f}Hz matched={match['shruti_name']})"
+            )
             return None
 
         # Debug logging for pitch detection - use INFO level for visibility
-        logger.info(f"Pitch Detection: freq={frequency:.1f}Hz, base_sa={self.base_sa}Hz, "
-                    f"matched={match['shruti_name']}, deviation={match['deviation_cents']:.1f}¢, "
-                    f"target_freq={match['frequency']:.1f}Hz, confidence={confidence:.2f}")
+        logger.info(
+            f"Pitch Detection: freq={frequency:.1f}Hz, base_sa={self.base_sa}Hz, "
+            f"matched={match['shruti_name']}, deviation={match['deviation_cents']:.1f}¢, "
+            f"target_freq={match['frequency']:.1f}Hz, confidence={confidence:.2f}"
+        )
 
         result = PitchDetectionResult(
             timestamp=start_time,
             detected_frequency=frequency,
             confidence=confidence,
-            shruti=self.shruti_system.get_shruti(match['shruti_name']) if match['shruti_name'] else None,
-            cent_deviation=match['deviation_cents'],
-            note_name=match['shruti_name'] or "Unknown",
-            is_voiced=True
+            shruti=self.shruti_system.get_shruti(match["shruti_name"]) if match["shruti_name"] else None,
+            cent_deviation=match["deviation_cents"],
+            note_name=match["shruti_name"] or "Unknown",
+            is_voiced=True,
         )
-        
+
         # Update metrics
         process_time = (time.time() - start_time) * 1000  # ms
         self._last_process_time = process_time
-        
+
         return result
 
     def _detect_pitch_autocorr(self, audio_buffer: np.ndarray) -> Tuple[float, float]:
@@ -248,7 +257,7 @@ class CarnaticAudioEngine:
         # Using FFT for faster correlation: corr(x,x) = ifft(fft(x) * conj(fft(x)))
         n = len(windowed)
         # Pad with zeros to avoid wrap-around error (circular correlation)
-        n_fft = 2 ** int(np.ceil(np.log2(2*n)))
+        n_fft = 2 ** int(np.ceil(np.log2(2 * n)))
 
         spectrum = np.fft.rfft(windowed, n_fft)
         autocorr = np.fft.irfft(spectrum * np.conj(spectrum))
@@ -261,8 +270,8 @@ class CarnaticAudioEngine:
 
         # Define search range for fundamental frequency
         # For vocal pitch detection, focus on typical vocal range (80-800 Hz)
-        min_period = int(self.config.sample_rate / 800)   # ~55 samples for 800Hz
-        max_period = int(self.config.sample_rate / 80)    # ~551 samples for 80Hz
+        min_period = int(self.config.sample_rate / 800)  # ~55 samples for 800Hz
+        max_period = int(self.config.sample_rate / 80)  # ~551 samples for 80Hz
 
         if max_period >= n:
             max_period = n - 1
@@ -281,7 +290,7 @@ class CarnaticAudioEngine:
         # A peak is where the value is greater than its neighbors
         peaks = []
         for i in range(1, len(search_region) - 1):
-            if search_region[i] > search_region[i-1] and search_region[i] > search_region[i+1]:
+            if search_region[i] > search_region[i - 1] and search_region[i] > search_region[i + 1]:
                 if search_region[i] >= self.config.autocorr_peak_threshold:
                     peaks.append((i + min_period, search_region[i]))
 
@@ -299,8 +308,9 @@ class CarnaticAudioEngine:
 
             peak_idx, peak_val = best_peak
 
-            logger.debug(f"Selected period {peak_idx} -> {self.config.sample_rate/peak_idx:.1f}Hz "
-                        f"(confidence: {peak_val:.2f})")
+            logger.debug(
+                f"Selected period {peak_idx} -> {self.config.sample_rate/peak_idx:.1f}Hz " f"(confidence: {peak_val:.2f})"
+            )
 
         true_idx = self._parabolic_peak_index(autocorr, peak_idx)
 
@@ -338,8 +348,10 @@ class CarnaticAudioEngine:
                 # Use strict threshold: must be actually stronger
                 if half_val > value * 0.95:
                     is_subharmonic = True
-                    logger.debug(f"Period {period} ({freq:.1f}Hz) is subharmonic - "
-                               f"stronger peak at {half_period} ({self.config.sample_rate/half_period:.1f}Hz)")
+                    logger.debug(
+                        f"Period {period} ({freq:.1f}Hz) is subharmonic - "
+                        f"stronger peak at {half_period} ({self.config.sample_rate/half_period:.1f}Hz)"
+                    )
 
             if not is_subharmonic:
                 best_peak = (period, value)
@@ -358,7 +370,7 @@ class CarnaticAudioEngine:
             alpha = autocorr[peak_idx - 1]
             beta = autocorr[peak_idx]
             gamma = autocorr[peak_idx + 1]
-            denom = alpha - 2*beta + gamma
+            denom = alpha - 2 * beta + gamma
             if abs(denom) > 1e-10:  # Avoid division by zero
                 offset = 0.5 * (alpha - gamma) / denom
                 true_idx = peak_idx + offset
@@ -367,4 +379,3 @@ class CarnaticAudioEngine:
         else:
             true_idx = peak_idx
         return true_idx
-

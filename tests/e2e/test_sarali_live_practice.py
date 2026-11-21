@@ -14,19 +14,35 @@ Requires the frontend and backend dev servers to already be running:
 Run standalone (bypasses the coverage-gated addopts in pytest.ini):
     .venv/bin/python -m pytest tests/e2e/test_sarali_live_practice.py -v -s -o addopts=""
 """
+import os
 import re
 import time
 
 import pytest
 from playwright.sync_api import sync_playwright
 
-FRONTEND_URL = "http://localhost:3000/"
+# Vite dev server by default. CI points this at Flask serving the built SPA.
+FRONTEND_URL = os.environ.get("E2E_FRONTEND_URL", "http://localhost:3000/")
 
 # Sarali Varisai 1 (Mayamalavagowla, base Sa = 261.63 Hz): full arohanam +
 # avarohanam sequence, one frequency per swara.
 NOTE_SEQUENCE = [
-    261.63, 275.63, 331.13, 348.84, 392.44, 413.44, 490.56, 523.26,
-    523.26, 490.56, 413.44, 392.44, 348.84, 331.13, 275.63, 261.63,
+    261.63,
+    275.63,
+    331.13,
+    348.84,
+    392.44,
+    413.44,
+    490.56,
+    523.26,
+    523.26,
+    490.56,
+    413.44,
+    392.44,
+    348.84,
+    331.13,
+    275.63,
+    261.63,
 ]
 
 SECONDS_PER_NOTE = 2.0
@@ -152,8 +168,6 @@ def test_sarali_live_practice_with_synthetic_audio():
             assert "Antara Gandhara" in final_logs
 
             cycles_text = page.locator("text=Cycles").locator("..").inner_text()
-            assert ("100.0%" in page_text) or ("1" in cycles_text), (
-                f"page_text tail: {page_text[-600:]!r}"
-            )
+            assert ("100.0%" in page_text) or ("1" in cycles_text), f"page_text tail: {page_text[-600:]!r}"
         finally:
             browser.close()
