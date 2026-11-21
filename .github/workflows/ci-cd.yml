@@ -254,6 +254,9 @@ jobs:
           SPA_DIST_DIR: ${{ github.workspace }}/frontend/dist
           ALLOW_UNSAFE_WERKZEUG: 1
         run: |
+          # Throwaway per-run key: create_app refuses to start without one
+          # outside development. Not a secret; it signs nothing that outlives the job.
+          export SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')"
           nohup python app.py > app.log 2>&1 &
           for i in $(seq 1 30); do
             curl -fsS http://localhost:5002/api/v1/health && exit 0
@@ -338,13 +341,19 @@ jobs:
         env:
           IMAGE: ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
         run: |
-          docker run --rm -d --name carnatic-test -e FLASK_ENV=testing -p 5001:5001 "$IMAGE"
-          trap 'docker logs carnatic-test; docker stop carnatic-test' EXIT
+          # Throwaway per-run key: create_app refuses to start without one
+          # outside development. No --rm, so the logs survive a crash.
+          docker run -d --name carnatic-test -e FLASK_ENV=testing \
+            -e SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_hex(32))')" \
+            -p 5001:5001 "$IMAGE"
+          trap 'docker logs carnatic-test; docker rm -f carnatic-test' EXIT
 
+          healthy=no
           for i in $(seq 1 30); do
-            curl -fsS http://localhost:5001/api/v1/health > health.json && break
+            if curl -fsS http://localhost:5001/api/v1/health > health.json; then healthy=yes; break; fi
             sleep 2
           done
+          [ "$healthy" = yes ] || { echo "container never answered /api/v1/health"; exit 1; }
           cat health.json
           python3 -c 'import json,sys; d=json.load(open("health.json")); sys.exit(d.get("status")!="healthy")'
 
