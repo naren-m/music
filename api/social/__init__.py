@@ -6,15 +6,15 @@ user discovery, activity feeds, leaderboards, and practice challenges.
 """
 
 from .routes import (
-    social_bp,
     ActivityType,
     ChallengeStatus,
     PracticeChallenge,
+    social_bp,
 )
 
 __all__ = [
-    'social_bp',
-    'ActivityType',
-    'ChallengeStatus',
-    'PracticeChallenge',
+    "social_bp",
+    "ActivityType",
+    "ChallengeStatus",
+    "PracticeChallenge",
 ]

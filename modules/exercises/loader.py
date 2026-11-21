@@ -8,9 +8,9 @@ Converts text-based patterns to the existing dataclass structures used by the ap
 import json
 import os
 import re
-from pathlib import Path
-from typing import List, Dict, Tuple, Optional, Any
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 # Base path for exercise data files
 DATA_DIR = Path(__file__).parent / "data"
@@ -19,6 +19,7 @@ DATA_DIR = Path(__file__).parent / "data"
 @dataclass
 class ParsedExercise:
     """Represents a parsed exercise from a text file."""
+
     level: int
     arohanam: List[str]  # List of swaras for ascending
     avarohanam: List[str]  # List of swaras for descending
@@ -27,6 +28,7 @@ class ParsedExercise:
 @dataclass
 class ExerciseConfig:
     """Configuration loaded from config.json."""
+
     exercise_type: str
     name: str
     description: str
@@ -65,7 +67,7 @@ def parse_swara_sequence(line: str) -> List[str]:
     for token in tokens:
         # Strip any gamaka notation (for future extensibility)
         # Currently just removes ~ ^ _ suffixes but preserves the swara
-        swara = re.sub(r'[~^_]+$', '', token)
+        swara = re.sub(r"[~^_]+$", "", token)
         if swara:
             swaras.append(swara)
 
@@ -92,11 +94,11 @@ def parse_exercise_file(file_path: Path) -> List[ParsedExercise]:
     if not file_path.exists():
         return exercises
 
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
 
     # Split by exercise separator
-    exercise_blocks = re.split(r'\n---\n|\n\n+', content)
+    exercise_blocks = re.split(r"\n---\n|\n\n+", content)
 
     level = 1
     for block in exercise_blocks:
@@ -107,8 +109,8 @@ def parse_exercise_file(file_path: Path) -> List[ParsedExercise]:
         # Filter out comment lines
         lines = [
             line.strip()
-            for line in block.split('\n')
-            if line.strip() and not line.strip().startswith('#')
+            for line in block.split("\n")
+            if line.strip() and not line.strip().startswith("#")
         ]
 
         if len(lines) >= 2:
@@ -117,21 +119,19 @@ def parse_exercise_file(file_path: Path) -> List[ParsedExercise]:
             avarohanam = parse_swara_sequence(lines[1])
 
             if arohanam and avarohanam:
-                exercises.append(ParsedExercise(
-                    level=level,
-                    arohanam=arohanam,
-                    avarohanam=avarohanam
-                ))
+                exercises.append(
+                    ParsedExercise(
+                        level=level, arohanam=arohanam, avarohanam=avarohanam
+                    )
+                )
                 level += 1
         elif len(lines) == 1:
             # Single line - use same for both arohanam and avarohanam
             sequence = parse_swara_sequence(lines[0])
             if sequence:
-                exercises.append(ParsedExercise(
-                    level=level,
-                    arohanam=sequence,
-                    avarohanam=sequence
-                ))
+                exercises.append(
+                    ParsedExercise(level=level, arohanam=sequence, avarohanam=sequence)
+                )
                 level += 1
 
     return exercises
@@ -150,20 +150,20 @@ def load_config(config_path: Path) -> Optional[ExerciseConfig]:
     if not config_path.exists():
         return None
 
-    with open(config_path, 'r', encoding='utf-8') as f:
+    with open(config_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
     return ExerciseConfig(
-        exercise_type=data.get('exercise_type', 'unknown'),
-        name=data.get('name', 'Unknown Exercise'),
-        description=data.get('description', ''),
-        raga=data.get('raga', 'mayamalavagowla'),
-        talam=data.get('talam', 'adi'),
-        angah=data.get('angah', ''),
-        default_tempo_range=tuple(data.get('default_tempo_range', [60, 120])),
-        swara_mapping=data.get('swara_mapping', {}),
-        levels=data.get('levels', []),
-        gamaka_notation=data.get('gamaka_notation')
+        exercise_type=data.get("exercise_type", "unknown"),
+        name=data.get("name", "Unknown Exercise"),
+        description=data.get("description", ""),
+        raga=data.get("raga", "mayamalavagowla"),
+        talam=data.get("talam", "adi"),
+        angah=data.get("angah", ""),
+        default_tempo_range=tuple(data.get("default_tempo_range", [60, 120])),
+        swara_mapping=data.get("swara_mapping", {}),
+        levels=data.get("levels", []),
+        gamaka_notation=data.get("gamaka_notation"),
     )
 
 
@@ -186,26 +186,26 @@ def get_level_config(config: ExerciseConfig, level: int) -> Dict[str, Any]:
     else:
         # Generate default level config
         level_config = {
-            'name': f'{config.name} {level}',
-            'difficulty': min(0.1 + (level - 1) * 0.1, 1.0),
+            "name": f"{config.name} {level}",
+            "difficulty": min(0.1 + (level - 1) * 0.1, 1.0),
         }
 
     # Apply defaults from config
-    if 'tempo_range' not in level_config:
-        level_config['tempo_range'] = list(config.default_tempo_range)
+    if "tempo_range" not in level_config:
+        level_config["tempo_range"] = list(config.default_tempo_range)
 
-    if 'learning_objectives' not in level_config:
-        level_config['learning_objectives'] = [
-            f'Master {config.name} level {level} patterns',
-            'Develop pitch accuracy',
-            'Build musical memory'
+    if "learning_objectives" not in level_config:
+        level_config["learning_objectives"] = [
+            f"Master {config.name} level {level} patterns",
+            "Develop pitch accuracy",
+            "Build musical memory",
         ]
 
-    if 'practice_tips' not in level_config:
-        level_config['practice_tips'] = [
-            'Start slowly with drone reference',
-            'Focus on clean transitions',
-            'Gradually increase tempo'
+    if "practice_tips" not in level_config:
+        level_config["practice_tips"] = [
+            "Start slowly with drone reference",
+            "Focus on clean transitions",
+            "Gradually increase tempo",
         ]
 
     return level_config
@@ -244,12 +244,12 @@ def extract_octave_shift(swara: str) -> Tuple[str, int]:
         Tuple of (base_swara, octave_shift) where shift is 0 for middle, 1 for upper
     """
     # Check for upper octave notation (Sa2, Ri2, etc. where 2 indicates upper octave)
-    match = re.match(r'^([A-Za-z]+)2$', swara)
+    match = re.match(r"^([A-Za-z]+)2$", swara)
     if match:
         return (match.group(1), 1)
 
     # Check for explicit variant with octave (e.g., Ri12 = Ri1 upper octave)
-    match = re.match(r'^([A-Za-z]+\d)2$', swara)
+    match = re.match(r"^([A-Za-z]+\d)2$", swara)
     if match:
         return (match.group(1), 1)
 
@@ -257,7 +257,9 @@ def extract_octave_shift(swara: str) -> Tuple[str, int]:
     return (swara, 0)
 
 
-def load_exercises_from_folder(folder_name: str, file_name: str = None) -> Tuple[List[ParsedExercise], Optional[ExerciseConfig]]:
+def load_exercises_from_folder(
+    folder_name: str, file_name: str = None
+) -> Tuple[List[ParsedExercise], Optional[ExerciseConfig]]:
     """
     Load all exercises from a folder.
 
@@ -275,7 +277,7 @@ def load_exercises_from_folder(folder_name: str, file_name: str = None) -> Tuple
         return ([], None)
 
     # Load config
-    config = load_config(folder_path / 'config.json')
+    config = load_config(folder_path / "config.json")
 
     # Load exercises
     all_exercises = []
@@ -287,7 +289,7 @@ def load_exercises_from_folder(folder_name: str, file_name: str = None) -> Tuple
             all_exercises = parse_exercise_file(file_path)
     else:
         # Load all .txt files
-        txt_files = sorted(folder_path.glob('*.txt'))
+        txt_files = sorted(folder_path.glob("*.txt"))
         level_offset = 0
         for txt_file in txt_files:
             exercises = parse_exercise_file(txt_file)
@@ -312,7 +314,7 @@ def get_available_exercise_folders() -> List[str]:
 
     folders = []
     for item in DATA_DIR.iterdir():
-        if item.is_dir() and (item / 'config.json').exists():
+        if item.is_dir() and (item / "config.json").exists():
             folders.append(item.name)
 
     return sorted(folders)
@@ -334,7 +336,7 @@ def get_available_ragas(folder_name: str) -> List[str]:
         return []
 
     ragas = []
-    for txt_file in folder_path.glob('*.txt'):
+    for txt_file in folder_path.glob("*.txt"):
         ragas.append(txt_file.stem)
 
     return sorted(ragas)

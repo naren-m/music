@@ -8,24 +8,25 @@ import logging
 import os
 import traceback
 from datetime import datetime, timezone
-from flask import Flask, request, jsonify, current_app
+
+from flask import Flask, current_app, jsonify, request
 from werkzeug.exceptions import HTTPException
 
-from api.validation import ValidationError
 from api.auth.middleware import AuthenticationError, RateLimitError
+from api.validation import ValidationError
 
 logger = logging.getLogger(__name__)
 
 # Dedicated security logger writes structured JSON for SIEM ingestion
-security_logger = logging.getLogger('security')
+security_logger = logging.getLogger("security")
 
 
 def _init_security_logger():
     """Initialize security logger with a file handler if not already configured."""
     if not security_logger.handlers:
-        os.makedirs('logs', exist_ok=True)
-        handler = logging.FileHandler('logs/security_events.log')
-        handler.setFormatter(logging.Formatter('%(message)s'))
+        os.makedirs("logs", exist_ok=True)
+        handler = logging.FileHandler("logs/security_events.log")
+        handler.setFormatter(logging.Formatter("%(message)s"))
         security_logger.addHandler(handler)
         security_logger.setLevel(logging.WARNING)
 
@@ -34,16 +35,17 @@ def _emit_security_event(event_type: str, details: dict):
     """Emit a structured security event to the security log."""
     _init_security_logger()
     event = {
-        'timestamp': datetime.now(timezone.utc).isoformat(),
-        'event_type': event_type,
-        'ip': request.remote_addr,
-        'user_agent': request.headers.get('User-Agent', 'Unknown'),
-        'endpoint': request.endpoint,
-        'method': request.method,
-        'path': request.path,
-        **details
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "event_type": event_type,
+        "ip": request.remote_addr,
+        "user_agent": request.headers.get("User-Agent", "Unknown"),
+        "endpoint": request.endpoint,
+        "method": request.method,
+        "path": request.path,
+        **details,
     }
     security_logger.warning(json.dumps(event))
+
 
 # Security-focused error messages (prevent information disclosure)
 GENERIC_ERROR_MESSAGES = {
@@ -54,25 +56,27 @@ GENERIC_ERROR_MESSAGES = {
     413: "Request too large",
     429: "Too many requests",
     500: "Internal server error",
-    503: "Service temporarily unavailable"
+    503: "Service temporarily unavailable",
 }
 
 
 class SecurityError(Exception):
     """Raised when security validation fails"""
+
     def __init__(self, message: str, status_code: int = 403, error_code: str = None):
         self.message = message
         self.status_code = status_code
-        self.error_code = error_code or 'SECURITY_ERROR'
+        self.error_code = error_code or "SECURITY_ERROR"
         super().__init__(message)
 
 
 class AudioProcessingError(Exception):
     """Raised when audio processing fails"""
+
     def __init__(self, message: str, status_code: int = 400, error_code: str = None):
         self.message = message
         self.status_code = status_code
-        self.error_code = error_code or 'AUDIO_ERROR'
+        self.error_code = error_code or "AUDIO_ERROR"
         super().__init__(message)
 
 
@@ -96,13 +100,10 @@ def _register_app_error_handlers(app: Flask):
             f"Endpoint: {request.endpoint}"
         )
 
-        response = {
-            'error': error.message,
-            'error_code': 'VALIDATION_ERROR'
-        }
+        response = {"error": error.message, "error_code": "VALIDATION_ERROR"}
 
         if error.field:
-            response['field'] = error.field
+            response["field"] = error.field
 
         return jsonify(response), error.status_code
 
@@ -116,10 +117,10 @@ def _register_app_error_handlers(app: Flask):
             f"Endpoint: {request.endpoint}"
         )
 
-        return jsonify({
-            'error': error.message,
-            'error_code': 'AUTH_ERROR'
-        }), error.status_code
+        return (
+            jsonify({"error": error.message, "error_code": "AUTH_ERROR"}),
+            error.status_code,
+        )
 
     @app.errorhandler(RateLimitError)
     def handle_rate_limit_error(error):
@@ -130,11 +131,16 @@ def _register_app_error_handlers(app: Flask):
             f"Endpoint: {request.endpoint}"
         )
 
-        return jsonify({
-            'error': error.message,
-            'error_code': 'RATE_LIMIT_ERROR',
-            'retry_after': 60
-        }), error.status_code
+        return (
+            jsonify(
+                {
+                    "error": error.message,
+                    "error_code": "RATE_LIMIT_ERROR",
+                    "retry_after": 60,
+                }
+            ),
+            error.status_code,
+        )
 
     @app.errorhandler(SecurityError)
     def handle_security_error(error):
@@ -148,16 +154,21 @@ def _register_app_error_handlers(app: Flask):
         )
 
         # Emit structured security event for SIEM ingestion
-        _emit_security_event('security_violation', {
-            'error_code': error.error_code,
-            'message': error.message,
-            'session': request.cookies.get('session', 'None')
-        })
+        _emit_security_event(
+            "security_violation",
+            {
+                "error_code": error.error_code,
+                "message": error.message,
+                "session": request.cookies.get("session", "None"),
+            },
+        )
 
-        return jsonify({
-            'error': 'Security policy violation',
-            'error_code': error.error_code
-        }), error.status_code
+        return (
+            jsonify(
+                {"error": "Security policy violation", "error_code": error.error_code}
+            ),
+            error.status_code,
+        )
 
     @app.errorhandler(AudioProcessingError)
     def handle_audio_error(error):
@@ -168,11 +179,16 @@ def _register_app_error_handlers(app: Flask):
             f"Endpoint: {request.endpoint}"
         )
 
-        return jsonify({
-            'error': error.message,
-            'error_code': error.error_code,
-            'message': 'Please try again with different audio data'
-        }), error.status_code
+        return (
+            jsonify(
+                {
+                    "error": error.message,
+                    "error_code": error.error_code,
+                    "message": "Please try again with different audio data",
+                }
+            ),
+            error.status_code,
+        )
 
 
 def _register_http_error_handlers(app: Flask):
@@ -190,15 +206,12 @@ def _register_http_error_handlers(app: Flask):
         )
 
         # Return generic message to prevent information disclosure
-        generic_message = GENERIC_ERROR_MESSAGES.get(
-            error.code,
-            "An error occurred"
-        )
+        generic_message = GENERIC_ERROR_MESSAGES.get(error.code, "An error occurred")
 
-        return jsonify({
-            'error': generic_message,
-            'error_code': f'HTTP_{error.code}'
-        }), error.code
+        return (
+            jsonify({"error": generic_message, "error_code": f"HTTP_{error.code}"}),
+            error.code,
+        )
 
     @app.errorhandler(413)
     def handle_request_too_large(error):
@@ -209,16 +222,21 @@ def _register_http_error_handlers(app: Flask):
             f"Endpoint: {request.endpoint}"
         )
 
-        return jsonify({
-            'error': 'Request too large',
-            'error_code': 'REQUEST_TOO_LARGE',
-            'max_size': '2MB'
-        }), 413
+        return (
+            jsonify(
+                {
+                    "error": "Request too large",
+                    "error_code": "REQUEST_TOO_LARGE",
+                    "max_size": "2MB",
+                }
+            ),
+            413,
+        )
 
     @app.errorhandler(Exception)
     def handle_unexpected_error(error):
         """Handle unexpected errors with secure logging"""
-        error_id = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S_%f')
+        error_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
 
         # Log full error details for debugging
         logger.error(
@@ -231,15 +249,12 @@ def _register_http_error_handlers(app: Flask):
         )
 
         # Return generic error to prevent information disclosure
-        response = {
-            'error': 'Internal server error',
-            'error_code': 'UNEXPECTED_ERROR'
-        }
+        response = {"error": "Internal server error", "error_code": "UNEXPECTED_ERROR"}
 
         # Include error ID in development for debugging
-        if current_app.config.get('FLASK_ENV') != 'production':
-            response['error_id'] = error_id
-            response['debug_info'] = str(error)
+        if current_app.config.get("FLASK_ENV") != "production":
+            response["error_id"] = error_id
+            response["debug_info"] = str(error)
 
         return jsonify(response), 500
 
@@ -253,10 +268,7 @@ def _register_http_error_handlers(app: Flask):
             f"Referrer: {request.headers.get('Referer', 'None')}"
         )
 
-        return jsonify({
-            'error': 'Resource not found',
-            'error_code': 'NOT_FOUND'
-        }), 404
+        return jsonify({"error": "Resource not found", "error_code": "NOT_FOUND"}), 404
 
 
 def _register_request_logging(app: Flask):
@@ -265,7 +277,7 @@ def _register_request_logging(app: Flask):
     @app.before_request
     def log_request_info():
         """Log request information for security monitoring"""
-        if current_app.config.get('LOG_REQUESTS', True):
+        if current_app.config.get("LOG_REQUESTS", True):
             logger.debug(
                 f"Request: {request.method} {request.path} | "
                 f"IP: {request.remote_addr} | "
@@ -276,7 +288,7 @@ def _register_request_logging(app: Flask):
     @app.after_request
     def log_response_info(response):
         """Log response information for monitoring"""
-        if current_app.config.get('LOG_RESPONSES', False):
+        if current_app.config.get("LOG_RESPONSES", False):
             logger.debug(
                 f"Response: {response.status_code} | "
                 f"Content-Length: {response.content_length} | "
@@ -286,10 +298,7 @@ def _register_request_logging(app: Flask):
 
 
 def create_error_response(
-    message: str,
-    status_code: int = 400,
-    error_code: str = None,
-    details: dict = None
+    message: str, status_code: int = 400, error_code: str = None, details: dict = None
 ):
     """
     Create standardized error response
@@ -303,14 +312,11 @@ def create_error_response(
     Returns:
         Flask response tuple
     """
-    response = {
-        'error': message,
-        'error_code': error_code or f'HTTP_{status_code}'
-    }
+    response = {"error": message, "error_code": error_code or f"HTTP_{status_code}"}
 
     # Add details in development only
-    if details and current_app.config.get('FLASK_ENV') != 'production':
-        response['details'] = details
+    if details and current_app.config.get("FLASK_ENV") != "production":
+        response["details"] = details
 
     return jsonify(response), status_code
 
@@ -342,32 +348,30 @@ def validate_request_security():
         SecurityError: If security violation is detected
     """
     # Check for suspicious headers
-    suspicious_headers = [
-        'X-Forwarded-Host', 'X-Host', 'X-Original-Host'
-    ]
+    suspicious_headers = ["X-Forwarded-Host", "X-Host", "X-Original-Host"]
 
     for header in suspicious_headers:
         if header in request.headers:
-            log_security_event('SUSPICIOUS_HEADER', {
-                'header': header,
-                'value': request.headers[header]
-            })
+            log_security_event(
+                "SUSPICIOUS_HEADER",
+                {"header": header, "value": request.headers[header]},
+            )
 
     # Check for path traversal attempts
-    if '..' in request.path or '//' in request.path:
-        raise SecurityError("Invalid path detected", 400, 'PATH_TRAVERSAL')
+    if ".." in request.path or "//" in request.path:
+        raise SecurityError("Invalid path detected", 400, "PATH_TRAVERSAL")
 
     # Check for SQL injection patterns in query parameters
-    sql_patterns = ['union', 'select', 'insert', 'delete', 'drop', 'exec']
+    sql_patterns = ["union", "select", "insert", "delete", "drop", "exec"]
     for param, value in request.args.items():
         if isinstance(value, str):
             value_lower = value.lower()
             if any(pattern in value_lower for pattern in sql_patterns):
-                log_security_event('SQL_INJECTION_ATTEMPT', {
-                    'parameter': param,
-                    'value': value[:100]  # Truncate for security
-                })
-                raise SecurityError("Invalid input detected", 400, 'SQL_INJECTION')
+                log_security_event(
+                    "SQL_INJECTION_ATTEMPT",
+                    {"parameter": param, "value": value[:100]},  # Truncate for security
+                )
+                raise SecurityError("Invalid input detected", 400, "SQL_INJECTION")
 
 
 # Security middleware function

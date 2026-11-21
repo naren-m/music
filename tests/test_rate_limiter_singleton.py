@@ -29,7 +29,9 @@ def test_get_rate_limiter_builds_once(counting_limiter, threads):
     built, gate = counting_limiter
     results = []
     workers = [
-        threading.Thread(target=lambda: results.append(rate_limiting.get_rate_limiter()))
+        threading.Thread(
+            target=lambda: results.append(rate_limiting.get_rate_limiter())
+        )
         for _ in range(threads)
     ]
     for w in workers:

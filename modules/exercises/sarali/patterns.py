@@ -7,24 +7,26 @@ with progressive difficulty levels and adaptive learning paths.
 Supports loading patterns from text files for easy content updates.
 """
 
-from typing import List, Dict, Tuple, Optional, Any
-from dataclasses import dataclass
-from enum import Enum
-import numpy as np
 import json
-from datetime import datetime
 import logging
+from dataclasses import dataclass
+from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
 
 # Import the exercise loader
 from modules.exercises.loader import (
-    load_exercises_from_folder,
-    get_level_config,
-    extract_octave_shift,
+    ExerciseConfig,
     ParsedExercise,
-    ExerciseConfig
+    extract_octave_shift,
+    get_level_config,
+    load_exercises_from_folder,
 )
 
 logger = logging.getLogger(__name__)
+
 
 class SwaraType(Enum):
     SHUDDHA = "shuddha"  # Natural
@@ -33,11 +35,13 @@ class SwaraType(Enum):
     ANTARA = "antara"  # Higher variant
     KAISIKA = "kaisika"  # Special variant
 
+
 class TalaType(Enum):
     ADI = "adi"
     RUPAKA = "rupaka"
     MISRA_CHAPU = "misra_chapu"
     KHANDA_CHAPU = "khanda_chapu"
+
 
 @dataclass
 class SwaraPattern:
@@ -47,6 +51,7 @@ class SwaraPattern:
     duration_ratios: List[float]  # Relative durations
     emphasis_points: List[int]  # Indices of emphasized swaras
     description: str
+
 
 @dataclass
 class SaraliVarisai:
@@ -62,6 +67,7 @@ class SaraliVarisai:
     learning_objectives: List[str]
     common_mistakes: List[str]
     practice_tips: List[str]
+
 
 class SaraliPatternGenerator:
     """
@@ -82,15 +88,15 @@ class SaraliPatternGenerator:
         self.raga = raga
 
         # Core swaras in proper order
-        self.base_swaras = ['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni']
+        self.base_swaras = ["Sa", "Ri", "Ga", "Ma", "Pa", "Da", "Ni"]
 
         # Swara variations for different ragas
         self.swara_variations = {
-            'Ri': ['Ri1', 'Ri2', 'Ri3'],  # Shuddha, Chathushruti, Shatshruti
-            'Ga': ['Ga1', 'Ga2', 'Ga3'],  # Shuddha, Saadhaarana, Antara
-            'Ma': ['Ma1', 'Ma2'],          # Shuddha, Prati
-            'Da': ['Da1', 'Da2', 'Da3'],  # Shuddha, Chathushruti, Shatshruti
-            'Ni': ['Ni1', 'Ni2', 'Ni3']   # Shuddha, Kaisika, Kaakali
+            "Ri": ["Ri1", "Ri2", "Ri3"],  # Shuddha, Chathushruti, Shatshruti
+            "Ga": ["Ga1", "Ga2", "Ga3"],  # Shuddha, Saadhaarana, Antara
+            "Ma": ["Ma1", "Ma2"],  # Shuddha, Prati
+            "Da": ["Da1", "Da2", "Da3"],  # Shuddha, Chathushruti, Shatshruti
+            "Ni": ["Ni1", "Ni2", "Ni3"],  # Shuddha, Kaisika, Kaakali
         }
 
         # Store config if loaded from files
@@ -125,8 +131,7 @@ class SaraliPatternGenerator:
         """
         try:
             exercises, config = load_exercises_from_folder(
-                "SaraliSwaras",
-                f"{self.raga}.txt"
+                "SaraliSwaras", f"{self.raga}.txt"
             )
 
             if not exercises:
@@ -147,9 +152,7 @@ class SaraliPatternGenerator:
             return []
 
     def _convert_to_sarali_varisai(
-        self,
-        exercise: ParsedExercise,
-        config: Optional[ExerciseConfig]
+        self, exercise: ParsedExercise, config: Optional[ExerciseConfig]
     ) -> Optional[SaraliVarisai]:
         """
         Convert a ParsedExercise to a SaraliVarisai dataclass.
@@ -188,7 +191,7 @@ class SaraliPatternGenerator:
                 octave_shifts=arohanam_octaves,
                 duration_ratios=[1.0] * len(arohanam_swaras),
                 emphasis_points=[0, len(arohanam_swaras) - 1],
-                description=f"Ascending pattern for {level_config.get('name', f'Level {exercise.level}')}"
+                description=f"Ascending pattern for {level_config.get('name', f'Level {exercise.level}')}",
             )
 
             avarohanam = SwaraPattern(
@@ -197,39 +200,47 @@ class SaraliPatternGenerator:
                 octave_shifts=avarohanam_octaves,
                 duration_ratios=[1.0] * len(avarohanam_swaras),
                 emphasis_points=[0, len(avarohanam_swaras) - 1],
-                description=f"Descending pattern for {level_config.get('name', f'Level {exercise.level}')}"
+                description=f"Descending pattern for {level_config.get('name', f'Level {exercise.level}')}",
             )
 
             # Get tempo range
-            tempo_range = level_config.get('tempo_range', [60, 120])
+            tempo_range = level_config.get("tempo_range", [60, 120])
             if isinstance(tempo_range, list):
                 tempo_range = tuple(tempo_range)
 
             return SaraliVarisai(
                 level=exercise.level,
-                name=level_config.get('name', f"Sarali Varisai {exercise.level}"),
+                name=level_config.get("name", f"Sarali Varisai {exercise.level}"),
                 pattern_type="file_loaded",
                 arohanam=arohanam,
                 avarohanam=avarohanam,
                 tempo_range=tempo_range,
                 tala=TalaType.ADI,
-                difficulty_score=level_config.get('difficulty', 0.1 + (exercise.level - 1) * 0.08),
+                difficulty_score=level_config.get(
+                    "difficulty", 0.1 + (exercise.level - 1) * 0.08
+                ),
                 prerequisite_levels=list(range(1, exercise.level)),
-                learning_objectives=level_config.get('learning_objectives', [
-                    f"Master Sarali Varisai level {exercise.level}",
-                    "Develop pitch accuracy",
-                    "Build swara relationships"
-                ]),
+                learning_objectives=level_config.get(
+                    "learning_objectives",
+                    [
+                        f"Master Sarali Varisai level {exercise.level}",
+                        "Develop pitch accuracy",
+                        "Build swara relationships",
+                    ],
+                ),
                 common_mistakes=[
                     "Rushing through the pattern",
                     "Incorrect pitch intervals",
-                    "Poor breath management"
+                    "Poor breath management",
                 ],
-                practice_tips=level_config.get('practice_tips', [
-                    "Start slowly with tanpura",
-                    "Focus on clean transitions",
-                    "Use metronome for timing"
-                ])
+                practice_tips=level_config.get(
+                    "practice_tips",
+                    [
+                        "Start slowly with tanpura",
+                        "Focus on clean transitions",
+                        "Use metronome for timing",
+                    ],
+                ),
             )
 
         except Exception as e:
@@ -282,20 +293,20 @@ class SaraliPatternGenerator:
         """Sa Ri Ga Ma - Ma Ga Ri Sa (Basic 4-note patterns)"""
         arohanam = SwaraPattern(
             name="Basic Arohanam",
-            swara_sequence=['Sa', 'Ri', 'Ga', 'Ma'],
+            swara_sequence=["Sa", "Ri", "Ga", "Ma"],
             octave_shifts=[0, 0, 0, 0],
             duration_ratios=[1.0, 1.0, 1.0, 2.0],
             emphasis_points=[0, 3],
-            description="Basic ascending four-note pattern"
+            description="Basic ascending four-note pattern",
         )
 
         avarohanam = SwaraPattern(
             name="Basic Avarohanam",
-            swara_sequence=['Ma', 'Ga', 'Ri', 'Sa'],
+            swara_sequence=["Ma", "Ga", "Ri", "Sa"],
             octave_shifts=[0, 0, 0, 0],
             duration_ratios=[1.0, 1.0, 1.0, 2.0],
             emphasis_points=[0, 3],
-            description="Basic descending four-note pattern"
+            description="Basic descending four-note pattern",
         )
 
         return SaraliVarisai(
@@ -311,38 +322,38 @@ class SaraliPatternGenerator:
             learning_objectives=[
                 "Establish basic swara relationships",
                 "Develop pitch accuracy for Sa-Ri-Ga-Ma",
-                "Learn fundamental ascending/descending movement"
+                "Learn fundamental ascending/descending movement",
             ],
             common_mistakes=[
                 "Rushing through the pattern",
                 "Incorrect pitch intervals",
-                "Not sustaining the final note"
+                "Not sustaining the final note",
             ],
             practice_tips=[
                 "Start very slowly with metronome",
                 "Focus on clean pitch transitions",
-                "Sustain each swara clearly"
-            ]
+                "Sustain each swara clearly",
+            ],
         )
 
     def _create_level_2(self) -> SaraliVarisai:
         """Sa Ri Ga Ma Ma Ga Ri Sa (Return pattern)"""
         arohanam = SwaraPattern(
             name="Ascending with Return",
-            swara_sequence=['Sa', 'Ri', 'Ga', 'Ma', 'Ma', 'Ga', 'Ri', 'Sa'],
+            swara_sequence=["Sa", "Ri", "Ga", "Ma", "Ma", "Ga", "Ri", "Sa"],
             octave_shifts=[0, 0, 0, 0, 0, 0, 0, 0],
             duration_ratios=[1.0, 1.0, 1.0, 2.0, 1.0, 1.0, 1.0, 2.0],
             emphasis_points=[0, 3, 7],
-            description="Ascending and immediate return pattern"
+            description="Ascending and immediate return pattern",
         )
 
         avarohanam = SwaraPattern(
             name="Descending with Return",
-            swara_sequence=['Sa', 'Ri', 'Ga', 'Ma', 'Ma', 'Ga', 'Ri', 'Sa'],
+            swara_sequence=["Sa", "Ri", "Ga", "Ma", "Ma", "Ga", "Ri", "Sa"],
             octave_shifts=[0, 0, 0, 0, 0, 0, 0, 0],
             duration_ratios=[1.0, 1.0, 1.0, 2.0, 1.0, 1.0, 1.0, 2.0],
             emphasis_points=[0, 3, 7],
-            description="Same pattern for avarohanam in this level"
+            description="Same pattern for avarohanam in this level",
         )
 
         return SaraliVarisai(
@@ -358,38 +369,38 @@ class SaraliPatternGenerator:
             learning_objectives=[
                 "Master return movements",
                 "Develop longer phrase control",
-                "Improve breath management"
+                "Improve breath management",
             ],
             common_mistakes=[
                 "Losing track during return journey",
                 "Inconsistent tempo",
-                "Unclear swara articulation"
+                "Unclear swara articulation",
             ],
             practice_tips=[
                 "Mark the turning point clearly",
                 "Maintain consistent volume",
-                "Practice hands to show direction"
-            ]
+                "Practice hands to show direction",
+            ],
         )
 
     def _create_level_3(self) -> SaraliVarisai:
         """Sa Ri Ga Ma Pa | Pa Ma Ga Ri Sa (Five-note patterns)"""
         arohanam = SwaraPattern(
             name="Five Note Arohanam",
-            swara_sequence=['Sa', 'Ri', 'Ga', 'Ma', 'Pa'],
+            swara_sequence=["Sa", "Ri", "Ga", "Ma", "Pa"],
             octave_shifts=[0, 0, 0, 0, 0],
             duration_ratios=[1.0, 1.0, 1.0, 1.0, 2.0],
             emphasis_points=[0, 4],
-            description="Five-note ascending pattern including Pa"
+            description="Five-note ascending pattern including Pa",
         )
 
         avarohanam = SwaraPattern(
             name="Five Note Avarohanam",
-            swara_sequence=['Pa', 'Ma', 'Ga', 'Ri', 'Sa'],
+            swara_sequence=["Pa", "Ma", "Ga", "Ri", "Sa"],
             octave_shifts=[0, 0, 0, 0, 0],
             duration_ratios=[1.0, 1.0, 1.0, 1.0, 2.0],
             emphasis_points=[0, 4],
-            description="Five-note descending pattern from Pa"
+            description="Five-note descending pattern from Pa",
         )
 
         return SaraliVarisai(
@@ -405,38 +416,38 @@ class SaraliPatternGenerator:
             learning_objectives=[
                 "Introduce Pa (fifth degree)",
                 "Extend vocal range",
-                "Develop stronger breath support"
+                "Develop stronger breath support",
             ],
             common_mistakes=[
                 "Pitch drift on Pa",
                 "Uneven note durations",
-                "Losing connection between Ma and Pa"
+                "Losing connection between Ma and Pa",
             ],
             practice_tips=[
                 "Practice Pa separately first",
                 "Use hand gestures for pitch guidance",
-                "Focus on smooth Ma-Pa transition"
-            ]
+                "Focus on smooth Ma-Pa transition",
+            ],
         )
 
     def _create_level_4(self) -> SaraliVarisai:
         """Six-note patterns with Da"""
         arohanam = SwaraPattern(
             name="Six Note Arohanam",
-            swara_sequence=['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da'],
+            swara_sequence=["Sa", "Ri", "Ga", "Ma", "Pa", "Da"],
             octave_shifts=[0, 0, 0, 0, 0, 0],
             duration_ratios=[1.0, 1.0, 1.0, 1.0, 1.0, 2.0],
             emphasis_points=[0, 5],
-            description="Six-note ascending including Da"
+            description="Six-note ascending including Da",
         )
 
         avarohanam = SwaraPattern(
             name="Six Note Avarohanam",
-            swara_sequence=['Da', 'Pa', 'Ma', 'Ga', 'Ri', 'Sa'],
+            swara_sequence=["Da", "Pa", "Ma", "Ga", "Ri", "Sa"],
             octave_shifts=[0, 0, 0, 0, 0, 0],
             duration_ratios=[1.0, 1.0, 1.0, 1.0, 1.0, 2.0],
             emphasis_points=[0, 5],
-            description="Six-note descending from Da"
+            description="Six-note descending from Da",
         )
 
         return SaraliVarisai(
@@ -452,38 +463,38 @@ class SaraliPatternGenerator:
             learning_objectives=[
                 "Add Da (sixth degree)",
                 "Extend range further",
-                "Maintain pitch accuracy over longer phrases"
+                "Maintain pitch accuracy over longer phrases",
             ],
             common_mistakes=[
                 "Da pitch instability",
                 "Rushing through longer sequences",
-                "Losing breath control"
+                "Losing breath control",
             ],
             practice_tips=[
                 "Practice Da with reference to Pa",
                 "Take breath at appropriate points",
-                "Use drone for pitch reference"
-            ]
+                "Use drone for pitch reference",
+            ],
         )
 
     def _create_level_5(self) -> SaraliVarisai:
         """Complete octave - Sa Ri Ga Ma Pa Da Ni Sa'"""
         arohanam = SwaraPattern(
             name="Full Octave Arohanam",
-            swara_sequence=['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni', 'Sa'],
+            swara_sequence=["Sa", "Ri", "Ga", "Ma", "Pa", "Da", "Ni", "Sa"],
             octave_shifts=[0, 0, 0, 0, 0, 0, 0, 1],
             duration_ratios=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0],
             emphasis_points=[0, 7],
-            description="Complete octave ascending pattern"
+            description="Complete octave ascending pattern",
         )
 
         avarohanam = SwaraPattern(
             name="Full Octave Avarohanam",
-            swara_sequence=['Sa', 'Ni', 'Da', 'Pa', 'Ma', 'Ga', 'Ri', 'Sa'],
+            swara_sequence=["Sa", "Ni", "Da", "Pa", "Ma", "Ga", "Ri", "Sa"],
             octave_shifts=[1, 0, 0, 0, 0, 0, 0, 0],
             duration_ratios=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0],
             emphasis_points=[0, 7],
-            description="Complete octave descending pattern"
+            description="Complete octave descending pattern",
         )
 
         return SaraliVarisai(
@@ -499,18 +510,18 @@ class SaraliPatternGenerator:
             learning_objectives=[
                 "Complete the full octave",
                 "Master octave jump on Sa",
-                "Develop full vocal range"
+                "Develop full vocal range",
             ],
             common_mistakes=[
                 "Ni pitch placement issues",
                 "Difficulty with octave Sa",
-                "Breath management over full octave"
+                "Breath management over full octave",
             ],
             practice_tips=[
                 "Practice Ni with reference to Sa",
                 "Prepare for octave jump",
-                "Plan breathing strategically"
-            ]
+                "Plan breathing strategically",
+            ],
         )
 
     def _create_level_6(self) -> SaraliVarisai:
@@ -521,11 +532,13 @@ class SaraliPatternGenerator:
         emphasis = []
 
         # Create Sa-X-Sa patterns for each swara
-        base_swaras = ['Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni']
+        base_swaras = ["Ri", "Ga", "Ma", "Pa", "Da", "Ni"]
         for i, swara in enumerate(base_swaras):
-            sequence.extend(['Sa', swara, 'Sa'])
+            sequence.extend(["Sa", swara, "Sa"])
             octaves.extend([0, 0, 0])
-            durations.extend([0.5, 0.5, 1.0] if i < len(base_swaras) - 1 else [0.5, 0.5, 2.0])
+            durations.extend(
+                [0.5, 0.5, 1.0] if i < len(base_swaras) - 1 else [0.5, 0.5, 2.0]
+            )
             if i == len(base_swaras) - 1:
                 emphasis.extend([len(sequence) - 3, len(sequence) - 1])
 
@@ -535,7 +548,7 @@ class SaraliPatternGenerator:
             octave_shifts=octaves,
             duration_ratios=durations,
             emphasis_points=emphasis,
-            description="Sa combined with each ascending swara"
+            description="Sa combined with each ascending swara",
         )
 
         # Create reverse pattern for avarohanam
@@ -543,11 +556,13 @@ class SaraliPatternGenerator:
         reverse_octaves = []
         reverse_durations = []
 
-        base_swaras_desc = ['Ni', 'Da', 'Pa', 'Ma', 'Ga', 'Ri']
+        base_swaras_desc = ["Ni", "Da", "Pa", "Ma", "Ga", "Ri"]
         for i, swara in enumerate(base_swaras_desc):
-            reverse_sequence.extend(['Sa', swara, 'Sa'])
+            reverse_sequence.extend(["Sa", swara, "Sa"])
             reverse_octaves.extend([0, 0, 0])
-            reverse_durations.extend([0.5, 0.5, 1.0] if i < len(base_swaras_desc) - 1 else [0.5, 0.5, 2.0])
+            reverse_durations.extend(
+                [0.5, 0.5, 1.0] if i < len(base_swaras_desc) - 1 else [0.5, 0.5, 2.0]
+            )
 
         avarohanam = SwaraPattern(
             name="Two Note Combinations Descending",
@@ -555,7 +570,7 @@ class SaraliPatternGenerator:
             octave_shifts=reverse_octaves,
             duration_ratios=reverse_durations,
             emphasis_points=[0, len(reverse_sequence) - 1],
-            description="Sa combined with each descending swara"
+            description="Sa combined with each descending swara",
         )
 
         return SaraliVarisai(
@@ -571,18 +586,18 @@ class SaraliPatternGenerator:
             learning_objectives=[
                 "Master Sa as anchor point",
                 "Develop accurate interval jumps",
-                "Improve phrase connectivity"
+                "Improve phrase connectivity",
             ],
             common_mistakes=[
                 "Losing Sa reference pitch",
                 "Uneven rhythm in triplets",
-                "Poor connection between phrases"
+                "Poor connection between phrases",
             ],
             practice_tips=[
                 "Keep Sa consistent throughout",
                 "Practice each pair separately",
-                "Use metronome for rhythm accuracy"
-            ]
+                "Use metronome for rhythm accuracy",
+            ],
         )
 
     def _create_level_7(self) -> SaraliVarisai:
@@ -593,11 +608,11 @@ class SaraliPatternGenerator:
 
         # Sa Ri Ga Sa, Sa Ga Ma Sa, Sa Ma Pa Sa, Sa Pa Da Sa, Sa Da Ni Sa
         combinations = [
-            ['Sa', 'Ri', 'Ga', 'Sa'],
-            ['Sa', 'Ga', 'Ma', 'Sa'],
-            ['Sa', 'Ma', 'Pa', 'Sa'],
-            ['Sa', 'Pa', 'Da', 'Sa'],
-            ['Sa', 'Da', 'Ni', 'Sa']
+            ["Sa", "Ri", "Ga", "Sa"],
+            ["Sa", "Ga", "Ma", "Sa"],
+            ["Sa", "Ma", "Pa", "Sa"],
+            ["Sa", "Pa", "Da", "Sa"],
+            ["Sa", "Da", "Ni", "Sa"],
         ]
 
         for i, combo in enumerate(combinations):
@@ -614,16 +629,16 @@ class SaraliPatternGenerator:
             octave_shifts=arohanam_oct,
             duration_ratios=arohanam_dur,
             emphasis_points=[0, len(arohanam_seq) - 1],
-            description="Three-note ascending combinations with Sa return"
+            description="Three-note ascending combinations with Sa return",
         )
 
         # Descending version
         desc_combinations = [
-            ['Sa', 'Ni', 'Da', 'Sa'],
-            ['Sa', 'Da', 'Pa', 'Sa'],
-            ['Sa', 'Pa', 'Ma', 'Sa'],
-            ['Sa', 'Ma', 'Ga', 'Sa'],
-            ['Sa', 'Ga', 'Ri', 'Sa']
+            ["Sa", "Ni", "Da", "Sa"],
+            ["Sa", "Da", "Pa", "Sa"],
+            ["Sa", "Pa", "Ma", "Sa"],
+            ["Sa", "Ma", "Ga", "Sa"],
+            ["Sa", "Ga", "Ri", "Sa"],
         ]
 
         avarohanam_seq = []
@@ -644,7 +659,7 @@ class SaraliPatternGenerator:
             octave_shifts=avarohanam_oct,
             duration_ratios=avarohanam_dur,
             emphasis_points=[0, len(avarohanam_seq) - 1],
-            description="Three-note descending combinations with Sa return"
+            description="Three-note descending combinations with Sa return",
         )
 
         return SaraliVarisai(
@@ -660,18 +675,18 @@ class SaraliPatternGenerator:
             learning_objectives=[
                 "Master three-note melodic cells",
                 "Develop smooth phrase transitions",
-                "Improve melodic memory"
+                "Improve melodic memory",
             ],
             common_mistakes=[
                 "Rushing through combinations",
                 "Losing pitch accuracy in middle notes",
-                "Poor phrase separation"
+                "Poor phrase separation",
             ],
             practice_tips=[
                 "Practice each combination slowly",
                 "Focus on melodic shape of each group",
-                "Maintain rhythmic precision"
-            ]
+                "Maintain rhythmic precision",
+            ],
         )
 
     def _create_level_8(self) -> SaraliVarisai:
@@ -679,22 +694,50 @@ class SaraliPatternGenerator:
         # This creates more complex patterns building on previous levels
         arohanam = SwaraPattern(
             name="Four Note Return Combinations",
-            swara_sequence=['Sa', 'Ri', 'Ga', 'Ma', 'Ga', 'Ri', 'Sa',
-                           'Ri', 'Ga', 'Ma', 'Pa', 'Ma', 'Ga', 'Ri'],
+            swara_sequence=[
+                "Sa",
+                "Ri",
+                "Ga",
+                "Ma",
+                "Ga",
+                "Ri",
+                "Sa",
+                "Ri",
+                "Ga",
+                "Ma",
+                "Pa",
+                "Ma",
+                "Ga",
+                "Ri",
+            ],
             octave_shifts=[0] * 14,
             duration_ratios=[0.5] * 13 + [2.0],
             emphasis_points=[0, 6, 13],
-            description="Four-note combinations with return patterns"
+            description="Four-note combinations with return patterns",
         )
 
         avarohanam = SwaraPattern(
             name="Four Note Return Combinations Desc",
-            swara_sequence=['Sa', 'Ni', 'Da', 'Pa', 'Da', 'Ni', 'Sa',
-                           'Ni', 'Da', 'Pa', 'Ma', 'Pa', 'Da', 'Ni'],
+            swara_sequence=[
+                "Sa",
+                "Ni",
+                "Da",
+                "Pa",
+                "Da",
+                "Ni",
+                "Sa",
+                "Ni",
+                "Da",
+                "Pa",
+                "Ma",
+                "Pa",
+                "Da",
+                "Ni",
+            ],
             octave_shifts=[0] * 14,
             duration_ratios=[0.5] * 13 + [2.0],
             emphasis_points=[0, 6, 13],
-            description="Four-note descending combinations with returns"
+            description="Four-note descending combinations with returns",
         )
 
         return SaraliVarisai(
@@ -710,18 +753,18 @@ class SaraliPatternGenerator:
             learning_objectives=[
                 "Master complex return patterns",
                 "Develop advanced phrase control",
-                "Improve musical memory and flow"
+                "Improve musical memory and flow",
             ],
             common_mistakes=[
                 "Getting lost in complex patterns",
                 "Inconsistent rhythm",
-                "Poor breath planning"
+                "Poor breath planning",
             ],
             practice_tips=[
                 "Break into smaller segments",
                 "Use hand movements to track patterns",
-                "Practice breathing at natural phrase points"
-            ]
+                "Practice breathing at natural phrase points",
+            ],
         )
 
     # Simplified implementations for levels 9-12 (following similar patterns)
@@ -737,25 +780,27 @@ class SaraliPatternGenerator:
     def _create_level_12(self) -> SaraliVarisai:
         return self._create_advanced_level(12, "octave_jumps", 0.9)
 
-    def _create_advanced_level(self, level: int, pattern_type: str, difficulty: float) -> SaraliVarisai:
+    def _create_advanced_level(
+        self, level: int, pattern_type: str, difficulty: float
+    ) -> SaraliVarisai:
         """Helper method for creating advanced levels"""
         # Simplified advanced pattern creation
         arohanam = SwaraPattern(
             name=f"Advanced Pattern {level}",
-            swara_sequence=['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni', 'Sa'],
+            swara_sequence=["Sa", "Ri", "Ga", "Ma", "Pa", "Da", "Ni", "Sa"],
             octave_shifts=[0, 0, 0, 0, 0, 0, 0, 1],
             duration_ratios=[0.5] * 7 + [2.0],
             emphasis_points=[0, 7],
-            description=f"Advanced level {level} pattern"
+            description=f"Advanced level {level} pattern",
         )
 
         avarohanam = SwaraPattern(
             name=f"Advanced Pattern {level} Desc",
-            swara_sequence=['Sa', 'Ni', 'Da', 'Pa', 'Ma', 'Ga', 'Ri', 'Sa'],
+            swara_sequence=["Sa", "Ni", "Da", "Pa", "Ma", "Ga", "Ri", "Sa"],
             octave_shifts=[1, 0, 0, 0, 0, 0, 0, 0],
             duration_ratios=[0.5] * 7 + [2.0],
             emphasis_points=[0, 7],
-            description=f"Advanced level {level} descending pattern"
+            description=f"Advanced level {level} descending pattern",
         )
 
         return SaraliVarisai(
@@ -770,7 +815,7 @@ class SaraliPatternGenerator:
             prerequisite_levels=list(range(1, level)),
             learning_objectives=[f"Master advanced level {level} patterns"],
             common_mistakes=["Complex pattern navigation"],
-            practice_tips=["Focus on precision and flow"]
+            practice_tips=["Focus on precision and flow"],
         )
 
     def get_pattern_by_level(self, level: int) -> Optional[SaraliVarisai]:
@@ -780,11 +825,16 @@ class SaraliPatternGenerator:
                 return pattern
         return None
 
-    def get_patterns_for_difficulty(self, difficulty_range: Tuple[float, float]) -> List[SaraliVarisai]:
+    def get_patterns_for_difficulty(
+        self, difficulty_range: Tuple[float, float]
+    ) -> List[SaraliVarisai]:
         """Get patterns within specified difficulty range"""
         min_diff, max_diff = difficulty_range
-        return [p for p in self.sarali_patterns
-                if min_diff <= p.difficulty_score <= max_diff]
+        return [
+            p
+            for p in self.sarali_patterns
+            if min_diff <= p.difficulty_score <= max_diff
+        ]
 
     def get_prerequisite_chain(self, level: int) -> List[int]:
         """Get the complete prerequisite chain for a given level"""
@@ -806,7 +856,9 @@ class SaraliPatternGenerator:
 
         return sorted(list(set(chain)))
 
-    def generate_practice_sequence(self, target_level: int, session_duration: int) -> List[Dict]:
+    def generate_practice_sequence(
+        self, target_level: int, session_duration: int
+    ) -> List[Dict]:
         """Generate a practice sequence for a given session"""
         pattern = self.get_pattern_by_level(target_level)
         if not pattern:
@@ -824,32 +876,38 @@ class SaraliPatternGenerator:
             warmup_level = max(pattern.prerequisite_levels)
             warmup_pattern = self.get_pattern_by_level(warmup_level)
             if warmup_pattern:
-                sequence.append({
-                    'type': 'warmup',
-                    'pattern': warmup_pattern,
-                    'duration': warmup_time,
-                    'tempo': warmup_pattern.tempo_range[0]
-                })
+                sequence.append(
+                    {
+                        "type": "warmup",
+                        "pattern": warmup_pattern,
+                        "duration": warmup_time,
+                        "tempo": warmup_pattern.tempo_range[0],
+                    }
+                )
 
         # Main practice
-        sequence.append({
-            'type': 'main_practice',
-            'pattern': pattern,
-            'duration': main_time,
-            'tempo': pattern.tempo_range[0],
-            'instructions': pattern.practice_tips
-        })
+        sequence.append(
+            {
+                "type": "main_practice",
+                "pattern": pattern,
+                "duration": main_time,
+                "tempo": pattern.tempo_range[0],
+                "instructions": pattern.practice_tips,
+            }
+        )
 
         # Cooldown
         if pattern.level > 1:
             cooldown_pattern = self.get_pattern_by_level(pattern.level - 1)
             if cooldown_pattern:
-                sequence.append({
-                    'type': 'cooldown',
-                    'pattern': cooldown_pattern,
-                    'duration': cooldown_time,
-                    'tempo': cooldown_pattern.tempo_range[1]
-                })
+                sequence.append(
+                    {
+                        "type": "cooldown",
+                        "pattern": cooldown_pattern,
+                        "duration": cooldown_time,
+                        "tempo": cooldown_pattern.tempo_range[1],
+                    }
+                )
 
         return sequence
 
@@ -858,48 +916,52 @@ class SaraliPatternGenerator:
         patterns_data = []
         for pattern in self.sarali_patterns:
             pattern_dict = {
-                'level': pattern.level,
-                'name': pattern.name,
-                'pattern_type': pattern.pattern_type,
-                'arohanam': {
-                    'name': pattern.arohanam.name,
-                    'swara_sequence': pattern.arohanam.swara_sequence,
-                    'octave_shifts': pattern.arohanam.octave_shifts,
-                    'duration_ratios': pattern.arohanam.duration_ratios,
-                    'emphasis_points': pattern.arohanam.emphasis_points,
-                    'description': pattern.arohanam.description
+                "level": pattern.level,
+                "name": pattern.name,
+                "pattern_type": pattern.pattern_type,
+                "arohanam": {
+                    "name": pattern.arohanam.name,
+                    "swara_sequence": pattern.arohanam.swara_sequence,
+                    "octave_shifts": pattern.arohanam.octave_shifts,
+                    "duration_ratios": pattern.arohanam.duration_ratios,
+                    "emphasis_points": pattern.arohanam.emphasis_points,
+                    "description": pattern.arohanam.description,
                 },
-                'avarohanam': {
-                    'name': pattern.avarohanam.name,
-                    'swara_sequence': pattern.avarohanam.swara_sequence,
-                    'octave_shifts': pattern.avarohanam.octave_shifts,
-                    'duration_ratios': pattern.avarohanam.duration_ratios,
-                    'emphasis_points': pattern.avarohanam.emphasis_points,
-                    'description': pattern.avarohanam.description
+                "avarohanam": {
+                    "name": pattern.avarohanam.name,
+                    "swara_sequence": pattern.avarohanam.swara_sequence,
+                    "octave_shifts": pattern.avarohanam.octave_shifts,
+                    "duration_ratios": pattern.avarohanam.duration_ratios,
+                    "emphasis_points": pattern.avarohanam.emphasis_points,
+                    "description": pattern.avarohanam.description,
                 },
-                'tempo_range': pattern.tempo_range,
-                'tala': pattern.tala.value,
-                'difficulty_score': pattern.difficulty_score,
-                'prerequisite_levels': pattern.prerequisite_levels,
-                'learning_objectives': pattern.learning_objectives,
-                'common_mistakes': pattern.common_mistakes,
-                'practice_tips': pattern.practice_tips
+                "tempo_range": pattern.tempo_range,
+                "tala": pattern.tala.value,
+                "difficulty_score": pattern.difficulty_score,
+                "prerequisite_levels": pattern.prerequisite_levels,
+                "learning_objectives": pattern.learning_objectives,
+                "common_mistakes": pattern.common_mistakes,
+                "practice_tips": pattern.practice_tips,
             }
             patterns_data.append(pattern_dict)
 
         return json.dumps(patterns_data, indent=2, ensure_ascii=False)
 
+
 # Initialize the pattern generator
 sarali_generator = SaraliPatternGenerator()
+
 
 # Export function for API use
 def get_sarali_patterns() -> List[SaraliVarisai]:
     """Get all Sarali Varisai patterns"""
     return sarali_generator.sarali_patterns
 
+
 def get_sarali_pattern(level: int) -> Optional[SaraliVarisai]:
     """Get specific Sarali Varisai pattern"""
     return sarali_generator.get_pattern_by_level(level)
+
 
 def generate_practice_session(level: int, duration: int) -> List[Dict]:
     """Generate practice session for given level and duration"""

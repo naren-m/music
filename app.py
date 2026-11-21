@@ -11,12 +11,12 @@ from api import create_app
 logger = logging.getLogger(__name__)
 
 # Create application using factory pattern
-app, socketio = create_app(os.environ.get('FLASK_ENV', 'development'))
+app, socketio = create_app(os.environ.get("FLASK_ENV", "development"))
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Development server
-    port = int(os.environ.get('PORT', 5002))
-    is_dev = os.environ.get('FLASK_ENV', 'development') == 'development'
+    port = int(os.environ.get("PORT", 5002))
+    is_dev = os.environ.get("FLASK_ENV", "development") == "development"
     logger.info("Starting Carnatic Learning Application")
     logger.info("Access the app at: http://localhost:%s", port)
 
@@ -24,14 +24,17 @@ if __name__ == '__main__':
     # server uses async_mode='threading' (Werkzeug), so a production container
     # must opt in to the threaded server explicitly via ALLOW_UNSAFE_WERKZEUG=1
     # (set in the Docker image); this keeps dev semantics unchanged.
-    allow_werkzeug = is_dev or os.environ.get(
-        'ALLOW_UNSAFE_WERKZEUG', '').lower() in ('1', 'true', 'yes')
+    allow_werkzeug = is_dev or os.environ.get("ALLOW_UNSAFE_WERKZEUG", "").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
     socketio.run(
         app,
         debug=is_dev,
-        host='0.0.0.0',
+        host="0.0.0.0",
         port=port,
         use_reloader=is_dev,
         log_output=True,
-        allow_unsafe_werkzeug=allow_werkzeug
+        allow_unsafe_werkzeug=allow_werkzeug,
     )

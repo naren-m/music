@@ -5,14 +5,16 @@ Tests all key functionality including UI components, API health checks, WebSocke
 error handling, status indicators, and user experience improvements.
 """
 
-import pytest
 import asyncio
 import json
 import time
-from playwright.async_api import async_playwright, Page, expect, Browser, BrowserContext
+
+import pytest
+from playwright.async_api import Browser, BrowserContext, Page, async_playwright, expect
 
 BASE_URL = "http://localhost:5002"
 CARNATIC_URL = f"{BASE_URL}/carnatic"
+
 
 class TestCarnaticUI:
     """Comprehensive test suite for the Carnatic Music Learning interface."""
@@ -39,7 +41,9 @@ class TestCarnaticUI:
         await page.goto(CARNATIC_URL)
 
         # Check page title
-        await expect(page).to_have_title("🎵 Carnatic Music Learning - Real-time Shruti Detection")
+        await expect(page).to_have_title(
+            "🎵 Carnatic Music Learning - Real-time Shruti Detection"
+        )
 
         # Check main header is visible
         await expect(page.locator("h1")).to_contain_text("🎵 Carnatic Music Learning")
@@ -51,7 +55,9 @@ class TestCarnaticUI:
 
         # Validate UI elements are properly styled
         status_section = page.locator(".status-section")
-        await expect(status_section).to_have_css("background-color", "rgb(248, 249, 250)")
+        await expect(status_section).to_have_css(
+            "background-color", "rgb(248, 249, 250)"
+        )
 
         # Check for responsive design indicators
         await page.set_viewport_size({"width": 768, "height": 1024})
@@ -80,7 +86,11 @@ class TestCarnaticUI:
 
             # Verify status indicator updates
             status_text = await api_status.inner_text()
-            assert status_text in ["🟢 API Connected", "🔴 API Disconnected", "🟡 Checking..."]
+            assert status_text in [
+                "🟢 API Connected",
+                "🔴 API Disconnected",
+                "🟡 Checking...",
+            ]
 
         # Check that API status is displayed in the status section
         status_section = page.locator(".status-section")
@@ -106,7 +116,12 @@ class TestCarnaticUI:
             print(f"WebSocket status: {status_text}")
 
             # WebSocket status should be one of the expected states
-            expected_states = ["🔴 Disconnected", "🟢 Connected", "🟡 Connecting", "🟠 Reconnecting"]
+            expected_states = [
+                "🔴 Disconnected",
+                "🟢 Connected",
+                "🟡 Connecting",
+                "🟠 Reconnecting",
+            ]
             assert any(state in status_text for state in expected_states)
 
         # Check console for WebSocket-related messages
@@ -116,7 +131,11 @@ class TestCarnaticUI:
         await page.wait_for_timeout(3000)
 
         # Look for WebSocket initialization in console
-        ws_messages = [msg for msg in console_messages if 'websocket' in msg.lower() or 'socket' in msg.lower()]
+        ws_messages = [
+            msg
+            for msg in console_messages
+            if "websocket" in msg.lower() or "socket" in msg.lower()
+        ]
         print(f"WebSocket console messages: {ws_messages}")
 
         print("✅ WebSocket connection handling validated")
@@ -136,7 +155,7 @@ class TestCarnaticUI:
             "#ws-status",
             "#microphone-status",
             "#mic-status",
-            ".status-indicator"
+            ".status-indicator",
         ]
 
         found_indicators = []
@@ -151,15 +170,19 @@ class TestCarnaticUI:
                     text = await indicator.inner_text()
                     print(f"Status indicator {selector}[{i}]: {text}")
 
-        assert len(found_indicators) > 0, "At least one status indicator should be present"
+        assert (
+            len(found_indicators) > 0
+        ), "At least one status indicator should be present"
 
         # Test error state simulation
-        await page.evaluate("""
+        await page.evaluate(
+            """
             // Simulate connection error
             if (window.showError) {
                 window.showError('Test error message');
             }
-        """)
+        """
+        )
 
         await page.wait_for_timeout(1000)
 
@@ -178,9 +201,9 @@ class TestCarnaticUI:
         # Test responsive design at different viewport sizes
         viewports = [
             {"width": 1920, "height": 1080},  # Desktop
-            {"width": 1024, "height": 768},   # Tablet landscape
-            {"width": 768, "height": 1024},   # Tablet portrait
-            {"width": 375, "height": 667}     # Mobile
+            {"width": 1024, "height": 768},  # Tablet landscape
+            {"width": 768, "height": 1024},  # Tablet portrait
+            {"width": 375, "height": 667},  # Mobile
         ]
 
         for viewport in viewports:
@@ -196,7 +219,9 @@ class TestCarnaticUI:
             await expect(page.locator("h1")).to_be_visible()
 
             # Check sections adapt to screen size
-            sections = page.locator(".status-section, .controls-section, .output-section")
+            sections = page.locator(
+                ".status-section, .controls-section, .output-section"
+            )
             section_count = await sections.count()
             for i in range(section_count):
                 await expect(sections.nth(i)).to_be_visible()
@@ -226,13 +251,7 @@ class TestCarnaticUI:
         await page.wait_for_load_state("networkidle")
 
         # Look for navigation elements
-        nav_selectors = [
-            "nav a",
-            ".nav-link",
-            ".navigation a",
-            "a[href]",
-            ".menu a"
-        ]
+        nav_selectors = ["nav a", ".nav-link", ".navigation a", "a[href]", ".menu a"]
 
         all_links = []
         for selector in nav_selectors:
@@ -259,7 +278,7 @@ class TestCarnaticUI:
             print(f"Testing link: '{text}' -> {href}")
 
             # Test internal links
-            if href.startswith('/') or 'localhost:5002' in href:
+            if href.startswith("/") or "localhost:5002" in href:
                 try:
                     # Click link and verify navigation
                     await link_info["element"].click()
@@ -277,7 +296,7 @@ class TestCarnaticUI:
                     print(f"Link test failed for '{text}': {str(e)}")
 
             # Test external links (just verify they exist)
-            elif href.startswith('http'):
+            elif href.startswith("http"):
                 await expect(link_info["element"]).to_have_attribute("href", href)
                 print(f"External link verified: {href}")
 
@@ -298,7 +317,7 @@ class TestCarnaticUI:
             "#start-btn",
             "#stop-btn",
             ".audio-controls",
-            ".microphone-controls"
+            ".microphone-controls",
         ]
 
         found_audio_controls = []
@@ -317,7 +336,7 @@ class TestCarnaticUI:
             "#note-display",
             ".visualization",
             ".frequency-viz",
-            "#output"
+            "#output",
         ]
 
         found_viz_elements = []
@@ -330,12 +349,14 @@ class TestCarnaticUI:
         print(f"Found visualization elements: {found_viz_elements}")
 
         # Test microphone permission handling (simulate)
-        await page.evaluate("""
+        await page.evaluate(
+            """
             // Mock navigator.mediaDevices for testing
             if (typeof navigator !== 'undefined' && navigator.mediaDevices) {
                 console.log('MediaDevices API available');
             }
-        """)
+        """
+        )
 
         # Check for output display area
         output_area = page.locator("#output, .output-section, .results")
@@ -363,19 +384,23 @@ class TestCarnaticUI:
         await page.wait_for_timeout(3000)  # Allow status updates
 
         # Step 3: Check JavaScript initialization
-        js_ready = await page.evaluate("""
+        js_ready = await page.evaluate(
+            """
             () => {
                 return typeof window !== 'undefined' &&
                        document.readyState === 'complete';
             }
-        """)
+        """
+        )
         assert js_ready, "JavaScript should be properly initialized"
 
         # Step 4: Test error recovery
-        await page.evaluate("""
+        await page.evaluate(
+            """
             // Simulate error and recovery
             console.log('Testing error handling...');
-        """)
+        """
+        )
 
         # Step 5: UI interaction test
         buttons = page.locator("button")
@@ -388,7 +413,9 @@ class TestCarnaticUI:
 
         # Step 6: Check final state
         page_title = await page.title()
-        assert "Carnatic" in page_title, f"Page title should contain 'Carnatic', got: {page_title}"
+        assert (
+            "Carnatic" in page_title
+        ), f"Page title should contain 'Carnatic', got: {page_title}"
 
         print("✅ Comprehensive integration test completed successfully")
 
@@ -401,14 +428,19 @@ class TestCarnaticUI:
         load_time = time.time() - start_time
 
         print(f"Page load time: {load_time:.2f} seconds")
-        assert load_time < 10, f"Page should load within 10 seconds, took {load_time:.2f}s"
+        assert (
+            load_time < 10
+        ), f"Page should load within 10 seconds, took {load_time:.2f}s"
 
         # Check resource loading
         await page.wait_for_timeout(2000)
 
         # Validate no JavaScript errors
         console_errors = []
-        page.on("console", lambda msg: console_errors.append(msg) if msg.type == "error" else None)
+        page.on(
+            "console",
+            lambda msg: console_errors.append(msg) if msg.type == "error" else None,
+        )
 
         await page.wait_for_timeout(3000)
 

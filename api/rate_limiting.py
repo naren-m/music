@@ -13,7 +13,7 @@ from functools import wraps
 from typing import Dict, Optional
 
 import redis
-from flask import request, jsonify, current_app, make_response
+from flask import current_app, jsonify, make_response, request
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class RateLimit:
     """Rate limit configuration"""
+
     requests: int
     window: int  # seconds
     burst_requests: int = 0  # Allow burst requests
@@ -30,11 +31,12 @@ class RateLimit:
 @dataclass
 class RateLimitResult:
     """Rate limit check result"""
+
     allowed: bool
     remaining: int
     reset_time: float
     retry_after: int = 0
-    limit_type: str = 'standard'
+    limit_type: str = "standard"
 
 
 class RedisRateLimiter:
@@ -47,7 +49,7 @@ class RedisRateLimiter:
     def _get_redis_client(self):
         """Get Redis client with fallback to in-memory"""
         try:
-            redis_url = current_app.config.get('REDIS_URL', 'redis://localhost:6379/0')
+            redis_url = current_app.config.get("REDIS_URL", "redis://localhost:6379/0")
             return redis.from_url(redis_url, decode_responses=True)
         except Exception as e:
             logger.warning(f"Redis connection failed: {e}")
@@ -89,14 +91,18 @@ class RedisRateLimiter:
             if current_count >= rate_limit.requests:
                 # Get oldest request time for reset calculation
                 oldest = self.redis.zrange(f"{self.prefix}{key}", 0, 0, withscores=True)
-                reset_time = oldest[0][1] + rate_limit.window if oldest else current_time + rate_limit.window
+                reset_time = (
+                    oldest[0][1] + rate_limit.window
+                    if oldest
+                    else current_time + rate_limit.window
+                )
 
                 return RateLimitResult(
                     allowed=False,
                     remaining=0,
                     reset_time=reset_time,
                     retry_after=int(reset_time - current_time),
-                    limit_type='rate_limit'
+                    limit_type="rate_limit",
                 )
 
             # Add current request
@@ -112,7 +118,7 @@ class RedisRateLimiter:
                 allowed=True,
                 remaining=remaining,
                 reset_time=reset_time,
-                limit_type='standard'
+                limit_type="standard",
             )
 
         except Exception as e:
@@ -122,13 +128,13 @@ class RedisRateLimiter:
                 allowed=True,
                 remaining=rate_limit.requests - 1,
                 reset_time=current_time + rate_limit.window,
-                limit_type='fallback'
+                limit_type="fallback",
             )
 
     def _memory_rate_limit(self, key: str, rate_limit: RateLimit) -> RateLimitResult:
         """Fallback in-memory rate limiting"""
         # Simple in-memory implementation for development
-        if not hasattr(self, '_memory_store'):
+        if not hasattr(self, "_memory_store"):
             self._memory_store = {}
 
         current_time = time.time()
@@ -137,7 +143,8 @@ class RedisRateLimiter:
         # Clean old entries
         if key in self._memory_store:
             self._memory_store[key] = [
-                timestamp for timestamp in self._memory_store[key]
+                timestamp
+                for timestamp in self._memory_store[key]
                 if timestamp > window_start
             ]
         else:
@@ -146,7 +153,11 @@ class RedisRateLimiter:
         current_count = len(self._memory_store[key])
 
         if current_count >= rate_limit.requests:
-            oldest_time = min(self._memory_store[key]) if self._memory_store[key] else current_time
+            oldest_time = (
+                min(self._memory_store[key])
+                if self._memory_store[key]
+                else current_time
+            )
             reset_time = oldest_time + rate_limit.window
 
             return RateLimitResult(
@@ -154,7 +165,7 @@ class RedisRateLimiter:
                 remaining=0,
                 reset_time=reset_time,
                 retry_after=int(reset_time - current_time),
-                limit_type='memory_limit'
+                limit_type="memory_limit",
             )
 
         # Add current request
@@ -164,7 +175,7 @@ class RedisRateLimiter:
             allowed=True,
             remaining=rate_limit.requests - current_count - 1,
             reset_time=current_time + rate_limit.window,
-            limit_type='memory'
+            limit_type="memory",
         )
 
 
@@ -220,8 +231,10 @@ class RateLimitConfig:
 
     # Burst limits for real-time audio
     AUDIO_REALTIME = RateLimit(
-        requests=100, window=60,  # 100 req/min base
-        burst_requests=10, burst_window=1  # Allow 10 req/sec burst
+        requests=100,
+        window=60,  # 100 req/min base
+        burst_requests=10,
+        burst_window=1,  # Allow 10 req/sec burst
     )
 
 
@@ -234,16 +247,17 @@ def get_client_identifier() -> str:
     """
     # Try to get user ID from session first
     from flask import session
-    user_id = session.get('user_id')
+
+    user_id = session.get("user_id")
 
     if user_id:
         return f"user:{user_id}"
 
     # Fallback to IP-based identification
-    client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
+    client_ip = request.environ.get("HTTP_X_FORWARDED_FOR", request.remote_addr)
     if client_ip:
         # Handle multiple IPs in X-Forwarded-For
-        client_ip = client_ip.split(',')[0].strip()
+        client_ip = client_ip.split(",")[0].strip()
 
     # Create hash for privacy (don't store raw IPs)
     ip_hash = hashlib.sha256(
@@ -254,9 +268,7 @@ def get_client_identifier() -> str:
 
 
 def rate_limit(
-    rate_limit_config: RateLimit,
-    key_suffix: str = None,
-    per_user: bool = True
+    rate_limit_config: RateLimit, key_suffix: str = None, per_user: bool = True
 ):
     """
     Rate limiting decorator with advanced configuration
@@ -266,6 +278,7 @@ def rate_limit(
         key_suffix: Additional key suffix for granular limiting
         per_user: If True, limit per user; if False, limit per IP only
     """
+
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
@@ -274,11 +287,13 @@ def rate_limit(
 
             # Generate rate limit key
             client_id = get_client_identifier()
-            if not per_user and client_id.startswith('user:'):
+            if not per_user and client_id.startswith("user:"):
                 # Force IP-based limiting even for authenticated users
-                client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
+                client_ip = request.environ.get(
+                    "HTTP_X_FORWARDED_FOR", request.remote_addr
+                )
                 if client_ip:
-                    client_ip = client_ip.split(',')[0].strip()
+                    client_ip = client_ip.split(",")[0].strip()
                 ip_hash = hashlib.sha256(client_ip.encode()).hexdigest()[:16]
                 client_id = f"ip:{ip_hash}"
 
@@ -299,35 +314,37 @@ def rate_limit(
                 )
 
                 # Return rate limit response
-                response = jsonify({
-                    'error': 'Rate limit exceeded',
-                    'message': f'Maximum {rate_limit_config.requests} requests per {rate_limit_config.window} seconds',
-                    'retry_after': result.retry_after,
-                    'limit_type': result.limit_type,
-                    'error_code': 'RATE_LIMIT_EXCEEDED'
-                })
+                response = jsonify(
+                    {
+                        "error": "Rate limit exceeded",
+                        "message": f"Maximum {rate_limit_config.requests} requests per {rate_limit_config.window} seconds",
+                        "retry_after": result.retry_after,
+                        "limit_type": result.limit_type,
+                        "error_code": "RATE_LIMIT_EXCEEDED",
+                    }
+                )
                 response.status_code = 429
 
                 # Add rate limit headers
-                response.headers['X-RateLimit-Limit'] = str(rate_limit_config.requests)
-                response.headers['X-RateLimit-Remaining'] = str(result.remaining)
-                response.headers['X-RateLimit-Reset'] = str(int(result.reset_time))
-                response.headers['Retry-After'] = str(result.retry_after)
+                response.headers["X-RateLimit-Limit"] = str(rate_limit_config.requests)
+                response.headers["X-RateLimit-Remaining"] = str(result.remaining)
+                response.headers["X-RateLimit-Reset"] = str(int(result.reset_time))
+                response.headers["Retry-After"] = str(result.retry_after)
 
                 return response
 
             # Add rate limit headers to successful responses
             def add_rate_limit_headers(response):
-                response.headers['X-RateLimit-Limit'] = str(rate_limit_config.requests)
-                response.headers['X-RateLimit-Remaining'] = str(result.remaining)
-                response.headers['X-RateLimit-Reset'] = str(int(result.reset_time))
+                response.headers["X-RateLimit-Limit"] = str(rate_limit_config.requests)
+                response.headers["X-RateLimit-Remaining"] = str(result.remaining)
+                response.headers["X-RateLimit-Reset"] = str(int(result.reset_time))
                 return response
 
             # Execute the original function
             response = f(*args, **kwargs)
 
             # Add headers to response
-            if hasattr(response, 'headers'):
+            if hasattr(response, "headers"):
                 return add_rate_limit_headers(response)
             else:
                 # Handle different response types
@@ -335,6 +352,7 @@ def rate_limit(
                 return add_rate_limit_headers(response)
 
         return decorated_function
+
     return decorator
 
 
@@ -386,6 +404,7 @@ def adaptive_rate_limit(base_limit: int = 60, burst_multiplier: float = 2.0):
         base_limit: Base requests per minute
         burst_multiplier: Multiplier for burst capacity
     """
+
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
@@ -401,8 +420,12 @@ def adaptive_rate_limit(base_limit: int = 60, burst_multiplier: float = 2.0):
                 # High load: reduce limit to protect the server
                 effective_limit = max(1, int(base_limit * 0.5))
 
-            return rate_limit(RateLimit(requests=effective_limit, window=60))(f)(*args, **kwargs)
+            return rate_limit(RateLimit(requests=effective_limit, window=60))(f)(
+                *args, **kwargs
+            )
+
         return decorated_function
+
     return decorator
 
 
@@ -412,7 +435,7 @@ def security_rate_limit(f):
     return rate_limit(
         RateLimit(requests=10, window=300),  # 10 req/5min
         key_suffix="security",
-        per_user=False  # Always use IP-based for security
+        per_user=False,  # Always use IP-based for security
     )(f)
 
 
@@ -437,21 +460,15 @@ def get_rate_limit_stats(key: str = None) -> Dict:
             # Get stats for specific key
             current_time = time.time()
             count = limiter.redis.zcard(f"{limiter.prefix}{key}")
-            return {
-                "key": key,
-                "current_count": count,
-                "timestamp": current_time
-            }
+            return {"key": key, "current_count": count, "timestamp": current_time}
         else:
             # Get overall stats
             keys = limiter.redis.keys(f"{limiter.prefix}*")
-            total_requests = sum(
-                limiter.redis.zcard(key) for key in keys
-            )
+            total_requests = sum(limiter.redis.zcard(key) for key in keys)
             return {
                 "total_active_keys": len(keys),
                 "total_active_requests": total_requests,
-                "timestamp": time.time()
+                "timestamp": time.time(),
             }
     except Exception as e:
         logger.error(f"Failed to get rate limit stats: {e}")
