@@ -37,7 +37,7 @@ jobs:
   # Python Backend Testing
   backend-tests:
     name: Backend Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # 3.9 matches the Dockerfile; ubuntu-26.04 has no 3.9
 
     services:
       postgres:
@@ -161,7 +161,7 @@ jobs:
   # End-to-End Testing
   e2e-tests:
     name: End-to-End Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # 3.9 matches the Dockerfile; ubuntu-26.04 has no 3.9
     needs: [backend-tests]
 
     services:
@@ -342,7 +342,7 @@ jobs:
   # Code Quality and Analysis
   code-quality:
     name: Code Quality Analysis
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # 3.9 matches the Dockerfile; ubuntu-26.04 has no 3.9
 
     steps:
       - uses: actions/checkout@v4
