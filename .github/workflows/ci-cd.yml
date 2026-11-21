@@ -115,7 +115,7 @@ jobs:
           name: carnatic-backend-coverage
 
       - name: Archive test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: backend-test-results
@@ -236,7 +236,7 @@ jobs:
           pytest tests/test_e2e_playwright.py -v --html=e2e-report.html --self-contained-html
 
       - name: Upload E2E test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: e2e-test-results
@@ -331,7 +331,7 @@ jobs:
           k6 run --out json=results.json tests/performance/load-test.js
 
       - name: Upload performance results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: performance-results
           path: results.json
@@ -375,7 +375,7 @@ jobs:
           bandit -r . -x tests/ -f json -o bandit-results.json || true
 
       - name: Upload code quality results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: code-quality-results
           path: |
