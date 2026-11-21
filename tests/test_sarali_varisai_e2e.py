@@ -4,11 +4,15 @@ Comprehensive testing of the first lesson workflow and interactions
 Uses synchronous Playwright API for pytest compatibility
 """
 
+import logging
 import re
 import time
 
 import pytest
 from playwright.sync_api import Page, expect
+
+logger = logging.getLogger(__name__)
+
 
 # Base URL for testing - configure based on environment
 BASE_URL = "http://localhost:3001"  # Vite dev server
@@ -311,7 +315,7 @@ class TestSaraliPerformance:
         # Filter out non-critical errors
         critical_errors = [e for e in errors if "favicon" not in e.lower() and "404" not in e]
         if critical_errors:
-            print(f"Console errors found: {critical_errors}")
+            logger.info(f"Console errors found: {critical_errors}")
 
 
 class TestSaraliAudioIntegration:

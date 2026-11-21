@@ -1,5 +1,5 @@
 # Code-smell gate (naren-m/smell-lint v0.1.0). Baseline: .smell_baseline.json.
-# Scan the app: Flask entry point, api/, core/, modules/, config/, monitoring/
-# and migrations/. Out of scope: tests/ and the root dev scripts (run_tests.py,
-# validation_test.py, verify_shruti_note.py).
-paths = ["app.py", "api", "core", "modules", "config", "monitoring", "migrations"]
+# Scan the whole repo: the app, tests/ and the root dev scripts. smell-lint's
+# built-in excludes (.git, __pycache__, venv, .venv, node_modules, ...) skip
+# vendored and environment dirs.
+paths = ["."]

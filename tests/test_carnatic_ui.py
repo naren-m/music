@@ -7,10 +7,13 @@ error handling, status indicators, and user experience improvements.
 
 import asyncio
 import json
+import logging
 import time
 
 import pytest
 from playwright.async_api import Browser, BrowserContext, Page, async_playwright, expect
+
+logger = logging.getLogger(__name__)
 
 BASE_URL = "http://localhost:5002"
 CARNATIC_URL = f"{BASE_URL}/carnatic"
@@ -59,7 +62,7 @@ class TestCarnaticUI:
         await page.set_viewport_size({"width": 768, "height": 1024})
         await expect(page.locator(".container")).to_be_visible()
 
-        print("✅ Page loads correctly with new UI design")
+        logger.info("✅ Page loads correctly with new UI design")
 
     async def test_api_health_check_functionality(self, page: Page):
         """Test 2: Validate API health check functionality works."""
@@ -88,7 +91,7 @@ class TestCarnaticUI:
         status_section = page.locator(".status-section")
         await expect(status_section).to_contain_text("API Status")
 
-        print("✅ API health check functionality validated")
+        logger.info("✅ API health check functionality validated")
 
     async def test_websocket_connection_handling(self, page: Page):
         """Test 3: Validate WebSocket connection handling is properly implemented."""
@@ -105,7 +108,7 @@ class TestCarnaticUI:
 
             # Check initial WebSocket status
             status_text = await ws_status.inner_text()
-            print(f"WebSocket status: {status_text}")
+            logger.info(f"WebSocket status: {status_text}")
 
             # WebSocket status should be one of the expected states
             expected_states = ["🔴 Disconnected", "🟢 Connected", "🟡 Connecting", "🟠 Reconnecting"]
@@ -119,9 +122,9 @@ class TestCarnaticUI:
 
         # Look for WebSocket initialization in console
         ws_messages = [msg for msg in console_messages if "websocket" in msg.lower() or "socket" in msg.lower()]
-        print(f"WebSocket console messages: {ws_messages}")
+        logger.info(f"WebSocket console messages: {ws_messages}")
 
-        print("✅ WebSocket connection handling validated")
+        logger.info("✅ WebSocket connection handling validated")
 
     async def test_error_handling_and_status_indicators(self, page: Page):
         """Test 4: Validate error handling and status indicators function correctly."""
@@ -151,7 +154,7 @@ class TestCarnaticUI:
                     indicator = indicators.nth(i)
                     await expect(indicator).to_be_visible()
                     text = await indicator.inner_text()
-                    print(f"Status indicator {selector}[{i}]: {text}")
+                    logger.info(f"Status indicator {selector}[{i}]: {text}")
 
         assert len(found_indicators) > 0, "At least one status indicator should be present"
 
@@ -172,7 +175,7 @@ class TestCarnaticUI:
         if await error_elements.count() > 0:
             await expect(error_elements.first()).to_be_visible()
 
-        print("✅ Error handling and status indicators validated")
+        logger.info("✅ Error handling and status indicators validated")
 
     async def test_user_interface_responsive_and_functional(self, page: Page):
         """Test 5: Validate the user interface is responsive and functional."""
@@ -205,7 +208,7 @@ class TestCarnaticUI:
             for i in range(section_count):
                 await expect(sections.nth(i)).to_be_visible()
 
-            print(f"✅ UI responsive at {viewport['width']}x{viewport['height']}")
+            logger.info(f"✅ UI responsive at {viewport['width']}x{viewport['height']}")
 
         # Test interactive elements
         await page.set_viewport_size({"width": 1024, "height": 768})
@@ -213,16 +216,16 @@ class TestCarnaticUI:
         # Check buttons are clickable
         buttons = page.locator("button")
         button_count = await buttons.count()
-        print(f"Found {button_count} buttons")
+        logger.info(f"Found {button_count} buttons")
 
         for i in range(min(button_count, 5)):  # Test up to 5 buttons
             button = buttons.nth(i)
             if await button.is_visible():
                 button_text = await button.inner_text()
                 await expect(button).to_be_enabled()
-                print(f"Button '{button_text}' is functional")
+                logger.info(f"Button '{button_text}' is functional")
 
-        print("✅ User interface is responsive and functional")
+        logger.info("✅ User interface is responsive and functional")
 
     async def test_navigation_links_working(self, page: Page):
         """Test 6: Validate navigation links are working properly."""
@@ -244,7 +247,7 @@ class TestCarnaticUI:
                     if href and href.strip():
                         all_links.append({"element": link, "href": href, "text": text})
 
-        print(f"Found {len(all_links)} navigation links")
+        logger.info(f"Found {len(all_links)} navigation links")
 
         # Test each navigation link
         for link_info in all_links[:5]:  # Test up to 5 links to avoid overwhelming
@@ -254,7 +257,7 @@ class TestCarnaticUI:
             if not text or len(text) > 50:  # Skip empty or very long text
                 continue
 
-            print(f"Testing link: '{text}' -> {href}")
+            logger.info(f"Testing link: '{text}' -> {href}")
 
             # Test internal links
             if href.startswith("/") or "localhost:5002" in href:
@@ -265,21 +268,21 @@ class TestCarnaticUI:
 
                     # Verify page changed or loaded
                     current_url = page.url
-                    print(f"Navigated to: {current_url}")
+                    logger.info(f"Navigated to: {current_url}")
 
                     # Navigate back for next test
                     await page.go_back()
                     await page.wait_for_load_state("networkidle", timeout=5000)
 
                 except Exception as e:
-                    print(f"Link test failed for '{text}': {str(e)}")
+                    logger.info(f"Link test failed for '{text}': {str(e)}")
 
             # Test external links (just verify they exist)
             elif href.startswith("http"):
                 await expect(link_info["element"]).to_have_attribute("href", href)
-                print(f"External link verified: {href}")
+                logger.info(f"External link verified: {href}")
 
-        print("✅ Navigation links validated")
+        logger.info("✅ Navigation links validated")
 
     async def test_real_time_audio_processing_interface(self, page: Page):
         """Test 7: Validate real-time audio processing interface components."""
@@ -306,7 +309,7 @@ class TestCarnaticUI:
                 found_audio_controls.append(selector)
                 await expect(elements.first()).to_be_visible()
 
-        print(f"Found audio controls: {found_audio_controls}")
+        logger.info(f"Found audio controls: {found_audio_controls}")
 
         # Check for audio visualization elements
         viz_elements = ["canvas", "#frequency-display", "#note-display", ".visualization", ".frequency-viz", "#output"]
@@ -318,7 +321,7 @@ class TestCarnaticUI:
                 found_viz_elements.append(selector)
                 await expect(elements.first()).to_be_visible()
 
-        print(f"Found visualization elements: {found_viz_elements}")
+        logger.info(f"Found visualization elements: {found_viz_elements}")
 
         # Test microphone permission handling (simulate)
         await page.evaluate(
@@ -334,9 +337,9 @@ class TestCarnaticUI:
         output_area = page.locator("#output, .output-section, .results")
         if await output_area.count() > 0:
             await expect(output_area.first()).to_be_visible()
-            print("✅ Output display area found")
+            logger.info("✅ Output display area found")
 
-        print("✅ Real-time audio processing interface validated")
+        logger.info("✅ Real-time audio processing interface validated")
 
     async def test_comprehensive_functionality_integration(self, page: Page):
         """Test 8: Comprehensive integration test of all key features."""
@@ -344,7 +347,7 @@ class TestCarnaticUI:
         await page.wait_for_load_state("networkidle")
 
         # Test complete user workflow
-        print("🧪 Running comprehensive integration test...")
+        logger.info("🧪 Running comprehensive integration test...")
 
         # Step 1: Page loads with all components
         await expect(page.locator("h1")).to_be_visible()
@@ -387,7 +390,7 @@ class TestCarnaticUI:
         page_title = await page.title()
         assert "Carnatic" in page_title, f"Page title should contain 'Carnatic', got: {page_title}"
 
-        print("✅ Comprehensive integration test completed successfully")
+        logger.info("✅ Comprehensive integration test completed successfully")
 
     async def test_performance_and_loading(self, page: Page):
         """Test 9: Validate page performance and loading metrics."""
@@ -397,7 +400,7 @@ class TestCarnaticUI:
         await page.wait_for_load_state("networkidle")
         load_time = time.time() - start_time
 
-        print(f"Page load time: {load_time:.2f} seconds")
+        logger.info(f"Page load time: {load_time:.2f} seconds")
         assert load_time < 10, f"Page should load within 10 seconds, took {load_time:.2f}s"
 
         # Check resource loading
@@ -410,15 +413,16 @@ class TestCarnaticUI:
         await page.wait_for_timeout(3000)
 
         if console_errors:
-            print(f"Console errors found: {[err.text for err in console_errors]}")
+            logger.info(f"Console errors found: {[err.text for err in console_errors]}")
 
         # Check page is interactive
         body = page.locator("body")
         await expect(body).to_be_visible()
 
-        print("✅ Performance and loading validated")
+        logger.info("✅ Performance and loading validated")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     # Run the tests
     pytest.main([__file__, "-v", "--tb=short"])

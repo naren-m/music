@@ -4,9 +4,12 @@ Validation Test for Carnatic Learning Application v2.0
 Quick validation of core functionality without complex module structure
 """
 
+import logging
 import os
 import sys
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 # Add project root to path
 sys.path.append(os.path.dirname(__file__))
@@ -18,7 +21,7 @@ def test_basic_flask_setup():
         from flask import Flask
         from flask_socketio import SocketIO
 
-        print("✅ Flask and Flask-SocketIO imports successful")
+        logger.info("✅ Flask and Flask-SocketIO imports successful")
 
         app = Flask(__name__)
         app.config["SECRET_KEY"] = "test-secret"
@@ -28,10 +31,10 @@ def test_basic_flask_setup():
         def home():
             return {"status": "Carnatic Learning Application v2.0", "timestamp": datetime.now().isoformat()}
 
-        print("✅ Basic Flask app with SocketIO created successfully")
+        logger.info("✅ Basic Flask app with SocketIO created successfully")
         return True
     except Exception as e:
-        print(f"❌ Flask setup failed: {e}")
+        logger.error(f"❌ Flask setup failed: {e}")
         return False
 
 
@@ -43,12 +46,12 @@ def test_core_dependencies():
         import scipy
         import sounddevice as sd
 
-        print("✅ Scientific computing libraries imported successfully")
+        logger.info("✅ Scientific computing libraries imported successfully")
 
         # Test basic numpy functionality
         test_array = np.array([1, 2, 3, 4, 5])
         assert len(test_array) == 5
-        print("✅ NumPy basic functionality works")
+        logger.info("✅ NumPy basic functionality works")
 
         # Test basic audio array creation
         sample_rate = 44100
@@ -57,11 +60,11 @@ def test_core_dependencies():
         frequency = 440.0  # A4
         audio_signal = np.sin(2 * np.pi * frequency * t)
         assert len(audio_signal) > 0
-        print("✅ Audio signal generation works")
+        logger.info("✅ Audio signal generation works")
 
         return True
     except Exception as e:
-        print(f"❌ Core dependencies test failed: {e}")
+        logger.error(f"❌ Core dependencies test failed: {e}")
         return False
 
 
@@ -92,7 +95,7 @@ def test_shruti_system_concept():
             shruti_frequencies.append((name, frequency, ratio))
 
         assert len(shruti_frequencies) == len(BASIC_SHRUTI_RATIOS)
-        print(f"✅ Basic shruti system created with {len(shruti_frequencies)} shrutis")
+        logger.info(f"✅ Basic shruti system created with {len(shruti_frequencies)} shrutis")
 
         # Test frequency calculation
         sa_freq = base_sa * 1.0
@@ -100,11 +103,11 @@ def test_shruti_system_concept():
 
         assert abs(sa_freq - 261.63) < 0.01
         assert abs(pa_freq - 392.44) < 0.01
-        print("✅ Shruti frequency calculations work correctly")
+        logger.info("✅ Shruti frequency calculations work correctly")
 
         return True
     except Exception as e:
-        print(f"❌ Shruti system test failed: {e}")
+        logger.error(f"❌ Shruti system test failed: {e}")
         return False
 
 
@@ -133,11 +136,11 @@ def test_basic_pitch_detection():
 
         # Should detect 440Hz within tolerance
         assert abs(detected_frequency - frequency) < 5.0
-        print(f"✅ Basic pitch detection works: {detected_frequency:.2f}Hz (target: {frequency}Hz)")
+        logger.info(f"✅ Basic pitch detection works: {detected_frequency:.2f}Hz (target: {frequency}Hz)")
 
         return True
     except Exception as e:
-        print(f"❌ Pitch detection test failed: {e}")
+        logger.error(f"❌ Pitch detection test failed: {e}")
         return False
 
 
@@ -155,10 +158,10 @@ def test_websocket_concepts():
         def handle_test_event(data):
             return {"status": "received", "data": data}
 
-        print("✅ WebSocket event handlers configured successfully")
+        logger.info("✅ WebSocket event handlers configured successfully")
         return True
     except Exception as e:
-        print(f"❌ WebSocket test failed: {e}")
+        logger.error(f"❌ WebSocket test failed: {e}")
         return False
 
 
@@ -193,18 +196,18 @@ def test_user_model_concept():
         assert user.user_id == "test_123"
         assert user.skill_level == SkillLevel.INTERMEDIATE
         assert user.practice_time == 1800
-        print("✅ User model concept works correctly")
+        logger.info("✅ User model concept works correctly")
 
         return True
     except Exception as e:
-        print(f"❌ User model test failed: {e}")
+        logger.error(f"❌ User model test failed: {e}")
         return False
 
 
 def run_validation_tests():
     """Run all validation tests"""
-    print("🎵 Carnatic Learning Application v2.0 - Validation Tests")
-    print("=" * 60)
+    logger.info("🎵 Carnatic Learning Application v2.0 - Validation Tests")
+    logger.info("=" * 60)
 
     tests = [
         ("Flask Setup", test_basic_flask_setup),
@@ -219,27 +222,28 @@ def run_validation_tests():
     total = len(tests)
 
     for test_name, test_func in tests:
-        print(f"\n🧪 Testing {test_name}:")
+        logger.info(f"\n🧪 Testing {test_name}:")
         try:
             if test_func():
                 passed += 1
-                print(f"✅ {test_name}: PASSED")
+                logger.info(f"✅ {test_name}: PASSED")
             else:
-                print(f"❌ {test_name}: FAILED")
+                logger.info(f"❌ {test_name}: FAILED")
         except Exception as e:
-            print(f"❌ {test_name}: ERROR - {e}")
+            logger.error(f"❌ {test_name}: ERROR - {e}")
 
-    print("\n" + "=" * 60)
-    print(f"📊 Validation Results: {passed}/{total} tests passed")
+    sys.stdout.write("\n" + "=" * 60 + "\n")
+    sys.stdout.write(f"📊 Validation Results: {passed}/{total} tests passed\n")
 
     if passed == total:
-        print("🎉 All validation tests PASSED! Core implementation is working.")
+        sys.stdout.write("🎉 All validation tests PASSED! Core implementation is working.\n")
     else:
-        print(f"⚠️  {total - passed} tests FAILED. Implementation needs fixes.")
+        sys.stdout.write(f"⚠️  {total - passed} tests FAILED. Implementation needs fixes.\n")
 
     return passed == total
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     success = run_validation_tests()
     sys.exit(0 if success else 1)

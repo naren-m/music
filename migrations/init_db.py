@@ -63,10 +63,10 @@ def create_database_if_not_exists():
         cursor.execute("SELECT 1 FROM pg_catalog.pg_database WHERE datname = %s", (validated_db_name,))
 
         if not cursor.fetchone():
-            # Use psycopg2.sql for safe identifier composition
-            cursor.execute(  # smell: ignore[SML012] CREATE DATABASE takes no bound params; name is regex-validated and quoted by sql.Identifier
-                sql.SQL("CREATE DATABASE {}").format(sql.Identifier(validated_db_name))
-            )
+            # CREATE DATABASE takes no bound params; psycopg2.sql quotes the
+            # (already regex-validated) name as an identifier.
+            create_stmt = sql.SQL("CREATE DATABASE {}").format(sql.Identifier(validated_db_name))
+            cursor.execute(create_stmt)
             logger.info(f"Database '{validated_db_name}' created successfully")
         else:
             logger.info(f"Database '{validated_db_name}' already exists")
