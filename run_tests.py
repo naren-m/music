@@ -6,11 +6,14 @@ Comprehensive test execution with reporting and validation
 
 import argparse
 import json
+import logging
 import os
 import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 # Add project root to path
 project_root = Path(__file__).parent
@@ -165,7 +168,7 @@ class TestRunner:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         report_file = self.project_root / f"test_report_{timestamp}.json"
 
-        print("🔄 Generating comprehensive test report...")
+        logger.info("🔄 Generating comprehensive test report...")
 
         # Run all test categories
         results = {
@@ -197,15 +200,15 @@ class TestRunner:
         with open(report_file, "w") as f:
             json.dump(results, f, indent=2, default=str)
 
-        print(f"\n📊 Test report saved to: {report_file}")
-        print(f"🎯 Overall Status: {results['overall_status']}")
+        logger.info(f"\n📊 Test report saved to: {report_file}")
+        logger.info(f"🎯 Overall Status: {results['overall_status']}")
 
         return results
 
     def _execute_command(self, cmd, description, capture_output=False):
         """Execute command and return results."""
-        print(f"\n🔄 Running {description}...")
-        print(f"📝 Command: {' '.join(cmd)}")
+        logger.info(f"\n🔄 Running {description}...")
+        logger.info(f"📝 Command: {' '.join(cmd)}")
 
         try:
             if capture_output:
@@ -215,12 +218,12 @@ class TestRunner:
 
             success = result.returncode == 0
             status = "✅ PASSED" if success else "❌ FAILED"
-            print(f"📊 {description}: {status}")
+            logger.info(f"📊 {description}: {status}")
 
             return {"success": success, "returncode": result.returncode, "command": " ".join(cmd), "description": description}
 
         except Exception as e:
-            print(f"❌ Error running {description}: {e}")
+            logger.error(f"❌ Error running {description}: {e}")
             return {"success": False, "error": str(e), "command": " ".join(cmd), "description": description}
 
     def _install_playwright_browsers(self):
@@ -228,15 +231,16 @@ class TestRunner:
         try:
             install_cmd = [sys.executable, "-m", "playwright", "install", "chromium"]
             subprocess.run(install_cmd, check=True, capture_output=True)
-            print("🌐 Playwright browsers installed successfully")
+            logger.info("🌐 Playwright browsers installed successfully")
         except subprocess.CalledProcessError:
-            print("⚠️  Warning: Could not install Playwright browsers")
+            logger.warning("⚠️  Warning: Could not install Playwright browsers")
         except FileNotFoundError:
-            print("⚠️  Warning: Playwright not found, skipping browser installation")
+            logger.warning("⚠️  Warning: Playwright not found, skipping browser installation")
 
 
 def main():
     """Main test runner entry point."""
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     parser = argparse.ArgumentParser(description="Carnatic Learning Application Test Runner")
     parser.add_argument("--unit", action="store_true", help="Run unit tests only")
     parser.add_argument("--integration", action="store_true", help="Run integration tests only")
@@ -256,8 +260,8 @@ def main():
 
     runner = TestRunner()
 
-    print("🎵 Carnatic Learning Application Test Runner")
-    print("=" * 50)
+    logger.info("🎵 Carnatic Learning Application Test Runner")
+    logger.info("=" * 50)
 
     # Default to quick tests if no specific test type is specified
     if not any(
@@ -307,19 +311,19 @@ def main():
         return
 
     # Summary
-    print("\n" + "=" * 50)
-    print("📊 Test Execution Summary")
-    print("=" * 50)
+    sys.stdout.write("\n" + "=" * 50 + "\n")
+    sys.stdout.write("📊 Test Execution Summary\n")
+    sys.stdout.write("=" * 50 + "\n")
 
     passed = sum(1 for r in results if r.get("success", False))
     total = len(results)
 
-    print(f"✅ Passed: {passed}/{total}")
-    print(f"❌ Failed: {total - passed}/{total}")
+    sys.stdout.write(f"✅ Passed: {passed}/{total}\n")
+    sys.stdout.write(f"❌ Failed: {total - passed}/{total}\n")
 
     if total > 0:
         success_rate = (passed / total) * 100
-        print(f"📈 Success Rate: {success_rate:.1f}%")
+        sys.stdout.write(f"📈 Success Rate: {success_rate:.1f}%\n")
 
     # Exit with appropriate code
     sys.exit(0 if passed == total else 1)

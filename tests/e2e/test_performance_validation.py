@@ -5,12 +5,17 @@ Validates real-world performance improvements with Playwright
 
 import asyncio
 import json
+import logging
 import statistics
 import time
 
 import numpy as np
 import pytest
-from playwright.async_api import BrowserContext, Page, async_playwright
+from playwright.async_api import BrowserContext
+from playwright.async_api import Error as PlaywrightError
+from playwright.async_api import Page, async_playwright
+
+logger = logging.getLogger(__name__)
 
 
 class TestPerformanceValidation:
@@ -52,7 +57,7 @@ class TestPerformanceValidation:
 
     async def test_websocket_connection_performance(self, app_page: Page):
         """Test WebSocket connection establishment performance"""
-        print("\n🔌 Testing WebSocket connection performance...")
+        logger.info("\n🔌 Testing WebSocket connection performance...")
 
         # Track connection metrics
         connection_times = []
@@ -99,11 +104,11 @@ class TestPerformanceValidation:
         max_connection_time = max(connection_times)
         max_latency = max(message_latencies)
 
-        print(f"📊 Connection Performance:")
-        print(f"   Average connection time: {avg_connection_time:.1f}ms")
-        print(f"   Maximum connection time: {max_connection_time:.1f}ms")
-        print(f"   Average message latency: {avg_latency:.1f}ms")
-        print(f"   Maximum message latency: {max_latency:.1f}ms")
+        logger.info(f"📊 Connection Performance:")
+        logger.info(f"   Average connection time: {avg_connection_time:.1f}ms")
+        logger.info(f"   Maximum connection time: {max_connection_time:.1f}ms")
+        logger.info(f"   Average message latency: {avg_latency:.1f}ms")
+        logger.info(f"   Maximum message latency: {max_latency:.1f}ms")
 
         # Performance assertions
         assert avg_connection_time < 500, f"Average connection time {avg_connection_time:.1f}ms exceeds 500ms"
@@ -113,7 +118,7 @@ class TestPerformanceValidation:
 
     async def test_audio_processing_real_time_performance(self, app_page: Page):
         """Test real-time audio processing performance with simulated audio"""
-        print("\n🎵 Testing real-time audio processing performance...")
+        logger.info("\n🎵 Testing real-time audio processing performance...")
 
         # Start audio detection
         await app_page.click('[data-testid="start-detection-btn"]')
@@ -156,7 +161,7 @@ class TestPerformanceValidation:
                 processing_time = (time.time() - start_time) * 1000
                 processing_times.append(processing_time)
 
-            except:
+            except PlaywrightError:
                 # Timeout - record as slow processing
                 processing_times.append(100)  # Max timeout value
 
@@ -169,11 +174,11 @@ class TestPerformanceValidation:
         p95_processing_time = np.percentile(processing_times, 95)
         success_rate = successful_chunks / chunk_count
 
-        print(f"📊 Audio Processing Performance:")
-        print(f"   Processed chunks: {chunk_count}")
-        print(f"   Success rate: {success_rate:.1%}")
-        print(f"   Average processing time: {avg_processing_time:.1f}ms")
-        print(f"   95th percentile: {p95_processing_time:.1f}ms")
+        logger.info(f"📊 Audio Processing Performance:")
+        logger.info(f"   Processed chunks: {chunk_count}")
+        logger.info(f"   Success rate: {success_rate:.1%}")
+        logger.info(f"   Average processing time: {avg_processing_time:.1f}ms")
+        logger.info(f"   95th percentile: {p95_processing_time:.1f}ms")
 
         # Performance assertions
         assert success_rate > 0.90, f"Success rate {success_rate:.1%} below 90% requirement"
@@ -182,7 +187,7 @@ class TestPerformanceValidation:
 
     async def test_concurrent_user_simulation(self, browser_context: BrowserContext):
         """Test concurrent user performance simulation"""
-        print("\n👥 Testing concurrent user performance...")
+        logger.info("\n👥 Testing concurrent user performance...")
 
         num_users = 10
         pages = []
@@ -213,7 +218,7 @@ class TestPerformanceValidation:
                 try:
                     await page.wait_for_selector('[data-testid="connection-status"][data-status="connected"]', timeout=5000)
                     active_connections += 1
-                except:
+                except PlaywrightError:
                     pass
 
             # Send audio data from all users
@@ -235,11 +240,11 @@ class TestPerformanceValidation:
 
             processing_time = (time.time() - processing_start) * 1000
 
-            print(f"📊 Concurrent User Performance:")
-            print(f"   Users simulated: {num_users}")
-            print(f"   Active connections: {active_connections}")
-            print(f"   Setup time: {setup_time:.1f}ms")
-            print(f"   Processing time: {processing_time:.1f}ms")
+            logger.info(f"📊 Concurrent User Performance:")
+            logger.info(f"   Users simulated: {num_users}")
+            logger.info(f"   Active connections: {active_connections}")
+            logger.info(f"   Setup time: {setup_time:.1f}ms")
+            logger.info(f"   Processing time: {processing_time:.1f}ms")
 
             # Performance assertions
             connection_rate = active_connections / num_users
@@ -252,12 +257,12 @@ class TestPerformanceValidation:
             for page in pages:
                 try:
                     await page.close()
-                except:
+                except PlaywrightError:
                     pass
 
     async def test_memory_usage_stability(self, app_page: Page):
         """Test memory usage stability during extended use"""
-        print("\n🧠 Testing memory usage stability...")
+        logger.info("\n🧠 Testing memory usage stability...")
 
         # Start detection
         await app_page.click('[data-testid="start-detection-btn"]')
@@ -284,7 +289,7 @@ class TestPerformanceValidation:
             current_metrics = await app_page.evaluate("performance.memory")
             memory_increase = (current_metrics["usedJSHeapSize"] - initial_metrics["usedJSHeapSize"]) / 1024 / 1024  # MB
 
-            print(f"   Cycle {cycle + 1}: Memory increase = {memory_increase:.1f}MB")
+            logger.info(f"   Cycle {cycle + 1}: Memory increase = {memory_increase:.1f}MB")
 
             # Memory should not increase excessively
             assert memory_increase < 50, f"Memory increase {memory_increase:.1f}MB exceeds 50MB limit"
@@ -296,15 +301,15 @@ class TestPerformanceValidation:
         final_metrics = await app_page.evaluate("performance.memory")
         total_memory_increase = (final_metrics["usedJSHeapSize"] - initial_metrics["usedJSHeapSize"]) / 1024 / 1024
 
-        print(f"📊 Memory Stability:")
-        print(f"   Total memory increase: {total_memory_increase:.1f}MB")
-        print(f"   Final heap size: {final_metrics['usedJSHeapSize'] / 1024 / 1024:.1f}MB")
+        logger.info(f"📊 Memory Stability:")
+        logger.info(f"   Total memory increase: {total_memory_increase:.1f}MB")
+        logger.info(f"   Final heap size: {final_metrics['usedJSHeapSize'] / 1024 / 1024:.1f}MB")
 
         assert total_memory_increase < 100, f"Total memory increase {total_memory_increase:.1f}MB exceeds 100MB"
 
     async def test_ui_responsiveness_under_load(self, app_page: Page):
         """Test UI responsiveness during heavy audio processing"""
-        print("\n🖱️ Testing UI responsiveness under load...")
+        logger.info("\n🖱️ Testing UI responsiveness under load...")
 
         # Start detection
         await app_page.click('[data-testid="start-detection-btn"]')
@@ -341,9 +346,9 @@ class TestPerformanceValidation:
         avg_response_time = statistics.mean(ui_response_times)
         max_response_time = max(ui_response_times)
 
-        print(f"📊 UI Responsiveness Under Load:")
-        print(f"   Average response time: {avg_response_time:.1f}ms")
-        print(f"   Maximum response time: {max_response_time:.1f}ms")
+        logger.info(f"📊 UI Responsiveness Under Load:")
+        logger.info(f"   Average response time: {avg_response_time:.1f}ms")
+        logger.info(f"   Maximum response time: {max_response_time:.1f}ms")
 
         # UI should remain responsive
         assert avg_response_time < 200, f"Average UI response {avg_response_time:.1f}ms exceeds 200ms"
@@ -368,7 +373,7 @@ class TestPerformanceValidation:
 
     async def test_performance_regression_detection(self, app_page: Page):
         """Test for performance regressions against baseline metrics"""
-        print("\n📈 Testing for performance regressions...")
+        logger.info("\n📈 Testing for performance regressions...")
 
         # Baseline performance expectations (optimized values)
         baseline_metrics = {"connection_time_ms": 300, "audio_processing_ms": 25, "ui_response_ms": 100, "memory_usage_mb": 30}
@@ -413,7 +418,7 @@ class TestPerformanceValidation:
             "memory_usage_mb": memory_usage,
         }
 
-        print(f"📊 Performance Regression Analysis:")
+        logger.info(f"📊 Performance Regression Analysis:")
 
         regression_detected = False
         for metric, baseline in baseline_metrics.items():
@@ -421,16 +426,17 @@ class TestPerformanceValidation:
             ratio = actual / baseline
             status = "✅" if ratio <= 1.2 else "⚠️" if ratio <= 1.5 else "❌"
 
-            print(f"   {metric}: {actual:.1f} vs {baseline:.1f} (ratio: {ratio:.2f}) {status}")
+            logger.info(f"   {metric}: {actual:.1f} vs {baseline:.1f} (ratio: {ratio:.2f}) {status}")
 
             if ratio > 1.5:  # 50% regression threshold
                 regression_detected = True
 
         assert not regression_detected, "Performance regression detected - metrics exceed 150% of baseline"
 
-        print("✅ No significant performance regressions detected")
+        logger.info("✅ No significant performance regressions detected")
 
 
 if __name__ == "__main__":
     # Run E2E performance validation
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     pytest.main([__file__, "-v", "--tb=short"])
