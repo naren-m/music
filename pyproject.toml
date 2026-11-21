@@ -1,0 +1,9 @@
+# Formatter settings only (no build backend; the app installs from
+# requirements.txt). 127 matches the flake8 max-line-length in ci-cd.yml.
+[tool.black]
+line-length = 127
+target-version = ["py39"]
+
+[tool.isort]
+profile = "black"
+line_length = 127

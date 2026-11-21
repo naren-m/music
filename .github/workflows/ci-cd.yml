@@ -362,7 +362,7 @@ jobs:
         run: |
           pip install black==23.7.0 isort==6.1.0 flake8==6.0.0 mypy==1.5.1 bandit==1.8.6
 
-      # isort reads .isort.cfg (profile = black) so the two agree.
+      # black and isort read pyproject.toml (profile black, 127 columns).
       - name: Check code formatting
         run: |
           black --check --diff .
