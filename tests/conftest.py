@@ -20,7 +20,7 @@ sys.path.insert(0, str(project_root))
 # Set default environment variables for testing
 os.environ.setdefault("SECRET_KEY", "test-secret-key-for-conftest")
 
-from api import create_app
+from api import create_app, rate_limiting
 from core.models.shruti import SHRUTI_SYSTEM
 from core.models.user import SubscriptionTier, UserProfile
 
@@ -31,6 +31,20 @@ def event_loop():
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
+
+
+@pytest.fixture(autouse=True)
+def isolated_rate_limiter(monkeypatch):
+    """Give every test a fresh in-memory rate limiter.
+
+    Without this the limiter talks to whatever Redis answers on
+    localhost:6379. With no Redis it fails open; with one (the CI service)
+    request counts pile up across tests and later tests get 429.
+    """
+    monkeypatch.setattr(rate_limiting.RedisRateLimiter, "_get_redis_client", lambda self: None)
+    rate_limiting._limiter_holder.reset()
+    yield
+    rate_limiting._limiter_holder.reset()
 
 
 @pytest.fixture(scope="session")
