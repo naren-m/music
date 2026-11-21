@@ -13,7 +13,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from config.database import (
-    DatabaseManager, DatabaseConfig,
+    DatabaseConfig, db_manager,
     Base, User, Exercise, Progress, Recording,
     Raga, Tala, Composition, Achievement, Group,
     seed_initial_data, get_db_session
@@ -85,7 +85,8 @@ def initialize_database():
         create_database_if_not_exists()
 
         # Initialize database manager
-        db_manager = DatabaseManager()
+        # Use the shared manager: get_db_session() reads it, so a private
+        # DatabaseManager() left it uninitialised ("Database not initialized").
         db_manager.initialize_postgresql()
         db_manager.initialize_redis()
 
@@ -242,7 +243,8 @@ def create_sample_data():
 def validate_database():
     """Validate database setup and connections"""
     try:
-        db_manager = DatabaseManager()
+        # Use the shared manager: get_db_session() reads it, so a private
+        # DatabaseManager() left it uninitialised ("Database not initialized").
         db_manager.initialize_postgresql()
         db_manager.initialize_redis()
 
@@ -285,7 +287,6 @@ def validate_database():
 def drop_all_tables():
     """Drop all tables (use with caution!)"""
     try:
-        db_manager = DatabaseManager()
         db_manager.initialize_postgresql()
 
         logger.warning("⚠️  Dropping all database tables...")
