@@ -14,13 +14,15 @@ Requires the frontend and backend dev servers to already be running:
 Run standalone (bypasses the coverage-gated addopts in pytest.ini):
     .venv/bin/python -m pytest tests/e2e/test_sarali_live_practice.py -v -s -o addopts=""
 """
+import os
 import re
 import time
 
 import pytest
 from playwright.sync_api import sync_playwright
 
-FRONTEND_URL = "http://localhost:3000/"
+# Vite dev server by default. CI points this at Flask serving the built SPA.
+FRONTEND_URL = os.environ.get("E2E_FRONTEND_URL", "http://localhost:3000/")
 
 # Sarali Varisai 1 (Mayamalavagowla, base Sa = 261.63 Hz): full arohanam +
 # avarohanam sequence, one frequency per swara.
