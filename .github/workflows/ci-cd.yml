@@ -356,10 +356,13 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
+      # Pinned so a formatter release can't turn main red. black, flake8 and
+      # mypy match requirements.txt. pylint was installed but never run.
       - name: Install analysis tools
         run: |
-          pip install black isort flake8 mypy bandit pylint
+          pip install black==23.7.0 isort==6.1.0 flake8==6.0.0 mypy==1.5.1 bandit==1.8.6
 
+      # isort reads .isort.cfg (profile = black) so the two agree.
       - name: Check code formatting
         run: |
           black --check --diff .
@@ -370,13 +373,19 @@ jobs:
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
+      # Flags live in mypy.ini. It also lists the 22 modules that still have
+      # errors (ignore_errors ratchet); every other file is checked for real:
+      # https://github.com/naren-m/music/issues/15
       - name: Type checking with mypy
         run: |
-          mypy . --ignore-missing-imports --follow-imports=skip
+          mypy .
 
+      # Full report (all severities) goes to the artifact; the gate is
+      # high severity, which must stay at zero.
       - name: Security analysis with bandit
         run: |
-          bandit -r . -x tests/ -f json -o bandit-results.json || true
+          bandit -r . -x ./tests -f json -o bandit-results.json --exit-zero
+          bandit -r . -x ./tests -lll
 
       - name: Upload code quality results
         uses: actions/upload-artifact@v4
