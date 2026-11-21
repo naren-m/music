@@ -1376,6 +1376,25 @@ class AdvancedAnalytics:
             logger.exception("Error generating comparative analysis: %s", e)
             return {"peer_comparison": {}, "ranking": None, "percentile": None}
 
+    @staticmethod
+    def _weak_swara_recommendation(recent_progress) -> Optional[str]:
+        """Name up to 3 swaras with 3+ scored attempts averaging below 0.7, or None."""
+        swara_performance: Dict[str, List[float]] = {}
+        for record in recent_progress:
+            # Assuming target_swara is stored within accuracy_metrics JSON
+            target_swara = record.accuracy_metrics.get("target_swara")
+            if target_swara:
+                swara = target_swara
+                if swara not in swara_performance:
+                    swara_performance[swara] = []
+                if record.average_accuracy is not None:
+                    swara_performance[swara].append(record.average_accuracy)
+
+        weak_swaras = [swara for swara, scores in swara_performance.items() if len(scores) >= 3 and np.mean(scores) < 0.7]
+        if weak_swaras:
+            return f"Focus extra practice on: {', '.join(weak_swaras[:3])}"
+        return None
+
     async def _generate_personalized_recommendations(self, user_id: int) -> List[str]:
         """Generate personalized recommendations based on user's learning patterns"""
         recommendations = []
@@ -1447,23 +1466,9 @@ class AdvancedAnalytics:
                         recommendations.append("Long sessions are great! Consider breaking into multiple focused sessions")
 
                 # Analyze weak areas from exercise data
-                swara_performance = {}
-                for record in recent_progress:
-                    # Assuming target_swara is stored within accuracy_metrics JSON
-                    target_swara = record.accuracy_metrics.get("target_swara")
-                    if target_swara:
-                        swara = target_swara
-                        if swara not in swara_performance:
-                            swara_performance[swara] = []
-                        if record.average_accuracy is not None:
-                            swara_performance[swara].append(record.average_accuracy)
-
-                if swara_performance:
-                    weak_swaras = [
-                        swara for swara, scores in swara_performance.items() if len(scores) >= 3 and np.mean(scores) < 0.7
-                    ]
-                    if weak_swaras:
-                        recommendations.append(f"Focus extra practice on: {', '.join(weak_swaras[:3])}")
+                weak_swara_tip = self._weak_swara_recommendation(recent_progress)
+                if weak_swara_tip:
+                    recommendations.append(weak_swara_tip)
 
                 # If we still have room for recommendations
                 if len(recommendations) < 3:

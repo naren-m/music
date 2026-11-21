@@ -289,3 +289,28 @@ def test_analysis_db_failure_is_logged(caplog, method, takes_period, message):
     assert any(r.getMessage().startswith(message) and "db down" in r.getMessage() and r.exc_info for r in records), [
         r.getMessage() for r in records
     ]
+
+
+def _scored(swara, accuracy):
+    return MagicMock(accuracy_metrics={"target_swara": swara}, average_accuracy=accuracy)
+
+
+# _weak_swara_recommendation: a swara is weak with 3+ scored attempts averaging < 0.7.
+WEAK_SWARA_CASES = [
+    # (records, expected tip)
+    ([], None),
+    ([_scored("Ri", 0.5), _scored("Ri", 0.5)], None),  # only 2 attempts
+    ([_scored("Ri", 0.5)] * 3, "Focus extra practice on: Ri"),
+    ([_scored("Ri", 0.9)] * 3, None),  # strong
+    ([_scored("Ri", 0.5)] * 3 + [_scored("Ri", None)], "Focus extra practice on: Ri"),  # unscored ignored
+    ([MagicMock(accuracy_metrics={}, average_accuracy=0.1)] * 3, None),  # no target swara
+    (
+        [_scored(s, 0.4) for s in ("Sa", "Ri", "Ga", "Ma") for _ in range(3)],
+        "Focus extra practice on: Sa, Ri, Ga",  # capped at 3
+    ),
+]
+
+
+@pytest.mark.parametrize("records,expected", WEAK_SWARA_CASES)
+def test_weak_swara_recommendation(records, expected):
+    assert AdvancedAnalytics._weak_swara_recommendation(records) == expected
